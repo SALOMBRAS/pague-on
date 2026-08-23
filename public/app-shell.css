@@ -138,7 +138,11 @@ button:disabled { cursor: not-allowed; opacity: .52; transform: none; }
 .form-footer, .detail-actions { background: rgba(18,28,23,.95); border-top-color: var(--line); backdrop-filter: blur(18px); }
 .form-next, .big-btn, .wealth-add, .budget-primary, .export-primary, .people-primary { min-height: 52px; }
 .field input, .field select, .field textarea, .global-search input { background: #17241e; border-color: var(--line) !important; color: var(--text); }
-.empty { border: 1px dashed #3a5144; border-radius: 18px; background: rgba(23,36,30,.54); }
+.empty { border: 1px dashed #3a3a40; border-radius: 18px; background: #121214; }
+.home-widget { border-color: #3a3a40 !important; background: #171719 !important; }
+.home-widget p, .home-widget small { color: var(--muted) !important; }
+.home-widget h2 { color: var(--text) !important; }
+.home-widget button { border-color: #3b8f5a !important; background: var(--green-bg) !important; color: var(--green) !important; }
 
 .desktop-sidebar, .desktop-topbar { display: none; }
 

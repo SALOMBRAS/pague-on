@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+  <script src="/icons.js" defer></script>
   <style>
     :root {
       --bg: #0a0a0a;
@@ -206,7 +206,7 @@
       <div class="nav-links">
         <a href="#inicio">Início</a><a href="#funcionalidades">Funcionalidades</a><a href="#planos">Planos</a><a href="#faq">FAQ</a>
       </div>
-      <div class="nav-actions"><a class="button button-outline header-login" href="/index.html?auth=login">Entrar</a><a class="button button-primary header-download" href="/index.html?auth=register">Criar conta</a></div>
+      <div class="nav-actions"><a class="button button-outline header-login" href="/auth.html?mode=login">Entrar</a><a class="button button-primary header-download" href="/auth.html?mode=register">Criar conta</a></div>
       <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu" aria-controls="mobileDrawer" aria-expanded="false"><i data-lucide="menu" aria-hidden="true"></i></button>
     </nav>
   </header>
@@ -215,7 +215,7 @@
   <aside class="drawer" id="mobileDrawer" aria-label="Menu móvel" aria-hidden="true">
     <div class="drawer-head"><a class="brand" href="#inicio"><span class="brand-mark" aria-hidden="true"></span>Pague-<em>On</em></a><button class="icon-button" id="drawerClose" type="button" aria-label="Fechar menu"><i data-lucide="x" aria-hidden="true"></i></button></div>
     <nav class="drawer-links" aria-label="Navegação móvel"><a href="#inicio">Início</a><a href="#funcionalidades">Funcionalidades</a><a href="#como-funciona">Como funciona</a><a href="#planos">Planos</a><a href="#faq">Dúvidas frequentes</a></nav>
-    <a class="button button-primary" href="/index.html?auth=register"><i data-lucide="arrow-up-right" aria-hidden="true"></i>Iniciar teste grátis</a>
+    <a class="button button-primary" href="/auth.html?mode=register"><i data-lucide="arrow-up-right" aria-hidden="true"></i>Iniciar teste grátis</a>
   </aside>
 
   <main>
@@ -225,7 +225,7 @@
           <span class="eyebrow">Seu dinheiro, no controle</span>
           <h1 class="hero-title"><span id="typedTitle" aria-label="Controle suas finanças sem complicação"></span><span class="cursor" id="typingCursor" aria-hidden="true"></span></h1>
           <p class="hero-subtitle">Dívidas, produtos, lucros e cobranças. Tudo em um só lugar, direto do seu celular.</p>
-          <div class="hero-actions"><a class="button button-primary" href="/index.html?auth=register"><i data-lucide="rocket" aria-hidden="true"></i>Testar grátis por 14 dias</a><a class="button button-ghost" href="#por-dentro"><i data-lucide="play" aria-hidden="true"></i>Ver demonstração</a></div>
+          <div class="hero-actions"><a class="button button-primary" href="/auth.html?mode=register"><i data-lucide="rocket" aria-hidden="true"></i>Testar grátis por 14 dias</a><a class="button button-ghost" href="#por-dentro"><i data-lucide="play" aria-hidden="true"></i>Ver demonstração</a></div>
           <div class="hero-proof"><span class="proof-item"><span class="rating" aria-label="Avaliação de cinco estrelas"><i data-lucide="star" aria-hidden="true"></i><i data-lucide="star" aria-hidden="true"></i><i data-lucide="star" aria-hidden="true"></i><i data-lucide="star" aria-hidden="true"></i><i data-lucide="star" aria-hidden="true"></i></span>4.9 na App Store</span><span class="proof-item"><span class="avatars" aria-hidden="true"><span class="avatar">M</span><span class="avatar">C</span><span class="avatar">A</span><span class="avatar">R</span></span>+10 mil usuários ativos</span></div>
         </div>
         <div class="hero-visual" aria-label="Prévia do aplicativo Pague-On" role="img">
@@ -307,7 +307,7 @@
     <section class="section" id="planos" aria-labelledby="plansTitle">
       <div class="container"><div class="section-head" data-reveal><span class="eyebrow">Sem letras miúdas</span><h2 id="plansTitle">Comece seu teste grátis</h2><p>Use todos os recursos por 14 dias. Você não precisa cadastrar o cartão para começar.</p></div>
         <div class="pricing-toggle" role="group" aria-label="Período de cobrança" data-reveal><button class="active" type="button" data-period="monthly" aria-pressed="true">Mensal</button><button type="button" data-period="yearly" aria-pressed="false">Anual <span class="save-tag">-20%</span></button></div>
-        <div class="plan-grid" data-reveal><article class="plan pro"><span class="popular"><i data-lucide="sparkles" aria-hidden="true"></i>14 dias grátis</span><p class="plan-name">PLANO PRO</p><h3>Controle completo</h3><p class="plan-desc">Todos os recursos para você cuidar do seu dinheiro e do seu negócio.</p><div class="price"><strong id="proPrice">R$ 19,90</strong><span>/mês após o teste</span></div><p class="billing-note" id="billingNote">14 dias grátis, sem cartão. Ao fim do teste, cadastre o cartão para continuar.</p><ul class="feature-list"><li class="included"><i data-lucide="check" aria-hidden="true"></i>Dívidas e produtos ilimitados</li><li class="included"><i data-lucide="check" aria-hidden="true"></i>Lembretes push + WhatsApp</li><li class="included"><i data-lucide="check" aria-hidden="true"></i>Relatórios em PDF e Excel</li><li class="included"><i data-lucide="check" aria-hidden="true"></i>Backup na nuvem</li><li class="included"><i data-lucide="check" aria-hidden="true"></i>Suporte prioritário</li></ul><a class="button button-primary" href="/index.html?auth=register">Começar teste de 14 dias</a></article></div>
+        <div class="plan-grid" data-reveal><article class="plan pro"><span class="popular"><i data-lucide="sparkles" aria-hidden="true"></i>14 dias grátis</span><p class="plan-name">PLANO PRO</p><h3>Controle completo</h3><p class="plan-desc">Todos os recursos para você cuidar do seu dinheiro e do seu negócio.</p><div class="price"><strong id="proPrice">R$ 19,90</strong><span>/mês após o teste</span></div><p class="billing-note" id="billingNote">14 dias grátis, sem cartão. Ao fim do teste, cadastre o cartão para continuar.</p><ul class="feature-list"><li class="included"><i data-lucide="check" aria-hidden="true"></i>Dívidas e produtos ilimitados</li><li class="included"><i data-lucide="check" aria-hidden="true"></i>Lembretes push + WhatsApp</li><li class="included"><i data-lucide="check" aria-hidden="true"></i>Relatórios em PDF e Excel</li><li class="included"><i data-lucide="check" aria-hidden="true"></i>Backup na nuvem</li><li class="included"><i data-lucide="check" aria-hidden="true"></i>Suporte prioritário</li></ul><a class="button button-primary" href="/auth.html?mode=register">Começar teste de 14 dias</a></article></div>
       </div>
     </section>
 
@@ -322,7 +322,7 @@
       </div>
     </section>
 
-    <section class="section final-cta" id="comece" aria-labelledby="ctaTitle"><div class="container"><div class="final-card" data-reveal><span class="eyebrow">Seu próximo passo</span><h2 id="ctaTitle">Pronto para organizar suas finanças?</h2><p>Comece o teste de 14 dias e controle seu dinheiro em menos de dois minutos.</p><a class="button button-primary" href="/index.html?auth=register"><i data-lucide="rocket" aria-hidden="true"></i>Iniciar teste grátis</a><div class="cta-checks"><span><i data-lucide="circle-check-big" aria-hidden="true"></i>14 dias sem cartão</span><span><i data-lucide="circle-check-big" aria-hidden="true"></i>Cobrança só após o teste</span></div></div></div></section>
+    <section class="section final-cta" id="comece" aria-labelledby="ctaTitle"><div class="container"><div class="final-card" data-reveal><span class="eyebrow">Seu próximo passo</span><h2 id="ctaTitle">Pronto para organizar suas finanças?</h2><p>Comece o teste de 14 dias e controle seu dinheiro em menos de dois minutos.</p><a class="button button-primary" href="/auth.html?mode=register"><i data-lucide="rocket" aria-hidden="true"></i>Iniciar teste grátis</a><div class="cta-checks"><span><i data-lucide="circle-check-big" aria-hidden="true"></i>14 dias sem cartão</span><span><i data-lucide="circle-check-big" aria-hidden="true"></i>Cobrança só após o teste</span></div></div></div></section>
   </main>
 
   <footer><div class="container"><div class="footer-grid"><div class="footer-about"><a class="brand" href="#inicio"><span class="brand-mark" aria-hidden="true"></span>Pague-<em>On</em></a><p>Finanças simples, no seu bolso.</p><div class="store-links"><a class="store-link" href="#comece"><i data-lucide="smartphone" aria-hidden="true"></i>Em breve na App Store</a><a class="store-link" href="#comece"><i data-lucide="download" aria-hidden="true"></i>Em breve no Google Play</a></div></div><div class="footer-col"><h3>Produto</h3><a href="#funcionalidades">Funcionalidades</a><a href="#planos">Planos</a><a href="#faq">FAQ</a></div><div class="footer-col"><h3>Empresa</h3><a href="#inicio">Sobre nós</a><a href="#comece">Contato</a></div><div class="footer-col"><h3>Legal</h3><a href="#faq">Termos de uso</a><a href="#faq">Privacidade</a></div></div><div class="copyright"><span>© 2026 Pague-On. Todos os direitos reservados.</span><a href="#inicio">Voltar ao topo ↑</a></div></div></footer>
@@ -346,7 +346,7 @@
     if (reduceMotion) { renderTyped(fullTitle.length); typingCursor.classList.add('finished'); }
     else { let i = 0; const type = () => { renderTyped(i++); if (i <= fullTitle.length) window.setTimeout(type, 42); else typingCursor.classList.add('finished'); }; type(); }
 
-    window.addEventListener('load', () => { if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': 1.9 } }); });
+    window.addEventListener('load', () => window.pagueOnIcons?.render(document));
 
     const header = document.getElementById('siteHeader');
     const progress = document.getElementById('progressBar');

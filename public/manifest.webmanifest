@@ -1,0 +1,13 @@
+{
+  "name": "Pague-On",
+  "short_name": "Pague-On",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00e676",
+  "lang": "pt-BR",
+  "shortcuts": [
+    { "name": "Nova conta", "short_name": "Nova conta", "url": "/index.html#add-debt" },
+    { "name": "Pendências", "short_name": "Pendências", "url": "/index.html#urgent" }
+  ]
+}

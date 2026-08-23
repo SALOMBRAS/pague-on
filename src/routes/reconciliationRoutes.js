@@ -1,0 +1,11 @@
+const express = require('express');
+const auth = require('../middlewares/authMiddleware');
+const controller = require('../controllers/reconciliationController');
+const router = express.Router();
+router.use(auth);
+router.get('/', controller.list);
+router.post('/upload', controller.upload);
+router.post('/match', controller.match);
+router.post('/confirm', controller.confirm);
+router.get('/:id', controller.get);
+module.exports = router;

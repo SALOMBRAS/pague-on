@@ -96,10 +96,16 @@
     if (event.key === 'Escape') document.querySelector('#sheetCancel')?.click() || document.querySelector('[data-close-panel]')?.click();
   });
 
+  new MutationObserver(syncNavigation).observe(app, { attributes: true, subtree: true, attributeFilter: ['class'] });
+  let iconNormalizationQueued = false;
   new MutationObserver((records) => {
-    syncNavigation();
-    records.forEach((record) => record.addedNodes.forEach((node) => { if (node.nodeType === 1) normalizeDecorativeIcons(node); }));
-  }).observe(app, { attributes: true, childList: true, subtree: true, attributeFilter: ['class'] });
+    const containsNewDecorativeIcon = records.some((record) => Array.from(record.addedNodes).some((node) => node.nodeType === 1 && (
+      node.matches?.('i:not([data-lucide]), .dash-greeting') || node.querySelector?.('i:not([data-lucide]), .dash-greeting')
+    )));
+    if (!containsNewDecorativeIcon || iconNormalizationQueued) return;
+    iconNormalizationQueued = true;
+    requestAnimationFrame(() => { iconNormalizationQueued = false; normalizeDecorativeIcons(app); });
+  }).observe(app, { childList: true, subtree: true });
   syncNavigation();
   normalizeDecorativeIcons(app);
 })();

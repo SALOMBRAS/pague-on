@@ -43,6 +43,27 @@
     profile: 'Configurações'
   };
 
+  const decorativeIcons = {
+    '🔔': 'bell', '⌕': 'search', '💬': 'bell-ring', '🛒': 'shopping-cart',
+    '📦': 'package', '💰': 'wallet-cards', '📥': 'arrow-down-left',
+    '📤': 'arrow-up-right', '⚡': 'sparkles', '⏱': 'calendar-days',
+    '▦': 'boxes', '↗': 'trending-up', '↓': 'arrow-down-left', '↑': 'arrow-up-right'
+  };
+  const normalizeDecorativeIcons = (root = document) => {
+    const candidates = [];
+    if (root.matches?.('i:not([data-lucide])')) candidates.push(root);
+    root.querySelectorAll?.('i:not([data-lucide])').forEach((node) => candidates.push(node));
+    candidates.forEach((node) => {
+      const name = decorativeIcons[node.textContent.trim()];
+      if (!name) return;
+      node.dataset.lucide = name;
+      node.setAttribute('aria-hidden', 'true');
+      node.textContent = '';
+    });
+    root.querySelectorAll?.('.dash-greeting h1').forEach((heading) => { heading.textContent = heading.textContent.replace(/\s*👋\s*/g, ''); });
+    window.pagueOnIcons?.render(root);
+  };
+
   const triggerNav = (screen) => {
     const target = document.querySelector(`.bottom-nav [data-nav="${screen}"]`);
     target?.click();
@@ -75,7 +96,10 @@
     if (event.key === 'Escape') document.querySelector('#sheetCancel')?.click() || document.querySelector('[data-close-panel]')?.click();
   });
 
-  new MutationObserver(syncNavigation).observe(app, { attributes: true, subtree: true, attributeFilter: ['class'] });
+  new MutationObserver((records) => {
+    syncNavigation();
+    records.forEach((record) => record.addedNodes.forEach((node) => { if (node.nodeType === 1) normalizeDecorativeIcons(node); }));
+  }).observe(app, { attributes: true, childList: true, subtree: true, attributeFilter: ['class'] });
   syncNavigation();
-  window.pagueOnIcons?.render(app);
+  normalizeDecorativeIcons(app);
 })();

@@ -71,9 +71,7 @@
   }
 
   function showSessionControl() {
-    document.getElementById('auth-session-control')?.remove(); const user = getUser(); if (!user) return;
-    const control = document.createElement('div'); control.id = 'auth-session-control'; control.className = 'auth-session'; control.innerHTML = `<span>Olá, ${String(user.name || 'você').split(' ')[0]}</span><button type="button" aria-label="Sair da sua conta">Sair</button>`;
-    control.querySelector('button').onclick = () => logout(); document.body.append(control);
+    document.getElementById('auth-session-control')?.remove();
   }
   function startSession() { if (document.body.dataset.authPage === 'true') { window.location.replace('/index.html'); return; } document.getElementById('auth-shell')?.setAttribute('hidden', ''); showSessionControl(); window.dispatchEvent(new CustomEvent('pagueon:auth', { detail: { user: getUser() } })); }
   function endSession() { clearSession(); document.getElementById('auth-session-control')?.remove(); showAuth('login', 'Sua sessão terminou. Entre novamente para continuar.'); }

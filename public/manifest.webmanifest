@@ -1,11 +1,17 @@
 {
   "name": "Pague-On",
   "short_name": "Pague-On",
+  "id": "/",
   "start_url": "/index.html",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#00e676",
   "lang": "pt-BR",
+  "icons": [
+    { "src": "/icons/pague-on.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/pague-on-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
   "shortcuts": [
     { "name": "Nova conta", "short_name": "Nova conta", "url": "/index.html#add-debt" },
     { "name": "Pendências", "short_name": "Pendências", "url": "/index.html#urgent" }

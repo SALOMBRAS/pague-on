@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#00e676">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/ui-enhancements.css">
+  <script src="/icons.js" defer></script>
   <title>Pague-On — Caixa</title>
   <style>
     :root { --bg:#0a0a0a; --panel:#111; --surface:#1a1a1a; --hover:#222; --raised:#272727; --line:#303030; --text:#fff; --muted:#a1a1aa; --dim:#676772; --green:#00e676; --green-bg:#123b2b; --red:#ff6464; --red-bg:#431f20; --amber:#ffb74d; --amber-bg:#46351d; --blue:#6aa2ff; --radius:16px; --shadow:0 16px 38px rgba(0,0,0,.32); }
@@ -100,7 +101,7 @@
   <div class="app">
     <section id="mainView">
       <header class="top">
-        <div class="topline"><div><p class="eyebrow">Controle financeiro</p><h1>💰 Caixa</h1></div><div class="top-actions"><button class="icon" id="searchBtn" aria-label="Buscar">⌕</button><button class="icon" id="addBtn" aria-label="Adicionar dívida">＋</button></div></div>
+        <div class="topline"><div><p class="eyebrow">Controle financeiro</p><h1><i data-lucide="wallet-cards" aria-hidden="true"></i> Caixa</h1></div><div class="top-actions"><button class="icon" id="searchBtn" aria-label="Buscar"><i data-lucide="search" aria-hidden="true"></i></button><button class="icon" id="addBtn" aria-label="Adicionar dívida"><i data-lucide="plus" aria-hidden="true"></i></button></div></div>
         <div class="search" id="searchWrap"><label class="search-box">⌕<input id="searchInput" placeholder="Buscar pessoa, descrição ou valor" autocomplete="off"></label></div>
         <nav class="tabs" id="tabs" aria-label="Seções de caixa">
           <button class="tab active" data-tab="all">Tudo</button><button class="tab" data-tab="receive">A Receber</button><button class="tab" data-tab="pay">A Pagar</button><button class="tab" data-tab="recurring">Recorrentes</button><button class="tab" data-tab="history">Histórico</button>
@@ -111,21 +112,21 @@
     </section>
     <section class="home-view" id="homeView"></section>
     <section class="wealth-view" id="wealthView"></section>
-    <section class="stock-view" id="stockView"><header class="stock-head"><div><p class="eyebrow">Produtos e compras</p><h1>📦 Estoque</h1></div><div class="top-actions"><button class="icon" id="stockSearch" aria-label="Buscar produto">⌕</button><button class="icon" id="stockAdd" aria-label="Adicionar produto">＋</button></div></header><nav class="stock-tabs"><button class="stock-tab active" data-stock-tab="products">Meus Produtos</button><button class="stock-tab" data-stock-tab="purchases">Compras</button><button class="stock-tab" data-stock-tab="analysis">Análise</button></nav><div id="stockContent"></div></section>
+    <section class="stock-view" id="stockView"><header class="stock-head"><div><p class="eyebrow">Produtos e compras</p><h1><i data-lucide="package" aria-hidden="true"></i> Estoque</h1></div><div class="top-actions"><button class="icon" id="stockSearch" aria-label="Buscar produto"><i data-lucide="search" aria-hidden="true"></i></button><button class="icon" id="stockAdd" aria-label="Adicionar produto"><i data-lucide="plus" aria-hidden="true"></i></button></div></header><nav class="stock-tabs"><button class="stock-tab active" data-stock-tab="products">Meus Produtos</button><button class="stock-tab" data-stock-tab="purchases">Compras</button><button class="stock-tab" data-stock-tab="analysis">Análise</button></nav><div id="stockContent"></div></section>
     <section class="profile-view" id="profileView"></section>
     <section class="detail" id="detail"></section>
     <section class="stock-detail" id="stockDetail"></section>
-    <nav class="bottom-nav"><button class="nav" data-nav="home"><i>⌂</i>Home</button><button class="nav active" data-nav="caixa"><i>▣</i>Caixa</button><button class="add" id="centerAdd" aria-label="Adicionar">＋</button><button class="nav" data-nav="wealth"><i>↗</i>Patrimônio</button><button class="nav" data-nav="stock"><i>▦</i>Stock</button><button class="nav" data-nav="profile"><i>◉</i>Perfil</button></nav>
+    <nav class="bottom-nav"><button class="nav" data-nav="home"><i data-lucide="house" aria-hidden="true"></i>Home</button><button class="nav active" data-nav="caixa"><i data-lucide="wallet-cards" aria-hidden="true"></i>Caixa</button><button class="add" id="centerAdd" aria-label="Adicionar"><i data-lucide="plus" aria-hidden="true"></i></button><button class="nav" data-nav="wealth"><i data-lucide="chart-pie" aria-hidden="true"></i>Patrimônio</button><button class="nav" data-nav="stock"><i data-lucide="boxes" aria-hidden="true"></i>Stock</button><button class="nav" data-nav="profile"><i data-lucide="user-round" aria-hidden="true"></i>Perfil</button></nav>
     <button class="rules-quick" id="rulesQuick" aria-label="Abrir regras automáticas">⚡ Regras</button>
     <div class="sheet-backdrop" id="sheetBackdrop"></div>
     <section class="sheet" id="sheet" aria-label="Adicionar registro"><div class="handle" id="sheetHandle"></div><h3>O que você quer registrar?</h3><div class="choice-list">
-      <button class="choice" data-create="debt"><i class="choice-icon">💰</i><span><strong>Nova Dívida ou Conta</strong><small>Única, parcelada ou fixa</small></span></button>
-      <button class="choice" data-scan-bill><i class="choice-icon">📷</i><span><strong>Escanear boleto ou conta</strong><small>Foto com preenchimento automático</small></span></button>
-      <button class="choice" data-create="product"><i class="choice-icon">📦</i><span><strong>Cadastrar Produto</strong><small>Com controle de estoque</small></span></button>
-      <button class="choice" data-create="purchase"><i class="choice-icon">🛒</i><span><strong>Registrar Compra</strong><small>Aquisição de mercadoria</small></span></button>
-      <button class="choice" data-create="reminder"><i class="choice-icon">🔔</i><span><strong>Criar Lembrete</strong><small>Alerta de vencimento</small></span></button>
-      <button class="choice" data-create="income"><i class="choice-icon">💵</i><span><strong>Registrar Entrada</strong><small>Dinheiro que entrou</small></span></button>
-      <button class="choice" data-create="expense"><i class="choice-icon">💸</i><span><strong>Registrar Saída</strong><small>Dinheiro que saiu</small></span></button>
+      <button class="choice" data-create="debt"><i class="choice-icon" data-lucide="wallet-cards" aria-hidden="true"></i><span><strong>Nova Dívida ou Conta</strong><small>Única, parcelada ou fixa</small></span></button>
+      <button class="choice" data-scan-bill><i class="choice-icon" data-lucide="search" aria-hidden="true"></i><span><strong>Escanear boleto ou conta</strong><small>Foto com preenchimento automático</small></span></button>
+      <button class="choice" data-create="product"><i class="choice-icon" data-lucide="package" aria-hidden="true"></i><span><strong>Cadastrar Produto</strong><small>Com controle de estoque</small></span></button>
+      <button class="choice" data-create="purchase"><i class="choice-icon" data-lucide="shopping-cart" aria-hidden="true"></i><span><strong>Registrar Compra</strong><small>Aquisição de mercadoria</small></span></button>
+      <button class="choice" data-create="reminder"><i class="choice-icon" data-lucide="bell-ring" aria-hidden="true"></i><span><strong>Criar Lembrete</strong><small>Alerta de vencimento</small></span></button>
+      <button class="choice" data-create="income"><i class="choice-icon" data-lucide="arrow-down-left" aria-hidden="true"></i><span><strong>Registrar Entrada</strong><small>Dinheiro que entrou</small></span></button>
+      <button class="choice" data-create="expense"><i class="choice-icon" data-lucide="arrow-up-right" aria-hidden="true"></i><span><strong>Registrar Saída</strong><small>Dinheiro que saiu</small></span></button>
     </div><button class="sheet-cancel" id="sheetCancel">Cancelar</button></section>
     <section class="form-view" id="formView" aria-live="polite"></section>
     <section class="full-panel" id="notificationPanel"></section>

@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#00e676">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/ui-enhancements.css">
+  <link rel="stylesheet" href="/app-shell.css">
   <script src="/icons.js" defer></script>
   <title>Pague-On — Caixa</title>
   <style>
@@ -116,8 +117,9 @@
     <section class="profile-view" id="profileView"></section>
     <section class="detail" id="detail"></section>
     <section class="stock-detail" id="stockDetail"></section>
-    <nav class="bottom-nav"><button class="nav" data-nav="home"><i data-lucide="house" aria-hidden="true"></i>Home</button><button class="nav active" data-nav="caixa"><i data-lucide="wallet-cards" aria-hidden="true"></i>Caixa</button><button class="add" id="centerAdd" aria-label="Adicionar"><i data-lucide="plus" aria-hidden="true"></i></button><button class="nav" data-nav="wealth"><i data-lucide="chart-pie" aria-hidden="true"></i>Patrimônio</button><button class="nav" data-nav="stock"><i data-lucide="boxes" aria-hidden="true"></i>Stock</button><button class="nav" data-nav="profile"><i data-lucide="user-round" aria-hidden="true"></i>Perfil</button></nav>
-    <button class="rules-quick" id="rulesQuick" aria-label="Abrir regras automáticas">⚡ Regras</button>
+    <nav class="bottom-nav" aria-label="Navegação principal"><button class="nav" data-nav="home"><i data-lucide="house" aria-hidden="true"></i>Início</button><button class="nav active" data-nav="caixa"><i data-lucide="wallet-cards" aria-hidden="true"></i>Contas</button><button class="nav" data-nav="wealth"><i data-lucide="chart-pie" aria-hidden="true"></i>Resumo</button><button class="nav" data-nav="profile"><i data-lucide="user-round" aria-hidden="true"></i>Perfil</button></nav>
+    <button class="mobile-fab" id="centerAdd" aria-label="Adicionar conta"><i data-lucide="plus" aria-hidden="true"></i></button>
+    <button class="rules-quick" id="rulesQuick" aria-label="Abrir regras automáticas"><i data-lucide="sparkles" aria-hidden="true"></i>Regras</button>
     <div class="sheet-backdrop" id="sheetBackdrop"></div>
     <section class="sheet" id="sheet" aria-label="Adicionar registro"><div class="handle" id="sheetHandle"></div><h3>O que você quer registrar?</h3><div class="choice-list">
       <button class="choice" data-create="debt"><i class="choice-icon" data-lucide="wallet-cards" aria-hidden="true"></i><span><strong>Nova Dívida ou Conta</strong><small>Única, parcelada ou fixa</small></span></button>

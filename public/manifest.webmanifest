@@ -3,8 +3,8 @@
   "short_name": "Pague-On",
   "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#00e676",
+  "background_color": "#0b1210",
+  "theme_color": "#32d583",
   "lang": "pt-BR",
   "shortcuts": [
     { "name": "Nova conta", "short_name": "Nova conta", "url": "/index.html#add-debt" },

@@ -1,0 +1,22 @@
+(() => {
+  const KEY = 'pagueon.currency.preference';
+  const fallback = { BRL: { name: 'Real brasileiro', symbol: 'R$', rateToBRL: 1 }, USD: { name: 'Dólar americano', symbol: 'US$', rateToBRL: 5.4 }, EUR: { name: 'Euro', symbol: '€', rateToBRL: 5.85 }, GBP: { name: 'Libra esterlina', symbol: '£', rateToBRL: 6.9 }, ARS: { name: 'Peso argentino', symbol: 'ARS$', rateToBRL: 0.005 }, CAD: { name: 'Dólar canadense', symbol: 'CA$', rateToBRL: 3.95 } };
+  let rates = { ...fallback };
+  const api = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
+  const token = () => localStorage.getItem('pagueon.token');
+  const preferred = () => localStorage.getItem(KEY) || 'BRL';
+  const number = (value) => Number(value || 0);
+  const parse = (value) => { const raw = String(value || '').replace(/\s/g, ''); return Number(raw.includes(',') ? raw.replace(/\./g, '').replace(',', '.') : raw.replace(/[^\d.]/g, '')); };
+  const rate = (code) => number(rates[code]?.rateToBRL || fallback[code]?.rateToBRL || 1);
+  const round = (value) => Number(number(value).toFixed(2));
+  function formatBrl(value) { const code = preferred(); const converted = number(value) / rate(code); try { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: code }).format(converted); } catch (_error) { return `${rates[code]?.symbol || code} ${converted.toFixed(2)}`; } }
+  function selector(id, selected = 'BRL') { return `<select id="currency-${id}" data-currency-for="${id}" aria-label="Moeda do valor" style="min-height:34px;border:1px solid var(--line);border-radius:8px;padding:0 7px;background:var(--hover);color:var(--text);font-size:11px">${Object.entries(rates).map(([code, item]) => `<option value="${code}" ${code === selected ? 'selected' : ''}>${item.symbol} ${code}</option>`).join('')}</select>`; }
+  function toBrl(debt, code = 'BRL') { const conversion = rate(code); const total = number(debt.total ?? debt.totalAmount); const itemAmount = number(debt.amount ?? debt.installmentAmount ?? total); return { ...debt, total: round(total * conversion), amount: round(itemAmount * conversion), currency: code, originalAmount: total, exchangeRate: conversion }; }
+  function bindInput(id) { const input = document.querySelector(`#${id}`); const select = document.querySelector(`#currency-${id}`); const preview = document.querySelector(`[data-currency-preview="${id}"]`); if (!input || !select || !preview) return; const update = () => { const value = parse(input.value); const code = select.value; const converted = value * rate(code); preview.textContent = code === 'BRL' || !value ? '' : `Convertido: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(converted)} · 1 ${code} = ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(rate(code))}`; }; if (!input.dataset.currencyBound) { input.addEventListener('input', update); input.dataset.currencyBound = 'true'; } if (!select.dataset.currencyBound) { select.addEventListener('change', update); select.dataset.currencyBound = 'true'; } update(); }
+  function bindAll() { document.querySelectorAll('[data-currency-for]').forEach((select) => bindInput(select.dataset.currencyFor)); }
+  async function loadRates() { if (!token()) return; try { const response = await fetch(`${api()}/currencies`, { headers: { Authorization: `Bearer ${token()}` } }); const result = await response.json(); if (!response.ok || !Array.isArray(result.data)) return; rates = Object.fromEntries(result.data.map((item) => [item.code, { name: item.name, symbol: item.symbol, rateToBRL: number(item.rateToBRL) }])); bindAll(); window.pagueOnCurrencyActions?.refresh?.(); } catch (_error) { /* As cotações de referência locais continuam disponíveis offline. */ } }
+  async function setPreferred(code) { localStorage.setItem(KEY, code); if (token()) { try { await fetch(`${api()}/auth/me`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` }, body: JSON.stringify({ currency: code }) }); } catch (_error) { /* A preferência será sincronizada quando a conexão voltar. */ } } window.pagueOnCurrencyActions?.refresh?.(); }
+  new MutationObserver(bindAll).observe(document.body, { childList: true, subtree: true }); bindAll(); loadRates();
+  window.pagueOnCurrency = { rates: () => rates, rate, formatBrl, selector, toBrl, bindInput, setPreferred };
+  window.pagueOnCurrencyActions?.refresh?.();
+})();

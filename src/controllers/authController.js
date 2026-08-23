@@ -1,56 +1,31 @@
 const prisma = require('../config/database');
 const authService = require('../services/authService');
-const { registerSchema, loginSchema, refreshTokenSchema, profileSchema, passwordSchema, pinSchema, securitySettingsSchema, webauthnCredentialSchema } = require('../utils/validators');
+const { registerSchema, loginSchema, refreshTokenSchema, passwordResetRequestSchema, passwordResetConfirmSchema, profileSchema, passwordSchema, pinSchema, securitySettingsSchema, webauthnCredentialSchema } = require('../utils/validators');
 const securityService = require('../services/securityService');
 const { sendSuccess } = require('../utils/responseHelper');
 const { publicUser } = require('../utils/serializers');
 const HttpError = require('../utils/httpError');
 const { fileUrl } = require('../middlewares/uploadMiddleware');
 
-async function register(req, res) {
-  const result = await authService.register(registerSchema.parse(req.body));
-  return sendSuccess(res, result, 'Cadastro realizado com sucesso.', 201);
-}
+const refreshCookie = 'pagueon_refresh';
+const refreshTtlMs = Number(process.env.REFRESH_TOKEN_TTL_DAYS || 30) * 24 * 60 * 60 * 1000;
+const cookieOptions = (remember = true) => ({ httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/api/v1/auth', ...(remember ? { maxAge: refreshTtlMs } : {}) });
+const cookieValue = (req, name) => {
+  const value = (req.headers.cookie || '').split(';').map((item) => item.trim()).find((item) => item.startsWith(`${name}=`));
+  return value ? decodeURIComponent(value.slice(name.length + 1)) : null;
+};
+function sendSession(res, result, message, status = 200, remember = true) { res.cookie(refreshCookie, result.refreshToken, cookieOptions(remember)); return sendSuccess(res, { token: result.token, user: result.user }, message, status); }
 
-async function login(req, res) {
-  const result = await authService.login(loginSchema.parse(req.body));
-  return sendSuccess(res, result, 'Login realizado com sucesso.');
-}
-
-async function refresh(req, res) {
-  const result = await authService.refresh(refreshTokenSchema.parse(req.body).refreshToken);
-  return sendSuccess(res, result, 'Sessão renovada com sucesso.');
-}
-
-async function logout(req, res) {
-  const refreshToken = req.body && typeof req.body.refreshToken === 'string' ? req.body.refreshToken : null;
-  await authService.logout(refreshToken);
-  return sendSuccess(res, null, 'Sessão encerrada com sucesso.');
-}
-
-async function me(req, res) {
-  return sendSuccess(res, publicUser(req.user));
-}
-
-async function updateMe(req, res) {
-  const input = profileSchema.parse(req.body);
-  const user = await prisma.user.update({ where: { id: req.user.id }, data: input });
-  return sendSuccess(res, publicUser(user), 'Perfil atualizado com sucesso.');
-}
-
-async function changePassword(req, res) {
-  const input = passwordSchema.parse(req.body);
-  await authService.changePassword(req.user, input.oldPassword, input.newPassword);
-  return sendSuccess(res, null, 'Senha atualizada com sucesso.');
-}
-
-async function uploadAvatar(req, res) {
-  if (!req.file) throw new HttpError(400, 'IMAGE_REQUIRED', 'Envie uma imagem no campo image.');
-  const avatar = fileUrl(req.file);
-  const user = await prisma.user.update({ where: { id: req.user.id }, data: { avatar } });
-  return sendSuccess(res, publicUser(user), 'Foto de perfil atualizada com sucesso.');
-}
-
+async function register(req, res) { const { remember, ...payload } = req.body || {}; const result = await authService.register(registerSchema.parse(payload)); return sendSession(res, result, 'Cadastro realizado com sucesso.', 201, remember !== false); }
+async function login(req, res) { const { remember, email, ...payload } = req.body || {}; const result = await authService.login(loginSchema.parse({ ...payload, identity: payload.identity || email })); return sendSession(res, result, 'Login realizado com sucesso.', 200, remember !== false); }
+async function refresh(req, res) { const token = cookieValue(req, refreshCookie) || req.body?.refreshToken; const result = await authService.refresh(refreshTokenSchema.parse({ refreshToken: token }).refreshToken); return sendSession(res, result, 'Sessão renovada com sucesso.'); }
+async function logout(req, res) { await authService.logout(req.user.id); res.clearCookie(refreshCookie, cookieOptions(false)); return sendSuccess(res, null, 'Sessão encerrada com sucesso.'); }
+async function requestPasswordReset(req, res) { await authService.requestPasswordReset(passwordResetRequestSchema.parse(req.body).identity); return sendSuccess(res, null, 'Se houver uma conta compatível, você receberá as instruções de recuperação.'); }
+async function resetPassword(req, res) { const input = passwordResetConfirmSchema.parse(req.body); await authService.resetPassword(input.token, input.newPassword); return sendSuccess(res, null, 'Senha atualizada. Entre novamente para continuar.'); }
+async function me(req, res) { return sendSuccess(res, publicUser(req.user)); }
+async function updateMe(req, res) { const input = profileSchema.parse(req.body); const user = await prisma.user.update({ where: { id: req.user.id }, data: { ...input, ...(Object.prototype.hasOwnProperty.call(input, 'phone') ? { phoneNormalized: authService.normalizePhone(input.phone) } : {}) } }); return sendSuccess(res, publicUser(user), 'Perfil atualizado com sucesso.'); }
+async function changePassword(req, res) { const input = passwordSchema.parse(req.body); await authService.changePassword(req.user, input.oldPassword, input.newPassword); return sendSuccess(res, null, 'Senha atualizada com sucesso.'); }
+async function uploadAvatar(req, res) { if (!req.file) throw new HttpError(400, 'IMAGE_REQUIRED', 'Envie uma imagem no campo image.'); const user = await prisma.user.update({ where: { id: req.user.id }, data: { avatar: fileUrl(req.file) } }); return sendSuccess(res, publicUser(user), 'Foto de perfil atualizada com sucesso.'); }
 async function security(req, res) { return sendSuccess(res, await securityService.getSecurity(req.user.id)); }
 async function updateSecurity(req, res) { return sendSuccess(res, await securityService.updateSettings(req.user.id, securitySettingsSchema.parse(req.body)), 'Preferências de segurança atualizadas.'); }
 async function setPin(req, res) { return sendSuccess(res, await securityService.setPin(req.user.id, pinSchema.parse(req.body).pin), 'PIN definido com sucesso.'); }
@@ -60,4 +35,4 @@ async function biometricRegister(req, res) { return sendSuccess(res, await secur
 async function biometricAuthenticationOptions(req, res) { return sendSuccess(res, await securityService.authenticationOptions(req.user.id)); }
 async function biometricVerify(req, res) { return sendSuccess(res, await securityService.verifyBiometric(req.user.id, webauthnCredentialSchema.parse(req.body.credential))); }
 
-module.exports = { register, login, refresh, logout, me, updateMe, changePassword, uploadAvatar, security, updateSecurity, setPin, verifyPin, biometricRegistrationOptions, biometricRegister, biometricAuthenticationOptions, biometricVerify };
+module.exports = { register, login, refresh, logout, requestPasswordReset, resetPassword, me, updateMe, changePassword, uploadAvatar, security, updateSecurity, setPin, verifyPin, biometricRegistrationOptions, biometricRegister, biometricAuthenticationOptions, biometricVerify };

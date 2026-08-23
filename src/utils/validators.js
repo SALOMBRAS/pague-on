@@ -24,9 +24,18 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().trim().email().transform((value) => value.toLowerCase()),
+  identity: z.string().trim().min(3).max(255).transform((value) => value.toLowerCase()),
   password: z.string().min(1).max(128),
 });
+
+const passwordResetRequestSchema = z.object({
+  identity: z.string().trim().min(3).max(255).transform((value) => value.toLowerCase()),
+}).strict();
+
+const passwordResetConfirmSchema = z.object({
+  token: z.string().trim().min(32).max(512),
+  newPassword: z.string().min(6).max(128),
+}).strict();
 
 const refreshTokenSchema = z.object({
   refreshToken: z.string().min(32).max(512),
@@ -274,6 +283,8 @@ module.exports = {
   enums,
   registerSchema,
   loginSchema,
+  passwordResetRequestSchema,
+  passwordResetConfirmSchema,
   refreshTokenSchema,
   profileSchema,
   passwordSchema,

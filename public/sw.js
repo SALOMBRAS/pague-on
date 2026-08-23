@@ -1,5 +1,5 @@
-const CACHE_NAME = 'pagueon-shell-v29';
-const APP_SHELL = ['/', '/index.html', '/auth.html', '/auth-enhancements.css?v=ui23', '/icons.js', '/ui-enhancements.css', '/app-shell.css?v=ui29', '/app-shell.js?v=ui29', '/offline.js', '/api.js', '/auth.js', '/security.js', '/export.js', '/scanner-loader.js', '/scanner.js', '/widget.js', '/onboarding.js', '/networth.js', '/reconciliation.js', '/budget.js', '/duplicate.js', '/currency.js', '/statement-import.js', '/push.js', '/people.js', '/manifest.webmanifest'];
+const CACHE_NAME = 'pagueon-shell-v30';
+const APP_SHELL = ['/', '/index.html', '/auth.html', '/auth-enhancements.css?v=ui23', '/icons.js', '/ui-enhancements.css', '/app-shell.css?v=ui30', '/app-shell.js?v=ui29', '/offline.js', '/api.js', '/auth.js', '/security.js', '/export.js', '/scanner-loader.js', '/scanner.js', '/widget.js', '/onboarding.js', '/networth.js', '/reconciliation.js', '/budget.js', '/duplicate.js', '/currency.js', '/statement-import.js', '/push.js', '/people.js', '/manifest.webmanifest'];
 self.addEventListener('install', (event) => { event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', (event) => {

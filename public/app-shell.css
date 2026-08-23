@@ -89,6 +89,7 @@ button:disabled { cursor: not-allowed; opacity: .52; transform: none; }
 .bottom-nav .nav i { display: grid; height: 20px; place-items: center; font-size: 0; }
 .bottom-nav .nav.active { color: var(--green); background: rgba(50,213,131,.12); }
 .bottom-nav .nav.active i { transform: translateY(-1px); }
+.nav-stock-proxy { display: none !important; }
 .mobile-fab {
   position: fixed;
   z-index: 35;

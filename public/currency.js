@@ -3,7 +3,7 @@
   const fallback = { BRL: { name: 'Real brasileiro', symbol: 'R$', rateToBRL: 1 }, USD: { name: 'Dólar americano', symbol: 'US$', rateToBRL: 5.4 }, EUR: { name: 'Euro', symbol: '€', rateToBRL: 5.85 }, GBP: { name: 'Libra esterlina', symbol: '£', rateToBRL: 6.9 }, ARS: { name: 'Peso argentino', symbol: 'ARS$', rateToBRL: 0.005 }, CAD: { name: 'Dólar canadense', symbol: 'CA$', rateToBRL: 3.95 } };
   let rates = { ...fallback };
   const api = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
-  const token = () => localStorage.getItem('pagueon.token');
+  const token = () => window.pagueOnAuth?.getToken?.() || '';
   const preferred = () => localStorage.getItem(KEY) || 'BRL';
   const number = (value) => Number(value || 0);
   const parse = (value) => { const raw = String(value || '').replace(/\s/g, ''); return Number(raw.includes(',') ? raw.replace(/\./g, '').replace(',', '.') : raw.replace(/[^\d.]/g, '')); };

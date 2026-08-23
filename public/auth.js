@@ -1,87 +1,65 @@
 (() => {
   const apiBase = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
-  const keys = { token: 'pagueon.token', legacyToken: 'pagueon_token', refresh: 'pagueon.refresh_token', user: 'pagueon.user', legacyUser: 'pagueon_user' };
+  const keys = { token: 'pagueon.token', user: 'pagueon.user' };
   const rawFetch = window.fetch.bind(window);
   let refreshing = null;
-
-  const readJson = (key) => { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (_error) { return null; } };
-  const getToken = () => localStorage.getItem(keys.token) || localStorage.getItem(keys.legacyToken);
-  const getRefreshToken = () => localStorage.getItem(keys.refresh);
-  const getUser = () => readJson(keys.user) || readJson(keys.legacyUser);
-  const setSession = ({ token, refreshToken, user }) => {
-    localStorage.setItem(keys.token, token); localStorage.setItem(keys.legacyToken, token);
-    if (refreshToken) localStorage.setItem(keys.refresh, refreshToken);
-    localStorage.setItem(keys.user, JSON.stringify(user)); localStorage.setItem(keys.legacyUser, JSON.stringify(user));
-  };
-  const clearSession = () => Object.values(keys).forEach((key) => localStorage.removeItem(key));
-  const isAuthEndpoint = (url) => /\/auth\/(login|register|refresh|logout)$/.test(new URL(url, location.href).pathname);
-  const isApiRequest = (url) => new URL(url, location.href).pathname.startsWith('/api/v1/');
+  const readUser = () => { try { return JSON.parse(sessionStorage.getItem(keys.user) || 'null'); } catch (_error) { return null; } };
+  const getToken = () => sessionStorage.getItem(keys.token);
+  const getUser = () => readUser();
+  const setSession = ({ token, user }) => { sessionStorage.setItem(keys.token, token); sessionStorage.setItem(keys.user, JSON.stringify(user)); };
+  const clearSession = () => { sessionStorage.removeItem(keys.token); sessionStorage.removeItem(keys.user); localStorage.removeItem('pagueon.token'); localStorage.removeItem('pagueon_token'); localStorage.removeItem('pagueon.refresh_token'); };
+  const authPath = (url) => /\/auth\/(login|register|refresh|logout|password-reset\/(request|confirm))$/.test(new URL(url, location.href).pathname);
+  const apiPath = (url) => new URL(url, location.href).pathname.startsWith('/api/v1/');
 
   async function renew() {
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) return false;
-    if (!refreshing) refreshing = rawFetch(`${apiBase()}/auth/refresh`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }) })
-      .then(async (response) => {
-        const result = await response.json();
-        if (!response.ok || !result.success) throw new Error(result.error || 'Sessão expirada');
-        setSession(result.data); return true;
-      }).catch(() => false).finally(() => { refreshing = null; });
+    if (!refreshing) refreshing = rawFetch(`${apiBase()}/auth/refresh`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(async (response) => {
+      const result = await response.json(); if (!response.ok || !result.success) throw new Error(); setSession(result.data); return true;
+    }).catch(() => false).finally(() => { refreshing = null; });
     return refreshing;
   }
-
   async function fetchWithAuth(input, options = {}, retried = false) {
     const url = input instanceof Request ? input.url : input;
     const headers = new Headers(options.headers || (input instanceof Request ? input.headers : undefined));
-    if (isApiRequest(url) && !isAuthEndpoint(url) && getToken() && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${getToken()}`);
-    const response = await rawFetch(input, { ...options, headers });
-    if (response.status === 401 && isApiRequest(url) && !isAuthEndpoint(url) && !retried && await renew()) return fetchWithAuth(input, options, true);
-    if (response.status === 401 && isApiRequest(url) && !isAuthEndpoint(url)) endSession();
+    if (apiPath(url) && !authPath(url) && getToken() && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${getToken()}`);
+    const response = await rawFetch(input, { ...options, headers, credentials: options.credentials || 'include' });
+    if (response.status === 401 && apiPath(url) && !authPath(url) && !retried && await renew()) return fetchWithAuth(input, options, true);
+    if (response.status === 401 && apiPath(url) && !authPath(url)) endSession();
     return response;
   }
 
-  function mountShell() {
-    if (document.getElementById('auth-shell')) return document.getElementById('auth-shell');
-    const style = document.createElement('style');
-    style.textContent = `#auth-shell{position:fixed;z-index:500;inset:0;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 20% 10%,#1e40af55,transparent 32%),radial-gradient(circle at 85% 95%,#05966938,transparent 30%),#0f172a;color:#fff;font-family:Inter,ui-sans-serif,system-ui,sans-serif}.auth-card{width:min(100%,420px);padding:32px;border:1px solid rgba(255,255,255,.14);border-radius:24px;background:rgba(25,33,52,.94);box-shadow:0 24px 80px #0009}.auth-brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}.auth-mark{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#059669;color:#062916;font-weight:900;font-size:19px}.auth-brand b{font-size:17px}.auth-brand small{display:block;color:#b9c5d6;font-size:12px;margin-top:2px}.auth-card h1{margin:0;font-size:26px;letter-spacing:-.6px}.auth-card>p{margin:8px 0 24px;color:#cbd5e1;line-height:1.5;font-size:14px}.auth-field{display:grid;gap:7px;margin-top:15px}.auth-field label{font-size:13px;font-weight:700}.auth-field input{width:100%;min-height:48px;border:1px solid #526176;border-radius:12px;padding:0 13px;background:#101a34;color:#fff;font-size:16px}.auth-field input:focus{outline:3px solid #60a5fa88;border-color:#60a5fa}.auth-actions{display:grid;gap:10px;margin-top:24px}.auth-primary,.auth-secondary{min-height:48px;border-radius:12px;padding:0 14px;font-size:14px;font-weight:800;cursor:pointer;transition:opacity .16s ease,transform .16s ease}.auth-primary{border:0;background:#059669;color:#031b11}.auth-secondary{border:1px solid #526176;background:transparent;color:#fff}.auth-primary:active,.auth-secondary:active{transform:scale(.98)}.auth-primary:disabled{opacity:.6;cursor:wait}.auth-switch{margin:19px 0 0;color:#cbd5e1;text-align:center;font-size:13px}.auth-link{border:0;padding:2px;background:transparent;color:#6ea8ff;font-weight:800;text-decoration:underline;cursor:pointer}.auth-error{margin:0 0 16px;padding:12px;border:1px solid #f87171;border-radius:12px;background:#451d28;color:#fee2e2;font-size:13px;line-height:1.4}.auth-error[hidden]{display:none}.auth-help{margin-top:18px;color:#94a3b8;text-align:center;font-size:12px;line-height:1.5}.auth-session{position:fixed;z-index:60;top:max(12px,env(safe-area-inset-top));right:max(12px,calc((100vw - 620px)/2 + 12px));display:flex;align-items:center;gap:8px;padding:7px 8px 7px 12px;border:1px solid #303030;border-radius:999px;background:#111e;color:#fff;font-size:12px;backdrop-filter:blur(10px)}.auth-session button{min-height:32px;border:0;border-radius:9px;padding:0 10px;background:#263449;color:#fff;font-weight:700;cursor:pointer}@media(max-width:420px){#auth-shell{padding:16px}.auth-card{padding:26px 20px}}@media(prefers-reduced-motion:reduce){.auth-primary,.auth-secondary{transition:none}}`;
-    document.head.append(style);
-    const shell = document.createElement('section'); shell.id = 'auth-shell'; shell.setAttribute('aria-live', 'polite'); document.body.append(shell); return shell;
+  function shell() {
+    let element = document.getElementById('auth-shell'); if (element) return element;
+    const style = document.createElement('style'); style.textContent = '#auth-shell{position:fixed;z-index:500;inset:0;display:grid;place-items:center;padding:24px;background:#0f172a;color:#fff;font-family:Inter,system-ui,sans-serif}.auth-card{width:min(100%,430px);padding:30px;border:1px solid #526176;border-radius:24px;background:#192134;box-shadow:0 24px 80px #0009}.auth-card h1{margin:0;font-size:26px}.auth-card p{color:#cbd5e1;line-height:1.5}.auth-field{display:grid;gap:7px;margin-top:15px}.auth-field input{min-height:48px;border:1px solid #526176;border-radius:12px;padding:0 13px;background:#101a34;color:#fff;font-size:16px}.auth-primary,.auth-secondary{width:100%;min-height:48px;margin-top:14px;border-radius:12px;padding:0 14px;font-weight:800;cursor:pointer}.auth-primary{border:0;background:#32d583;color:#062916}.auth-secondary,.auth-link{border:1px solid #526176;background:transparent;color:#fff}.auth-link{border:0;padding:2px;color:#8ab4ff;text-decoration:underline}.auth-error{margin:14px 0;padding:12px;border:1px solid #f87171;border-radius:12px;background:#451d28;color:#fee2e2}.auth-error[hidden]{display:none}.auth-check{display:flex;gap:9px;align-items:center;margin-top:16px;color:#cbd5e1;font-size:13px}.auth-help{text-align:center;font-size:13px}.auth-session{position:fixed;z-index:60;top:12px;right:12px;display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid #526176;border-radius:999px;background:#111e;color:#fff;font-size:12px}.auth-session button{border:0;border-radius:8px;padding:7px;background:#263449;color:#fff;font-weight:700;cursor:pointer}'; document.head.append(style);
+    element = document.createElement('section'); element.id = 'auth-shell'; element.setAttribute('aria-live', 'polite'); document.body.append(element); return element;
   }
-
-  function showAuth(mode = 'login', message = '') {
-    const shell = mountShell(); shell.hidden = false;
-    const register = mode === 'register';
-    shell.innerHTML = `<form class="auth-card" novalidate><div class="auth-brand"><span class="auth-mark" aria-hidden="true">P</span><div><b>Pague-On</b><small>Seu financeiro, no controle.</small></div></div><h1>${register ? 'Crie sua conta' : 'Que bom ter você de volta'}</h1><p>${register ? 'Comece a organizar vendas, contas e estoque em um só lugar.' : 'Entre para acompanhar suas finanças com segurança.'}</p><div class="auth-error" role="alert" tabindex="-1" ${message ? '' : 'hidden'}>${message}</div>${register ? '<div class="auth-field"><label for="auth-name">Nome completo</label><input id="auth-name" name="name" autocomplete="name" required minlength="2"></div>' : ''}<div class="auth-field"><label for="auth-email">E-mail</label><input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" required></div><div class="auth-field"><label for="auth-password">Senha</label><input id="auth-password" name="password" type="password" autocomplete="${register ? 'new-password' : 'current-password'}" required minlength="6"></div>${register ? '<div class="auth-field"><label for="auth-confirm">Confirme a senha</label><input id="auth-confirm" name="confirm" type="password" autocomplete="new-password" required minlength="6"></div><div class="auth-field"><label for="auth-phone">Telefone <small>(opcional)</small></label><input id="auth-phone" name="phone" type="tel" autocomplete="tel"></div>' : ''}<div class="auth-actions"><button class="auth-primary" type="submit">${register ? 'Criar conta' : 'Entrar'}</button></div><p class="auth-switch">${register ? 'Já tem conta?' : 'Ainda não tem conta?'} <button class="auth-link" type="button" data-switch>${register ? 'Entrar' : 'Criar conta'}</button></p><p class="auth-help">Use seu gerenciador de senhas se quiser. Colar senha é permitido.</p></form>`;
-    shell.querySelector('[data-switch]').onclick = () => showAuth(register ? 'login' : 'register');
-    shell.querySelector('form').onsubmit = async (event) => {
-      event.preventDefault(); const form = new FormData(event.currentTarget); const error = shell.querySelector('.auth-error'); const submit = shell.querySelector('[type=submit]');
-      const payload = Object.fromEntries(form.entries());
-      if (register && payload.password !== payload.confirm) { error.textContent = 'As senhas precisam ser iguais.'; error.hidden = false; error.focus(); return; }
-      submit.disabled = true; submit.textContent = register ? 'Criando conta…' : 'Entrando…'; error.hidden = true;
+  const form = (content) => `<form class="auth-card" novalidate><h1>Pague-On</h1>${content}<div class="auth-error" role="alert" hidden></div></form>`;
+  const actionError = (element, message) => { const error = element.querySelector('.auth-error'); error.textContent = message; error.hidden = false; error.focus(); };
+  function show(mode = 'login', message = '') {
+    const target = shell(); target.hidden = false; const resetToken = new URLSearchParams(location.search).get('reset');
+    if (mode === 'forgot') target.innerHTML = form('<p>Informe seu e-mail ou telefone para receber as instruções de recuperação.</p><label class="auth-field">E-mail ou telefone<input name="identity" autocomplete="username" required></label><button class="auth-primary">Enviar instruções</button><p class="auth-help"><button class="auth-link" type="button" data-mode="login">Voltar ao acesso</button></p>');
+    else if (mode === 'reset') target.innerHTML = form('<p>Defina uma nova senha para sua conta.</p><label class="auth-field">Nova senha<input name="password" type="password" autocomplete="new-password" minlength="6" required></label><label class="auth-field">Confirme a senha<input name="confirm" type="password" autocomplete="new-password" minlength="6" required></label><button class="auth-primary">Atualizar senha</button>');
+    else if (mode === 'register') target.innerHTML = form('<p>Crie sua conta para organizar suas finanças.</p><label class="auth-field">Nome completo<input name="name" autocomplete="name" required minlength="2"></label><label class="auth-field">E-mail<input name="email" type="email" autocomplete="email" required></label><label class="auth-field">Telefone (opcional)<input name="phone" type="tel" autocomplete="tel"></label><label class="auth-field">Senha<input name="password" type="password" autocomplete="new-password" minlength="6" required></label><label class="auth-field">Confirme a senha<input name="confirm" type="password" autocomplete="new-password" minlength="6" required></label><label class="auth-check"><input name="remember" type="checkbox" checked> Manter conectado neste dispositivo</label><button class="auth-primary">Criar conta</button><p class="auth-help">Já tem conta? <button class="auth-link" type="button" data-mode="login">Entrar</button></p>');
+    else target.innerHTML = form(`<p>${message || 'Entre para acompanhar suas finanças com segurança.'}</p><label class="auth-field">E-mail ou telefone<input name="identity" autocomplete="username" required></label><label class="auth-field">Senha<input name="password" type="password" autocomplete="current-password" required></label><label class="auth-check"><input name="remember" type="checkbox" checked> Manter conectado neste dispositivo</label><button class="auth-primary">Entrar</button><button class="auth-secondary" type="button" data-pwa-install hidden>Instalar aplicativo</button><p class="auth-help"><button class="auth-link" type="button" data-mode="forgot">Esqueci minha senha</button><br>Não possui conta? <button class="auth-link" type="button" data-mode="register">Criar conta</button></p>`);
+    target.querySelectorAll('[data-mode]').forEach((button) => button.onclick = () => show(button.dataset.mode));
+    target.querySelector('form').onsubmit = async (event) => {
+      event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget)); const submit = event.currentTarget.querySelector('[type=submit]'); submit.disabled = true;
       try {
-        const response = await rawFetch(`${apiBase()}/auth/${register ? 'register' : 'login'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(register ? { name: payload.name, email: payload.email, password: payload.password, phone: payload.phone || undefined } : { email: payload.email, password: payload.password }) });
-        const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.error || 'Não foi possível concluir a solicitação.');
-        setSession(result.data); startSession();
-      } catch (requestError) { error.textContent = requestError.message || 'Verifique sua conexão e tente novamente.'; error.hidden = false; error.focus(); submit.disabled = false; submit.textContent = register ? 'Criar conta' : 'Entrar'; }
+        let path; let body;
+        if (mode === 'forgot') { path = '/auth/password-reset/request'; body = { identity: values.identity }; }
+        else if (mode === 'reset') { if (!resetToken || values.password !== values.confirm) throw new Error('As senhas precisam ser iguais.'); path = '/auth/password-reset/confirm'; body = { token: resetToken, newPassword: values.password }; }
+        else { if (mode === 'register' && values.password !== values.confirm) throw new Error('As senhas precisam ser iguais.'); path = `/auth/${mode === 'register' ? 'register' : 'login'}`; body = mode === 'register' ? { name: values.name, email: values.email, phone: values.phone || undefined, password: values.password, remember: values.remember === 'on' } : { identity: values.identity, password: values.password, remember: values.remember === 'on' }; }
+        const response = await rawFetch(`${apiBase()}${path}`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const result = await response.json().catch(() => ({})); if (!response.ok || !result.success) throw new Error(result.error || 'Não foi possível concluir a solicitação.');
+        if (mode === 'forgot') show('login', 'Se houver uma conta compatível, você receberá as instruções.'); else if (mode === 'reset') { history.replaceState({}, '', location.pathname); show('login', 'Senha atualizada. Entre novamente.'); } else { setSession(result.data); startSession(); }
+      } catch (error) { actionError(event.currentTarget, error.message || 'Verifique os dados e tente novamente.'); } finally { submit.disabled = false; }
     };
-    shell.querySelector(register ? '#auth-name' : '#auth-email').focus();
+    target.querySelector('input')?.focus(); window.dispatchEvent(new CustomEvent('pagueon:auth-ui-ready')); window.pagueOnPwa?.bind(target);
   }
-
-  function showSessionControl() {
-    document.getElementById('auth-session-control')?.remove(); const user = getUser(); if (!user) return;
-    const control = document.createElement('div'); control.id = 'auth-session-control'; control.className = 'auth-session'; control.innerHTML = `<span>Olá, ${String(user.name || 'você').split(' ')[0]}</span><button type="button" aria-label="Sair da sua conta">Sair</button>`;
-    control.querySelector('button').onclick = () => logout(); document.body.append(control);
-  }
+  function showSessionControl() { document.getElementById('auth-session-control')?.remove(); const user = getUser(); if (!user) return; const control = document.createElement('div'); control.id = 'auth-session-control'; control.className = 'auth-session'; const label = document.createElement('span'); label.textContent = `${String(user.name || 'Você').split(' ')[0]}${user.role ? ` · ${user.role}` : ''}`; const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Sair'; button.onclick = logout; control.append(label, button); document.body.append(control); }
   function startSession() { document.getElementById('auth-shell')?.setAttribute('hidden', ''); showSessionControl(); window.dispatchEvent(new CustomEvent('pagueon:auth', { detail: { user: getUser() } })); }
-  function endSession() { clearSession(); document.getElementById('auth-session-control')?.remove(); showAuth('login', 'Sua sessão terminou. Entre novamente para continuar.'); }
-  async function logout() { const refreshToken = getRefreshToken(); try { if (refreshToken) await rawFetch(`${apiBase()}/auth/logout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }) }); } finally { endSession(); } }
-  async function loadUser() {
-    if (!getToken()) return null;
-    let response = await rawFetch(`${apiBase()}/auth/me`, { headers: { Authorization: `Bearer ${getToken()}` } });
-    if (response.status === 401 && await renew()) response = await rawFetch(`${apiBase()}/auth/me`, { headers: { Authorization: `Bearer ${getToken()}` } });
-    if (!response.ok) return null; const result = await response.json(); if (!result.success) return null; setSession({ token: getToken(), refreshToken: getRefreshToken(), user: result.data }); return result.data;
-  }
-
+  function endSession() { clearSession(); document.getElementById('auth-session-control')?.remove(); show('login', 'Sua sessão terminou. Entre novamente para continuar.'); }
+  async function logout() { try { if (getToken()) await rawFetch(`${apiBase()}/auth/logout`, { method: 'POST', credentials: 'include', headers: { Authorization: `Bearer ${getToken()}` } }); } finally { endSession(); } }
+  async function loadUser() { if (!getToken() && !(await renew())) return null; const response = await rawFetch(`${apiBase()}/auth/me`, { credentials: 'include', headers: { Authorization: `Bearer ${getToken()}` } }); if (!response.ok) return null; const result = await response.json(); if (!result.success) return null; setSession({ token: getToken(), user: result.data }); return result.data; }
   window.pagueOnAuth = { getToken, getUser, isAuthenticated: () => Boolean(getToken()), fetchWithAuth, logout, loadUser };
   window.fetch = (input, options) => fetchWithAuth(input, options);
-  (async () => { const user = await loadUser(); if (user) startSession(); else { clearSession(); showAuth(); } })();
+  (async () => { const reset = new URLSearchParams(location.search).get('reset'); const user = reset ? null : await loadUser(); if (user) startSession(); else { clearSession(); show(reset ? 'reset' : 'login'); } })();
 })();

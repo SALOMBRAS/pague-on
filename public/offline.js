@@ -41,7 +41,7 @@
   async function deviceId() { const db = await open(); const tx = db.transaction('syncMeta', 'readwrite'); const store = tx.objectStore('syncMeta'); let record = await request(store.get('deviceId')); if (!record) { record = { key: 'deviceId', value: operationId() }; store.put(record); } await completed(tx); return record.value; }
   async function sync() {
     if (!navigator.onLine) return setStatus('offline');
-    const token = localStorage.getItem('pagueon.token');
+    const token = window.pagueOnAuth?.getToken?.() || '';
     if (!token) return setStatus('local');
     const changes = await queueItems(); if (!changes.length) return setStatus('online'); setStatus('syncing');
     try {

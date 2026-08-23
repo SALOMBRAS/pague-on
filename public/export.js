@@ -5,7 +5,7 @@
   const safeCell = (value) => { const text = String(value ?? ''); return /^[=+\-@]/.test(text) ? `\t${text}` : text; };
   const download = (contents, name, type) => { const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([contents], { type })); link.download = name; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(link.href), 500); };
   const apiBase = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
-  const token = () => localStorage.getItem('pagueon.token');
+  const token = () => window.pagueOnAuth?.getToken?.() || '';
   const authHeaders = () => ({ Authorization: `Bearer ${token()}` });
   const money = (value) => window.pagueOnLock?.config?.hideValues ? '••••' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
   const date = (value) => value ? new Date(value).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '';

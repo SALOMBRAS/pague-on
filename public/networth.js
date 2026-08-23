@@ -6,7 +6,7 @@
   const read = () => { try { return JSON.parse(localStorage.getItem(ASSET_KEY) || '[]'); } catch (_error) { return []; } };
   const write = (assets) => { localStorage.setItem(ASSET_KEY, JSON.stringify(assets)); window.dispatchEvent(new CustomEvent('pagueon:data-change', { detail: { snapshot: window.pagueOnExportData?.snapshot()?.data } })); };
   const api = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
-  const token = () => localStorage.getItem('pagueon.token');
+  const token = () => window.pagueOnAuth?.getToken?.() || '';
   const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` });
   let remote = null; let loading = false;
   const localSnapshot = () => window.pagueOnExportData?.snapshot()?.data || { debts: [], products: [] };

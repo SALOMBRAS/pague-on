@@ -1,6 +1,6 @@
 (() => {
   const LOCAL_KEY = 'pagueon.statement-imports.v1'; const state = { fileName: '', headers: [], rows: [], mapping: { date: 0, description: 1, amount: 2 }, ofx: false };
-  const host = () => document.querySelector('#statementImportScreen'); const api = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1'; const token = () => localStorage.getItem('pagueon.token');
+  const host = () => document.querySelector('#statementImportScreen'); const api = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1'; const token = () => window.pagueOnAuth?.getToken?.() || '';
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); const money = (value) => window.pagueOnLock?.config?.hideValues ? '••••' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.abs(Number(value || 0)));
   const clean = (value) => String(value || '').trim(); const normalized = (value) => clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   function split(line, delimiter) { const cells = []; let value = ''; let quoted = false; for (let i = 0; i < line.length; i += 1) { const char = line[i]; if (char === '"' && line[i + 1] === '"') { value += '"'; i += 1; } else if (char === '"') quoted = !quoted; else if (char === delimiter && !quoted) { cells.push(value.trim()); value = ''; } else value += char; } cells.push(value.trim()); return cells; }

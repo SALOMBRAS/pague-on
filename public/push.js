@@ -4,8 +4,8 @@
   const preferences = () => ({ ...defaults, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') });
   const save = (value) => localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
   const apiBase = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
-  const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('pagueon.token') || ''}` });
-  const hasSession = () => Boolean(localStorage.getItem('pagueon.token'));
+  const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${window.pagueOnAuth?.getToken?.() || ''}` });
+  const hasSession = () => Boolean(window.pagueOnAuth?.getToken?.());
   const notify = (message) => window.showToast ? window.showToast(message) : alert(message);
   const vapidKey = (value) => {
     const padded = `${value}${'='.repeat((4 - value.length % 4) % 4)}`.replace(/-/g, '+').replace(/_/g, '/');

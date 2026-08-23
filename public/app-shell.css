@@ -221,7 +221,21 @@ button:disabled { cursor: not-allowed; opacity: .52; transform: none; }
   .home-view, .wealth-view, .stock-view, .profile-view { max-width: none; padding: 30px 0 40px; }
   .dashboard-head { padding: 0 0 24px; }.dash-hero { min-height: 178px; padding: 28px; }.dash-quick-row { grid-template-columns: repeat(3, 1fr); gap: 16px; }.dash-section { margin-top: 30px; }.dash-products { grid-template-columns: repeat(3, 1fr); }.dash-actions { grid-template-columns: repeat(4, 1fr); }.dash-chart { min-height: 230px; }
   .profile-view { max-width: 850px; }.profile-hero { border-radius: 18px; }.profile-section { margin-top: 24px; }
-  .sheet-backdrop { z-index: 89; }.sheet { width: min(520px, calc(100vw - 48px)); right: 32px; bottom: 32px; left: auto; max-height: calc(100dvh - 96px); border-radius: 20px; transform: translateY(24px) scale(.98); }.sheet.show { transform: translateY(0) scale(1); }.handle { display: none; }
+  .sheet-backdrop { z-index: 89; }
+  .sheet {
+    right: 32px;
+    bottom: 32px;
+    left: auto;
+    width: min(520px, calc(100vw - 48px));
+    max-height: calc(100dvh - 96px);
+    border-radius: 20px;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(24px) scale(.98);
+  }
+  .sheet.show { visibility: visible; opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+  .handle { display: none; }
   .form-view, .detail, .stock-detail, .full-panel { width: min(760px, calc(100vw - 352px)); left: auto; right: 24px; border-left: 1px solid var(--line); box-shadow: -20px 0 50px rgba(0,0,0,.22); }
   .detail-actions, .form-footer { right: 24px; width: min(760px, calc(100vw - 352px)); }
 }

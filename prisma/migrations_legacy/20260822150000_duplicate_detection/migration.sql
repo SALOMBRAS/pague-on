@@ -1,0 +1,1 @@
+ALTER TABLE "User" ADD COLUMN "duplicateSensitivity" INTEGER NOT NULL DEFAULT 70;

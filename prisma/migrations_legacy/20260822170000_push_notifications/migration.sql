@@ -1,0 +1,29 @@
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'DEBT_OVERDUE';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'BUDGET_ALERT';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'BUDGET_EXCEEDED';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'GOAL_REACHED';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'WEEKLY_DIGEST';
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'MONTHLY_DIGEST';
+
+ALTER TABLE "User" ADD COLUMN "dueReminderDays" INTEGER NOT NULL DEFAULT 3;
+ALTER TABLE "User" ADD COLUMN "budgetAlerts" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "User" ADD COLUMN "stockAlerts" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "User" ADD COLUMN "weeklyDigest" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "User" ADD COLUMN "monthlyDigest" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN "notificationSound" TEXT NOT NULL DEFAULT 'DEFAULT';
+
+CREATE TABLE "PushSubscription" (
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "userId" UUID NOT NULL,
+  "endpoint" TEXT NOT NULL,
+  "p256dh" TEXT NOT NULL,
+  "auth" TEXT NOT NULL,
+  "expirationTime" TIMESTAMP(3),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "PushSubscription_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "PushSubscription_endpoint_key" ON "PushSubscription"("endpoint");
+CREATE INDEX "PushSubscription_userId_idx" ON "PushSubscription"("userId");
+ALTER TABLE "PushSubscription" ADD CONSTRAINT "PushSubscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

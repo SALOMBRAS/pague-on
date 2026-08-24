@@ -6,7 +6,7 @@
   const api = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
   const token = () => localStorage.getItem('pagueon.token');
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
-  const money = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
+  const money = (value) => window.pagueOnLock?.config?.hideValues ? '••••' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
   const date = (value) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value));
   const normalize = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
   function similarity(left, right) { const a = normalize(left).replace(/\s/g, ''); const b = normalize(right).replace(/\s/g, ''); if (!a && !b) return 1; if (!a || !b) return 0; if (a === b) return 1; const row = Array.from({ length: b.length + 1 }, (_item, index) => index); for (let i = 1; i <= a.length; i += 1) { let previous = row[0]; row[0] = i; for (let j = 1; j <= b.length; j += 1) { const old = row[j]; row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + (a[i - 1] === b[j - 1] ? 0 : 1)); previous = old; } } return 1 - row[b.length] / Math.max(a.length, b.length); }

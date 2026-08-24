@@ -1,5 +1,5 @@
 const saleService = require('../services/saleService');
-const { saleCreateSchema, paymentCreateSchema, paySchema, idSchema } = require('../utils/validators');
+const { saleCreateSchema, saleUpdateSchema, paymentCreateSchema, paySchema, idSchema } = require('../utils/validators');
 const { sendSuccess } = require('../utils/responseHelper');
 const { serialize } = require('../utils/serializers');
 const HttpError = require('../utils/httpError');
@@ -25,6 +25,11 @@ async function create(req, res) {
   return sendSuccess(res, serialize(sale), 'Venda registrada, estoque atualizado e cobrança criada.', 201);
 }
 
+async function update(req, res) {
+  const sale = await saleService.updateSale(req.user.id, parseId(req), saleUpdateSchema.parse(req.body));
+  return sendSuccess(res, serialize(sale), 'Venda atualizada com sucesso.');
+}
+
 async function cancel(req, res) {
   const sale = await saleService.cancelSale(req.user.id, parseId(req));
   return sendSuccess(res, serialize(sale), 'Venda cancelada e estoque devolvido.');
@@ -37,4 +42,4 @@ async function pay(req, res) {
 }
 async function recalculate(req, res) { const sale = await saleService.findOwnedSale(req.user.id, parseId(req)); return sendSuccess(res, await interestCalculator.recalculateSaleInterest(sale.id), 'Juros recalculados com sucesso.'); }
 
-module.exports = { list, getById, create, cancel, pay, recalculate };
+module.exports = { list, getById, create, update, cancel, pay, recalculate };

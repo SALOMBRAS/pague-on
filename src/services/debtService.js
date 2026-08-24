@@ -5,6 +5,7 @@ const { createNotification } = require('./notificationService');
 const ruleService = require('./ruleService');
 const budgetService = require('./budgetService');
 const currencyService = require('./currencyService');
+const goalService = require('./goalService');
 
 const debtInclude = {
   installments: { orderBy: { number: 'asc' } },
@@ -237,7 +238,7 @@ async function updateLinkedSalePayment(tx, debt, amount, debtStatus) {
   await tx.sale.update({ where: { id: sale.id }, data: { status } });
 }
 
-async function paySingleDebt(userId, id, paidAmount) {
+async function paySingleDebt(userId, id, paidAmount, goalId) {
   return prisma.$transaction(async (tx) => {
     const debt = await tx.debt.findFirst({ where: { id, userId } });
     if (!debt) throw new HttpError(404, 'DEBT_NOT_FOUND', 'Dívida não encontrada.');
@@ -263,6 +264,11 @@ async function paySingleDebt(userId, id, paidAmount) {
       data: { debtId: debt.id },
     });
     return updated;
+  }).then((debt) => {
+    if (debt.type === 'RECEIVABLE' && debt.status === 'PAID' && goalId) {
+      goalService.deposit(userId, goalId, amount).catch((error) => console.warn('Falha ao depositar na meta:', error.message));
+    }
+    return debt;
   });
 }
 
@@ -347,7 +353,7 @@ async function payRecurringDebt(userId, id, paidAmount) {
   });
 }
 
-async function payDebt(userId, id, paidAmount) {
+async function payDebt(userId, id, paidAmount, goalId) {
   const debt = await findDebt(userId, id, false);
   if (debt.paymentType === 'INSTALLMENT') {
     const next = await prisma.installment.findFirst({ where: { debtId: id, status: { in: ['PENDING', 'OVERDUE'] } }, orderBy: { dueDate: 'asc' } });
@@ -355,7 +361,7 @@ async function payDebt(userId, id, paidAmount) {
     return payInstallment(userId, id, next.id, paidAmount);
   }
   if (debt.paymentType === 'RECURRING') return payRecurringDebt(userId, id, paidAmount);
-  return paySingleDebt(userId, id, paidAmount);
+  return paySingleDebt(userId, id, paidAmount, goalId);
 }
 
 async function cancelRecurringDebt(userId, id) {

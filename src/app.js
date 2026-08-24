@@ -30,6 +30,8 @@ const statementImportRoutes = require('./routes/statementImportRoutes');
 const pushRoutes = require('./routes/pushRoutes');
 const peopleRoutes = require('./routes/peopleRoutes');
 const installmentRoutes = require('./routes/installmentRoutes');
+const syncRoutes = require('./routes/syncRoutes');
+const goalRoutes = require('./routes/goalRoutes');
 const assetController = require('./controllers/assetController');
 
 const app = express();
@@ -87,6 +89,8 @@ app.use('/api/v1/budgets', budgetRoutes);
 app.use('/api/v1/currencies', currencyRoutes);
 app.use('/api/v1/statement-imports', statementImportRoutes);
 app.use('/api/v1/push', pushRoutes);
+app.use('/api/v1/sync', syncRoutes);
+app.use('/api/v1/goals', goalRoutes);
 app.get('/api/v1/net-worth', require('./middlewares/authMiddleware'), assetController.summary);
 
 app.use(notFoundHandler);

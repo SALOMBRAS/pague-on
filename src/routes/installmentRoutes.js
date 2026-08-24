@@ -4,6 +4,7 @@ const controller = require('../controllers/installmentController');
 const router = express.Router();
 router.use(auth);
 router.get('/overdue', controller.overdue);
+router.post('/:id/extra', controller.extra);
 router.post('/:id/pay', controller.pay);
 router.post('/:id/pay-partial', controller.pay);
 router.post('/:id/unpay', controller.unpay);

@@ -191,6 +191,27 @@ const paymentCreateSchema = z.object({
   installmentId: uuid.optional(),
   paidAmount: optionalAmount.optional(),
 }).strict();
+
+const saleUpdateSchema = z.object({
+  customerId: uuid.nullable().optional(),
+  personId: uuid.nullable().optional(),
+  description: z.string().trim().min(2).max(500).optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+  paymentType: z.enum(['SINGLE', 'INSTALLMENT']).optional(),
+  totalInstallments: z.coerce.number().int().min(2).max(360).nullable().optional(),
+  installmentAmount: optionalAmount.nullable().optional(),
+  frequency: enums.frequency.nullable().optional(),
+  firstDueDate: isoDate.optional(),
+  interestType: z.enum(['NONE', 'SIMPLE', 'COMPOUND', 'DAILY', 'FIXED_FEE']).optional(),
+  interestRate: z.coerce.number().min(0).max(1000000).optional(),
+  totalAmount: optionalAmount.optional(),
+  discount: z.coerce.number().min(0).max(100000000).optional(),
+}).strict();
+
+const addExtraSchema = z.object({
+  amount: amount,
+  dueDate: isoDate.optional(),
+}).strict();
 const installmentPaySchema = z.object({ paidAmount: z.coerce.number().positive().max(9999999999).optional(), paymentDate: isoDate.optional(), paymentMethod: z.enum(['CASH', 'PIX', 'CARD', 'TRANSFER', 'OTHER']).optional(), note: z.string().trim().max(1000).nullable().optional() }).strict();
 
 const idSchema = z.object({ id: uuid });
@@ -266,6 +287,8 @@ module.exports = {
   customerCreateSchema,
   customerUpdateSchema,
   saleCreateSchema,
+  saleUpdateSchema,
+  addExtraSchema,
   paymentCreateSchema,
   installmentPaySchema,
   ruleCreateSchema,

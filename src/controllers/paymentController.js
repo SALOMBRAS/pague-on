@@ -7,7 +7,7 @@ async function create(req, res) {
   const payment = paymentCreateSchema.parse(req.body);
   const debt = payment.installmentId
     ? await debtService.payInstallment(req.user.id, payment.debtId, payment.installmentId, payment.paidAmount)
-    : await debtService.payDebt(req.user.id, payment.debtId, payment.paidAmount);
+    : await debtService.payDebt(req.user.id, payment.debtId, payment.paidAmount, req.body.goalId);
   return sendSuccess(res, serialize(debt), 'Pagamento registrado com sucesso.');
 }
 

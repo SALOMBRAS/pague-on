@@ -7,7 +7,7 @@
   const apiBase = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
   const token = () => localStorage.getItem('pagueon.token');
   const authHeaders = () => ({ Authorization: `Bearer ${token()}` });
-  const money = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
+  const money = (value) => window.pagueOnLock?.config?.hideValues ? '••••' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
   const date = (value) => value ? new Date(value).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '';
   const stamp = () => new Date().toISOString().slice(0, 10);
   const source = () => window.pagueOnExportData?.snapshot();

@@ -2,6 +2,7 @@ const prisma = require('../config/database');
 const HttpError = require('../utils/httpError');
 const { createNotification } = require('./notificationService');
 const { recalculateSaleInterest } = require('./interestCalculator');
+const { saleInclude } = require('./saleService');
 
 function round(value) { return Number(Number(value || 0).toFixed(2)); }
 const installmentInclude = { debt: { include: { sale: true, customer: true, installments: { orderBy: { number: 'asc' } } } } };
@@ -66,10 +67,32 @@ async function remindInstallment(userId, id) {
   return { message, whatsappLink: phone ? `https://wa.me/55${phone}?text=${encodeURIComponent(message)}` : null, smsLink: phone ? `sms:${phone}?body=${encodeURIComponent(message)}` : null };
 }
 
+async function addExtraInstallment(userId, id, amount, dueDate) {
+  const sale = await prisma.sale.findFirst({ where: { id, userId }, include: { debt: { include: { installments: { orderBy: { number: 'asc' } } } } } });
+  if (!sale) throw new HttpError(404, 'SALE_NOT_FOUND', 'Venda não encontrada.');
+  if (!sale.debt) throw new HttpError(409, 'SALE_WITHOUT_DEBT', 'Esta venda não possui cobrança vinculada.');
+  const value = round(amount);
+  if (value <= 0) throw new HttpError(400, 'INVALID_AMOUNT', 'Informe um valor de parcela positivo.');
+  const number = (sale.debt.installments.reduce((max, item) => Math.max(max, Number(item.number)), 0)) + 1;
+  const baseDate = dueDate ? new Date(dueDate) : sale.debt.dueDate || new Date();
+  const newTotal = round(Number(sale.debt.totalAmount) + value);
+  const totalInstallments = Number(sale.debt.totalInstallments || 1) + 1;
+  const average = round(newTotal / totalInstallments);
+  const paidAmount = Number(sale.debt.paidAmount || 0);
+  const remaining = round(newTotal - paidAmount);
+  return prisma.$transaction(async (tx) => {
+    await tx.installment.create({ data: { debtId: sale.debt.id, number, amount: value, totalAmount: value, status: 'PENDING', dueDate: baseDate, interestRateAtCreation: Number(sale.interestRate || 0) } });
+    const status = remaining <= 0 ? 'PAID' : paidAmount > 0 ? 'PARTIAL' : 'PENDING';
+    await tx.debt.update({ where: { id: sale.debt.id }, data: { totalAmount: newTotal, installmentAmount: average, totalInstallments, ...(baseDate >= new Date(sale.debt.dueDate) ? { dueDate: baseDate } : {}) } });
+    await tx.sale.update({ where: { id }, data: { totalAmount: newTotal, remainingAmount: remaining, installmentAmount: average, totalInstallments, status } });
+    return tx.sale.findUnique({ where: { id }, include: saleInclude });
+  });
+}
+
 async function overdueInstallments(userId) {
   const sales = await prisma.sale.findMany({ where: { userId, status: { in: ['PENDING', 'PARTIAL'] } }, select: { id: true } });
   await Promise.all(sales.map((sale) => recalculateSaleInterest(sale.id)));
   return prisma.installment.findMany({ where: { debt: { userId, saleId: { not: null } }, status: { in: ['OVERDUE', 'PARTIAL'] }, dueDate: { lt: new Date() } }, include: installmentInclude, orderBy: { dueDate: 'asc' } });
 }
 
-module.exports = { payInstallment, unpayInstallment, remindInstallment, overdueInstallments };
+module.exports = { payInstallment, unpayInstallment, remindInstallment, addExtraInstallment, overdueInstallments };

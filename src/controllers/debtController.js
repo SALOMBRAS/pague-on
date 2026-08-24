@@ -54,7 +54,7 @@ async function remove(req, res) {
 }
 
 async function pay(req, res) {
-  const debt = await debtService.payDebt(req.user.id, parseId(req), paySchema.parse(req.body).paidAmount);
+  const debt = await debtService.payDebt(req.user.id, parseId(req), paySchema.parse(req.body).paidAmount, req.body.goalId);
   return sendSuccess(res, serialize(debt), 'Pagamento registrado com sucesso.');
 }
 

@@ -7,7 +7,7 @@
   const api = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
   const token = () => localStorage.getItem('pagueon.token');
   const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` });
-  const money = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
+  const money = (value) => window.pagueOnLock?.config?.hideValues ? '••••' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
   const monthName = () => new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(state.year, state.month - 1, 1))).replace(/^./, (letter) => letter.toUpperCase());
   const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (_error) { return []; } };
   const write = (items) => localStorage.setItem(KEY, JSON.stringify(items));

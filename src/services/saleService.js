@@ -116,6 +116,101 @@ async function saleDetail(userId, id) {
   return findOwnedSale(userId, id, { include: saleInclude });
 }
 
+async function updateSale(userId, id, input) {
+  return prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.findFirst({
+      where: { id, userId },
+      include: { items: true, customer: true, debt: { include: { installments: { orderBy: { number: 'asc' } } } } },
+    });
+    if (!sale) throw new HttpError(404, 'SALE_NOT_FOUND', 'Venda não encontrada.');
+    if (sale.status === 'CANCELLED') throw new HttpError(409, 'SALE_CANCELLED', 'Esta venda está cancelada.');
+    const hasPaid = Number(sale.paidAmount) > 0 || (sale.debt?.installments || []).some((item) => item.paidAt || item.status === 'PAID');
+    if (hasPaid) throw new HttpError(409, 'INVALID_STATE', 'Não é possível editar: já há parcelas pagas.');
+
+    const financialChanged = input.paymentType !== undefined || input.totalAmount !== undefined || input.totalInstallments !== undefined || input.installmentAmount !== undefined || input.frequency !== undefined || input.firstDueDate !== undefined || input.interestRate !== undefined || input.interestType !== undefined || input.discount !== undefined;
+
+    let customerId = input.customerId !== undefined ? input.customerId : (input.personId !== undefined ? input.personId : sale.customerId);
+    let customer = null;
+    if (customerId) {
+      customer = await tx.customer.findFirst({ where: { id: customerId, userId, isActive: true } });
+      if (!customer) throw new HttpError(400, 'INVALID_CUSTOMER', 'A pessoa selecionada não existe ou está inativa.');
+    }
+    const description = input.description ?? sale.description;
+    const notes = input.notes !== undefined ? input.notes : sale.notes;
+
+    if (!financialChanged) {
+      const saleData = {
+        description,
+        notes,
+        customerId,
+        ...(input.interestType !== undefined ? { interestType: input.interestType } : {}),
+        ...(input.interestRate !== undefined ? { interestRate: Number(input.interestRate) } : {}),
+      };
+      await tx.sale.update({ where: { id }, data: saleData });
+      if (sale.debt) {
+        await tx.debt.update({ where: { id: sale.debt.id }, data: {
+          customerId,
+          description,
+          counterparty: customer?.name || sale.debt.counterparty,
+          counterpartyPhone: customer?.phone !== undefined ? customer?.phone : sale.debt.counterpartyPhone,
+        } });
+      }
+      return tx.sale.findUnique({ where: { id }, include: saleInclude });
+    }
+
+    const paymentType = input.paymentType ?? sale.paymentType;
+    const single = paymentType !== 'INSTALLMENT';
+    const discount = input.discount !== undefined ? Number(input.discount) : Number(sale.discount);
+    const totalAmount = Number((Number(input.totalAmount !== undefined ? input.totalAmount : sale.totalAmount)).toFixed(2));
+    const totalInstallments = single ? 1 : (input.totalInstallments ?? sale.totalInstallments ?? 1);
+    const installmentAmount = single ? null : (input.installmentAmount !== undefined ? Number(input.installmentAmount) : sale.installmentAmount);
+    const frequency = single ? null : (input.frequency ?? sale.frequency ?? 'MONTHLY');
+    const startDate = input.firstDueDate !== undefined ? new Date(input.firstDueDate) : (sale.firstDueDate || sale.debt?.dueDate || sale.soldAt);
+    const interestRate = input.interestRate !== undefined ? Number(input.interestRate) : Number(sale.interestRate);
+    const interestType = input.interestType ?? sale.interestType;
+
+    const installments = buildInstallments({ totalAmount, totalInstallments, installmentAmount, startDate, frequency });
+    const dueDate = installments[0]?.dueDate || startDate;
+
+    await tx.sale.update({ where: { id }, data: {
+      description,
+      notes,
+      customerId,
+      totalAmount,
+      discount,
+      paymentType,
+      totalInstallments: single ? null : totalInstallments,
+      installmentAmount: installmentAmount ?? installments[0]?.amount,
+      frequency,
+      firstDueDate: startDate,
+      interestType,
+      interestRate,
+      remainingAmount: totalAmount,
+      status: 'PENDING',
+    } });
+    if (sale.debt) {
+      await tx.installment.deleteMany({ where: { debtId: sale.debt.id } });
+      await tx.debt.update({ where: { id: sale.debt.id }, data: {
+        customerId,
+        description,
+        counterparty: customer?.name || sale.debt.counterparty,
+        counterpartyPhone: customer?.phone !== undefined ? customer?.phone : sale.debt.counterpartyPhone,
+        paymentType,
+        totalAmount,
+        installmentAmount: installmentAmount ?? installments[0]?.amount,
+        totalInstallments: single ? null : totalInstallments,
+        frequency: single ? null : frequency,
+        startDate,
+        dueDate,
+        status: 'PENDING',
+        isActive: true,
+        installments: { create: installments.map((item) => ({ ...item, totalAmount: item.amount, interestRateAtCreation: interestRate })) },
+      } });
+    }
+    return tx.sale.findUnique({ where: { id }, include: saleInclude });
+  });
+}
+
 async function cancelSale(userId, id) {
   return prisma.$transaction(async (tx) => {
     const sale = await tx.sale.findFirst({ where: { id, userId }, include: { items: true, debt: true } });
@@ -139,4 +234,4 @@ async function paySale(userId, id, payment) {
   return payDebt(userId, sale.debt.id, payment.paidAmount);
 }
 
-module.exports = { saleInclude, createSale, listSales, saleDetail, findOwnedSale, cancelSale, paySale };
+module.exports = { saleInclude, createSale, listSales, saleDetail, updateSale, findOwnedSale, cancelSale, paySale };

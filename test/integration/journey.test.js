@@ -47,3 +47,21 @@ test('journey: venda parcelada → pagamento da 1ª parcela reflete no estado e 
   assert.equal(dashboard.balance.toReceive, 20);
   assert.equal(dashboard.balance.liquid, 20);
 });
+
+test('journey: createSale sem discount normaliza para 0 e não gera NaN', async (t) => {
+  const user = await createTestUser();
+  t.after(() => cleanup(user.id));
+
+  const product = await prisma.product.create({
+    data: { userId: user.id, name: `Produto ND ${user.id}`, costPrice: 10, sellingPrice: 20, profitMargin: 50, stockQuantity: 20 },
+  });
+
+  // sem "discount" no payload: discount vira 0 e totalAmount = subtotal
+  const sale = await saleService.createSale(user.id, {
+    paymentType: 'SINGLE',
+    items: [{ productId: product.id, quantity: 2 }],
+  });
+  assert.ok(!Number.isNaN(Number(sale.totalAmount)), 'totalAmount não pode ser NaN');
+  assert.equal(Number(sale.totalAmount), 40);
+  assert.equal(Number(sale.discount), 0);
+});

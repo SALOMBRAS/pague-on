@@ -7,8 +7,13 @@ const { saleInclude } = require('./saleService');
 function round(value) { return Number(Number(value || 0).toFixed(2)); }
 const installmentInclude = { debt: { include: { sale: true, customer: true, installments: { orderBy: { number: 'asc' } } } } };
 
-async function ownedInstallment(userId, id) {
-  const installment = await prisma.installment.findFirst({ where: { id, debt: { userId } }, include: installmentInclude });
+function scopedDebt(userId, scope = {}) {
+  const customer = scope.role === 'COLLECTOR' ? { collectorId: scope.actorId } : scope.role === 'CLIENT' ? { id: scope.customerId || '__forbidden__' } : undefined;
+  return { userId, ...(customer ? { customer } : {}) };
+}
+
+async function ownedInstallment(userId, id, scope = {}) {
+  const installment = await prisma.installment.findFirst({ where: { id, debt: scopedDebt(userId, scope) }, include: installmentInclude });
   if (!installment) throw new HttpError(404, 'INSTALLMENT_NOT_FOUND', 'Parcela não encontrada.');
   if (!installment.debt.sale) throw new HttpError(409, 'SALE_NOT_FOUND', 'Esta parcela não pertence a uma venda.');
   return installment;
@@ -89,10 +94,12 @@ async function addExtraInstallment(userId, id, amount, dueDate) {
   });
 }
 
-async function overdueInstallments(userId) {
-  const sales = await prisma.sale.findMany({ where: { userId, status: { in: ['PENDING', 'PARTIAL'] } }, select: { id: true } });
+async function overdueInstallments(userId, scope = {}) {
+  const sales = await prisma.sale.findMany({ where: { userId, status: { in: ['PENDING', 'PARTIAL'] }, ...(scope.role === 'COLLECTOR' ? { customer: { collectorId: scope.actorId } } : {}) }, select: { id: true } });
   await Promise.all(sales.map((sale) => recalculateSaleInterest(sale.id)));
-  return prisma.installment.findMany({ where: { debt: { userId, saleId: { not: null } }, status: { in: ['OVERDUE', 'PARTIAL'] }, dueDate: { lt: new Date() } }, include: installmentInclude, orderBy: { dueDate: 'asc' } });
+  return prisma.installment.findMany({ where: { debt: { ...scopedDebt(userId, scope), saleId: { not: null } }, status: { in: ['OVERDUE', 'PARTIAL'] }, dueDate: { lt: new Date() } }, include: installmentInclude, orderBy: { dueDate: 'asc' } });
 }
 
-module.exports = { payInstallment, unpayInstallment, remindInstallment, addExtraInstallment, overdueInstallments };
+async function listScopedInstallments(userId, scope = {}) { return prisma.installment.findMany({ where: { debt: scopedDebt(userId, scope) }, include: installmentInclude, orderBy: { dueDate: 'asc' } }); }
+
+module.exports = { payInstallment, unpayInstallment, remindInstallment, addExtraInstallment, overdueInstallments, listScopedInstallments };

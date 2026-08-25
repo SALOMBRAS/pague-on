@@ -219,6 +219,8 @@ model User {
   workspaceMembers    User[]         @relation("WorkspaceMembers")
   clientProfile       Customer?      @relation("ClientPortal")
   assignedCustomers   Customer[]     @relation("CollectorAssignments")
+  auditEvents         AuditLog[]     @relation("AuditActor")
+  workspaceAuditEvents AuditLog[]    @relation("AuditWorkspace")
   goals               Goal[]
   goalTransactions    GoalTransaction[]
   syncLogs            SyncLog[]
@@ -234,6 +236,28 @@ model PasswordResetToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+}
+
+model AuditLog {
+  id               String   @id @default(uuid()) @db.Uuid
+  workspaceOwnerId String?  @db.Uuid
+  actorId          String?  @db.Uuid
+  eventType        String   @db.VarChar(80)
+  actorEmailHash   String?  @db.VarChar(64)
+  targetId         String?  @db.Uuid
+  targetType       String?  @db.VarChar(80)
+  targetEmailHash  String?  @db.VarChar(64)
+  payload          Json?
+  ipAddress        String?  @db.VarChar(64)
+  userAgent        String?  @db.VarChar(512)
+  legalHold        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  actor            User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  workspaceOwner   User?    @relation("AuditWorkspace", fields: [workspaceOwnerId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceOwnerId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([legalHold, createdAt])
 }
 
 model RefreshToken {

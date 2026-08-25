@@ -104,16 +104,60 @@ async function getDashboard(user) {
   };
 }
 
-function rangeFor(query = {}) { const now = new Date(); const today = startOfUtcDay(now); const period = query.period || 'MONTH'; if (period === 'TODAY') return { start: today, end: endOfUtcDay(today) }; if (period === 'WEEK') return { start: addDays(today, -6), end: endOfUtcDay(today) }; if (period === 'CUSTOM') return { start: startOfUtcDay(new Date(query.startDate)), end: endOfUtcDay(new Date(query.endDate)) }; return { start: new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)), end: endOfUtcDay(today) }; }
-function principalRemaining(debt) { if (debt.paymentType !== 'INSTALLMENT') return Math.max(0, Number(debt.totalAmount) - Number(debt.paidAmount || 0)); return debt.installments.reduce((sum, item) => sum + Math.max(0, Number(item.amount) - Math.min(Number(item.amount), Number(item.paidAmount || 0))), 0); }
-function dueInRange(debts, start, end) { return debts.reduce((sum, debt) => { if (debt.paymentType === 'INSTALLMENT') return sum + debt.installments.filter((item) => item.status !== 'PAID' && item.dueDate >= start && item.dueDate <= end).reduce((n, item) => n + Number(item.totalAmount || item.amount), 0); return sum + (debt.isActive && debt.dueDate >= start && debt.dueDate <= end ? remainingAmount(debt) : 0); }, 0); }
+function rangeFor(query = {}) {
+  const now = new Date(); const today = startOfUtcDay(now); const period = query.period || 'MONTH';
+  if (period === 'TODAY') return { start: today, end: endOfUtcDay(today) };
+  if (period === 'WEEK') return { start: addDays(today, -6), end: endOfUtcDay(today) };
+  if (period === 'CUSTOM') return { start: startOfUtcDay(`${query.startDate}T00:00:00.000Z`), end: endOfUtcDay(`${query.endDate}T00:00:00.000Z`) };
+  return { start: new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)), end: endOfUtcDay(today) };
+}
+
+function principalRemaining(debt) {
+  if (debt.paymentType !== 'INSTALLMENT') return Math.max(0, Number(debt.totalAmount) - Number(debt.paidAmount || 0));
+  return debt.installments.reduce((sum, item) => sum + Math.max(0, Number(item.amount) - Math.min(Number(item.amount), Number(item.paidAmount || 0))), 0);
+}
+
+function dueInRange(debts, start, end) {
+  return debts.reduce((sum, debt) => {
+    if (debt.paymentType === 'INSTALLMENT') return sum + debt.installments.filter((item) => item.status !== 'PAID' && item.dueDate >= start && item.dueDate <= end).reduce((n, item) => n + Number(item.totalAmount || item.amount), 0);
+    return sum + (debt.isActive && debt.dueDate >= start && debt.dueDate <= end ? remainingAmount(debt) : 0);
+  }, 0);
+}
+
+function sumReceived(flows, movements, period, hasAccountFilter) {
+  if (hasAccountFilter) return movements.filter((movement) => movement.type === 'PAYMENT_RECEIVED' && movement.occurredAt >= period.start && movement.occurredAt <= period.end).reduce((sum, movement) => sum + Number(movement.amount), 0);
+  return flows.filter((flow) => flow.date >= period.start && flow.date <= period.end).reduce((sum, flow) => sum + Number(flow.totalIn), 0);
+}
+
 async function getFinancialDashboard(userId, query = {}) {
-  await refreshOverdues(userId); const { start, end } = rangeFor(query); const today = startOfUtcDay(); const week = { start: addDays(today, -6), end: endOfUtcDay(today) }; const month = { start: new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)), end: endOfUtcDay(today) };
+  await refreshOverdues(userId);
+  const { start, end } = rangeFor(query); const today = startOfUtcDay(); const todayRange = { start: today, end: endOfUtcDay(today) };
+  const week = { start: addDays(today, -6), end: endOfUtcDay(today) }; const month = { start: new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)), end: endOfUtcDay(today) };
+  const dataStart = new Date(Math.min(start.getTime(), week.start.getTime(), month.start.getTime()));
   const where = { userId, ...(query.collectorId ? { customer: { collectorId: query.collectorId } } : {}), ...(query.status ? { status: query.status } : {}) };
-  const [debts, customers, accounts, flows] = await Promise.all([prisma.debt.findMany({ where, include: { installments: true }, orderBy: { dueDate: 'asc' } }), prisma.customer.count({ where: { userId, isActive: true, ...(query.collectorId ? { collectorId: query.collectorId } : {}) } }), financialAccounts.listWithBalances(userId), prisma.cashFlow.findMany({ where: { userId, date: { gte: month.start, lte: month.end } }, orderBy: { date: 'asc' } })]);
-  const accountSet = query.cashAccountId ? new Set([query.cashAccountId]) : null; const available = accounts.filter((account) => account.isActive && account.includeInAvailability && (!accountSet || accountSet.has(account.id))).reduce((sum, account) => sum + Number(account.balance), 0); const loans = debts.filter((debt) => debt.type === 'RECEIVABLE' && debt.category === 'LOAN' && debt.isActive); const receivables = debts.filter((debt) => debt.type === 'RECEIVABLE' && debt.isActive); const overdue = receivables.filter((debt) => debt.status === 'OVERDUE').reduce((sum, debt) => sum + remainingAmount(debt), 0); const received = (period) => flows.filter((flow) => flow.date >= period.start && flow.date <= period.end).reduce((sum, flow) => sum + Number(flow.totalIn), 0);
-  const expected = dueInRange(receivables, start, end); const principal = loans.reduce((sum, debt) => sum + principalRemaining(debt), 0); const interest = loans.reduce((sum, debt) => sum + debt.installments.reduce((n, item) => n + Math.max(0, Number(item.totalAmount || item.amount) - Number(item.amount)), 0), 0);
-  return { filters: { period: query.period || 'MONTH', startDate: start, endDate: end }, accounts, metrics: { availableCash: available, capitalInCirculation: principal, totalReceivable: receivables.reduce((sum, debt) => sum + remainingAmount(debt), 0), receivedToday: received({ start: today, end: endOfUtcDay(today) }), dueToday: dueInRange(receivables, today, endOfUtcDay(today)), receivedWeek: received(week), dueWeek: dueInRange(receivables, week.start, week.end), receivedMonth: received(month), dueMonth: dueInRange(receivables, month.start, month.end), overdueTotal: overdue, activeCustomers: customers, activeLoans: loans.length }, charts: { receipts: flows.map((flow) => ({ date: flow.date, value: Number(flow.totalIn) })), lent: loans.filter((loan) => loan.createdAt >= start && loan.createdAt <= end).map((loan) => ({ date: loan.createdAt, value: Number(loan.totalAmount) })), overdue: receivables.filter((debt) => debt.status === 'OVERDUE').map((debt) => ({ date: debt.dueDate, value: remainingAmount(debt) })), composition: { principal, interest, penalties: 0 }, forecastVsReceived: { expected, received: received({ start, end }) } } };
+  const movementWhere = { userId, occurredAt: { gte: dataStart, lte: endOfUtcDay(new Date(Math.max(end.getTime(), month.end.getTime()))) }, ...(query.cashAccountId ? { accountId: query.cashAccountId } : {}) };
+  const [debts, customers, accounts, flows, movements, collectors] = await Promise.all([
+    prisma.debt.findMany({ where, include: { installments: true }, orderBy: { dueDate: 'asc' } }),
+    prisma.customer.count({ where: { userId, isActive: true, ...(query.collectorId ? { collectorId: query.collectorId } : {}) } }),
+    financialAccounts.listWithBalances(userId),
+    prisma.cashFlow.findMany({ where: { userId, date: { gte: dataStart, lte: month.end } }, orderBy: { date: 'asc' } }),
+    prisma.financialMovement.findMany({ where: movementWhere, orderBy: { occurredAt: 'asc' } }),
+    prisma.user.findMany({ where: { workspaceOwnerId: userId, role: 'COLLECTOR' }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+  ]);
+  const hasAccountFilter = Boolean(query.cashAccountId); const accountSet = hasAccountFilter ? new Set([query.cashAccountId]) : null;
+  const available = accounts.filter((account) => account.isActive && account.includeInAvailability && (!accountSet || accountSet.has(account.id))).reduce((sum, account) => sum + Number(account.balance), 0);
+  const loans = debts.filter((debt) => debt.type === 'RECEIVABLE' && debt.category === 'LOAN' && debt.isActive);
+  const receivables = debts.filter((debt) => debt.type === 'RECEIVABLE' && debt.isActive);
+  const overdue = receivables.filter((debt) => debt.status === 'OVERDUE').reduce((sum, debt) => sum + remainingAmount(debt), 0);
+  const received = (period) => sumReceived(flows, movements, period, hasAccountFilter);
+  const expected = dueInRange(receivables, start, end); const principal = loans.reduce((sum, debt) => sum + principalRemaining(debt), 0);
+  const interest = loans.reduce((sum, debt) => sum + debt.installments.reduce((n, item) => n + Math.max(0, Number(item.totalAmount || item.amount) - Number(item.amount)), 0), 0);
+  const receiptSeries = hasAccountFilter ? movements.filter((movement) => movement.type === 'PAYMENT_RECEIVED').map((movement) => ({ date: movement.occurredAt, value: Number(movement.amount) })) : flows.map((flow) => ({ date: flow.date, value: Number(flow.totalIn) }));
+  return {
+    filters: { period: query.period || 'MONTH', startDate: start, endDate: end, collectors }, accounts,
+    metrics: { availableCash: available, capitalInCirculation: principal, totalReceivable: receivables.reduce((sum, debt) => sum + remainingAmount(debt), 0), receivedToday: received(todayRange), dueToday: dueInRange(receivables, todayRange.start, todayRange.end), receivedWeek: received(week), dueWeek: dueInRange(receivables, week.start, week.end), receivedMonth: received(month), dueMonth: dueInRange(receivables, month.start, month.end), overdueTotal: overdue, activeCustomers: customers, activeLoans: loans.length },
+    charts: { receipts: receiptSeries, lent: loans.filter((loan) => loan.createdAt >= start && loan.createdAt <= end).map((loan) => ({ date: loan.createdAt, value: Number(loan.totalAmount) })), overdue: receivables.filter((debt) => debt.status === 'OVERDUE').map((debt) => ({ date: debt.dueDate, value: remainingAmount(debt) })), composition: { principal, interest, penalties: 0 }, forecastVsReceived: { expected, received: received({ start, end }) } },
+  };
 }
 
 module.exports = { getDashboard, getFinancialDashboard, remainingAmount, rangeFor };

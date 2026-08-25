@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { addMonths, nextDueDate, recurringPeriod } = require('../src/utils/dateHelpers');
 const { calculateProfitMargin } = require('../src/utils/calculateProfit');
-const { debtCreateSchema, saleCreateSchema, statementImportSchema, pushSubscriptionSchema } = require('../src/utils/validators');
+const { debtCreateSchema, saleCreateSchema, statementImportSchema, pushSubscriptionSchema, dashboardQuerySchema } = require('../src/utils/validators');
 const { applyToDebtInput } = require('../src/services/ruleService');
 const { parseStatement, score } = require('../src/services/reconciliationService');
 const { effectiveLimit } = require('../src/services/budgetService');
@@ -10,6 +10,7 @@ const { buildInstallments } = require('../src/services/debtService');
 const { calculateInterest } = require('../src/services/interestCalculator');
 const { duplicateScore, similarity } = require('../src/services/duplicateService');
 const { convertAmount } = require('../src/services/currencyService');
+const { rangeFor } = require('../src/services/dashboardService');
 
 test('preserva o último dia válido ao avançar meses', () => {
   const januaryThirtyFirst = new Date('2026-01-31T00:00:00.000Z');
@@ -109,4 +110,13 @@ test('calcula juros diário e composto apenas para parcela vencida', () => {
   const installment = { amount: 100, dueDate: new Date('2026-08-10T00:00:00.000Z'), status: 'PENDING' };
   assert.deepEqual(calculateInterest(installment, { interestType: 'DAILY', interestRate: 2 }, new Date('2026-08-15T00:00:00.000Z')), { interestAmount: 10, daysOverdue: 5, totalAmount: 110, rateApplied: 2 });
   assert.equal(calculateInterest(installment, { interestType: 'COMPOUND', interestRate: 10 }, new Date('2026-08-10T00:00:00.000Z')).interestAmount, 0);
+});
+
+test('valida o período personalizado do dashboard no backend', () => {
+  assert.equal(dashboardQuerySchema.safeParse({ period: 'CUSTOM', startDate: '2026-08-01', endDate: '2026-08-31' }).success, true);
+  assert.equal(dashboardQuerySchema.safeParse({ period: 'CUSTOM', startDate: '2026-08-31', endDate: '2026-08-01' }).success, false);
+  assert.equal(dashboardQuerySchema.safeParse({ period: 'CUSTOM', startDate: '2026-08-01' }).success, false);
+  const range = rangeFor({ period: 'CUSTOM', startDate: '2026-08-01', endDate: '2026-08-31' });
+  assert.equal(range.start.toISOString(), '2026-08-01T00:00:00.000Z');
+  assert.equal(range.end.toISOString(), '2026-08-31T23:59:59.999Z');
 });

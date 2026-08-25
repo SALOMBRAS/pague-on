@@ -3,6 +3,8 @@ const HttpError = require('../utils/httpError');
 const { createNotification } = require('./notificationService');
 const { recalculateSaleInterest } = require('./interestCalculator');
 const { saleInclude } = require('./saleService');
+const { updateDailyCashFlow } = require('./debtService');
+const { recordMovement } = require('./financialAccountService');
 
 function round(value) { return Number(Number(value || 0).toFixed(2)); }
 const installmentInclude = { debt: { include: { sale: true, customer: true, installments: { orderBy: { number: 'asc' } } } } };
@@ -41,8 +43,13 @@ async function payInstallment(userId, id, input) {
   if (value <= 0 || value > totalDue - alreadyPaid + 0.01) throw new HttpError(400, 'INVALID_PAYMENT', 'Informe um valor de pagamento válido.');
   return prisma.$transaction(async (tx) => {
     const paidAmount = round(alreadyPaid + value); const isPaid = paidAmount >= totalDue - 0.01;
-    await tx.installment.update({ where: { id }, data: { paidAmount, paidAt: input.paymentDate || new Date(), paymentMethod: input.paymentMethod || null, note: input.note || null, status: isPaid ? 'PAID' : 'PARTIAL' } });
+    const paidAt = input.paymentDate || new Date();
+    await tx.installment.update({ where: { id }, data: { paidAmount, paidAt, paymentMethod: input.paymentMethod || null, note: input.note || null, status: isPaid ? 'PAID' : 'PARTIAL' } });
     const summary = await syncSaleAndDebt(tx, current.debtId);
+    const principalBefore = Math.min(alreadyPaid, Number(current.amount));
+    const principal = Math.min(value, Math.max(0, Number(current.amount) - principalBefore));
+    await updateDailyCashFlow(tx, userId, 'RECEIVABLE', value, paidAt);
+    await recordMovement({ db: tx, userId, type: 'PAYMENT_RECEIVED', amount: value, occurredAt: paidAt, referenceId: `sale-installment-payment:${id}:${paidAt.toISOString()}`, description: `Parcela ${current.number}: ${current.debt.description}`, principal, interest: Math.max(0, value - principal) });
     await createNotification(tx, userId, { title: 'Parcela registrada', body: `${current.number}ª parcela de ${current.debt.description} ${isPaid ? 'foi paga' : 'recebeu pagamento parcial'}.`, type: 'PAYMENT_RECEIVED', data: { debtId: current.debtId, installmentId: id } });
     const installment = await tx.installment.findUnique({ where: { id } });
     return { installment, sale: summary };
@@ -53,7 +60,10 @@ async function unpayInstallment(userId, id) {
   const current = await ownedInstallment(userId, id);
   if (current.status !== 'PAID' && current.status !== 'PARTIAL') throw new HttpError(409, 'INSTALLMENT_UNPAID', 'Esta parcela ainda não possui pagamento.');
   return prisma.$transaction(async (tx) => {
+    const paidAt = current.paidAt || new Date();
     await tx.installment.update({ where: { id }, data: { paidAmount: null, paidAt: null, paymentMethod: null, note: null, status: new Date(current.dueDate) < new Date() ? 'OVERDUE' : 'PENDING' } });
+    await updateDailyCashFlow(tx, userId, 'RECEIVABLE', -Number(current.paidAmount || 0), paidAt);
+    await recordMovement({ db: tx, userId, type: 'ADJUSTMENT', amount: -Number(current.paidAmount || 0), occurredAt: paidAt, referenceId: `sale-installment-reversal:${id}:${paidAt.toISOString()}`, description: `Estorno da parcela ${current.number}: ${current.debt.description}` });
     return { installment: await tx.installment.findUnique({ where: { id } }), sale: await syncSaleAndDebt(tx, current.debtId) };
   });
 }

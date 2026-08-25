@@ -274,6 +274,17 @@ const assetUpdateSchema = assetCreateSchema.partial().strict();
 const budgetCreateSchema = z.object({ category: enums.category, month: z.coerce.number().int().min(1).max(12), year: z.coerce.number().int().min(2020).max(2200), limitAmount: z.coerce.number().positive().max(9999999999), rollover: z.boolean().default(false), alertAt: z.coerce.number().int().min(1).max(100).default(80) }).strict();
 const budgetUpdateSchema = z.object({ limitAmount: z.coerce.number().positive().max(9999999999).optional(), rollover: z.boolean().optional(), alertAt: z.coerce.number().int().min(1).max(100).optional() }).strict();
 const budgetQuerySchema = z.object({ month: z.coerce.number().int().min(1).max(12).default(new Date().getUTCMonth() + 1), year: z.coerce.number().int().min(2020).max(2200).default(new Date().getUTCFullYear()) }).strict();
+const dashboardQuerySchema = z.object({
+  period: z.enum(['TODAY', 'WEEK', 'MONTH', 'CUSTOM']).default('MONTH'),
+  startDate: z.string().date().optional(),
+  endDate: z.string().date().optional(),
+  cashAccountId: uuid.optional(),
+  collectorId: uuid.optional(),
+  status: enums.debtStatus.optional(),
+}).strict().superRefine((value, context) => {
+  if (value.period === 'CUSTOM' && (!value.startDate || !value.endDate)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['startDate'], message: 'Informe as datas inicial e final do período.' });
+  if (value.startDate && value.endDate && value.startDate > value.endDate) context.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'A data final deve ser posterior à inicial.' });
+});
 const reconciliationUploadSchema = z.object({ fileName: z.string().trim().min(1).max(255), content: z.string().min(1).max(1024 * 1024), accountName: z.string().trim().max(160).nullable().optional() }).strict();
 const reconciliationMatchSchema = z.object({ statementId: uuid }).strict();
 const reconciliationConfirmSchema = z.object({ statementId: uuid, decisions: z.array(z.object({ transactionId: uuid, action: z.enum(['CONFIRM', 'IGNORE', 'CREATE']), debtId: uuid.nullable().optional() }).strict()).min(1).max(500) }).strict();
@@ -318,6 +329,7 @@ module.exports = {
   budgetCreateSchema,
   budgetUpdateSchema,
   budgetQuerySchema,
+  dashboardQuerySchema,
   reconciliationUploadSchema,
   reconciliationMatchSchema,
   reconciliationConfirmSchema,

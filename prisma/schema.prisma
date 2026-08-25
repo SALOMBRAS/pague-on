@@ -13,6 +13,13 @@ enum Plan {
   PRO
 }
 
+enum UserRole {
+  ADMIN
+  MANAGER
+  COLLECTOR
+  CLIENT
+}
+
 enum DebtType {
   RECEIVABLE
   PAYABLE
@@ -169,6 +176,8 @@ model User {
   avatar              String?
   phone               String?
   phoneNormalized     String?        @unique
+  role                UserRole       @default(ADMIN)
+  workspaceOwnerId    String?        @db.Uuid
   plan                Plan           @default(FREE)
   currency            String         @default("BRL")
   theme               String         @default("dark")
@@ -206,6 +215,10 @@ model User {
   pushSubscriptions   PushSubscription[]
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  workspaceOwner      User?          @relation("WorkspaceMembers", fields: [workspaceOwnerId], references: [id], onDelete: Cascade)
+  workspaceMembers    User[]         @relation("WorkspaceMembers")
+  clientProfile       Customer?      @relation("ClientPortal")
+  assignedCustomers   Customer[]     @relation("CollectorAssignments")
   goals               Goal[]
   goalTransactions    GoalTransaction[]
   syncLogs            SyncLog[]
@@ -347,6 +360,8 @@ model Product {
 model Customer {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @db.Uuid
+  collectorId String? @db.Uuid
+  portalUserId String? @unique @db.Uuid
   name      String
   nickname  String?
   phone     String?
@@ -359,10 +374,13 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collector User?    @relation("CollectorAssignments", fields: [collectorId], references: [id], onDelete: SetNull)
+  portalUser User?   @relation("ClientPortal", fields: [portalUserId], references: [id], onDelete: SetNull)
   debts     Debt[]
   sales     Sale[]
 
   @@index([userId, isActive, name])
+  @@index([collectorId, isActive])
 }
 
 model Sale {

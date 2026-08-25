@@ -3,6 +3,7 @@ const auth = require('../middlewares/authMiddleware');
 const controller = require('../controllers/installmentController');
 const router = express.Router();
 router.use(auth);
+router.get('/mine', controller.mine);
 router.get('/overdue', controller.overdue);
 router.post('/:id/extra', controller.extra);
 router.post('/:id/pay', controller.pay);

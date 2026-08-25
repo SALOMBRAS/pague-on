@@ -37,6 +37,9 @@ const passwordResetConfirmSchema = z.object({
   newPassword: z.string().min(6).max(128),
 }).strict();
 
+const memberCreateSchema = z.object({ name: z.string().trim().min(2).max(120), email: z.string().trim().email().max(255).transform((value) => value.toLowerCase()), password: z.string().min(6).max(128), role: z.enum(['MANAGER', 'COLLECTOR', 'CLIENT']), customerId: uuid.optional() }).strict();
+const memberUpdateSchema = z.object({ role: z.enum(['MANAGER', 'COLLECTOR', 'CLIENT']).optional(), customerId: uuid.nullable().optional(), customerIds: z.array(uuid).max(1000).optional() }).strict();
+
 const refreshTokenSchema = z.object({
   refreshToken: z.string().min(32).max(512),
 }).strict();
@@ -285,6 +288,8 @@ module.exports = {
   loginSchema,
   passwordResetRequestSchema,
   passwordResetConfirmSchema,
+  memberCreateSchema,
+  memberUpdateSchema,
   refreshTokenSchema,
   profileSchema,
   passwordSchema,

@@ -5,10 +5,13 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const auth = require('./middlewares/authMiddleware');
+const apiAccessPolicy = require('./middlewares/apiAccessPolicy');
 const { sendSuccess } = require('./utils/responseHelper');
 const { notFoundHandler, errorHandler } = require('./middlewares/errorHandler');
 
 const authRoutes = require('./routes/authRoutes');
+const accessRoutes = require('./routes/accessRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const debtRoutes = require('./routes/debtRoutes');
 const productRoutes = require('./routes/productRoutes');
@@ -68,6 +71,8 @@ app.use(express.static(path.resolve('public')));
 
 app.get('/health', (_req, res) => sendSuccess(res, { status: 'ok', timestamp: new Date().toISOString() }));
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1', (req, res, next) => auth(req, res, (error) => error ? next(error) : apiAccessPolicy(req, res, next)));
+app.use('/api/v1/access', accessRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/debts', debtRoutes);
 app.use('/api/v1/products', productRoutes);

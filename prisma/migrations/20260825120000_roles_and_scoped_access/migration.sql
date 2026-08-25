@@ -1,0 +1,11 @@
+create type "UserRole" as enum ('ADMIN', 'MANAGER', 'COLLECTOR', 'CLIENT');
+alter table "User" add column "role" "UserRole" not null default 'ADMIN';
+alter table "User" add column "workspaceOwnerId" uuid;
+alter table "Customer" add column "collectorId" uuid;
+alter table "Customer" add column "portalUserId" uuid;
+create unique index "Customer_portalUserId_key" on "Customer"("portalUserId");
+create index "User_workspaceOwnerId_idx" on "User"("workspaceOwnerId");
+create index "Customer_collectorId_isActive_idx" on "Customer"("collectorId", "isActive");
+alter table "User" add constraint "User_workspaceOwnerId_fkey" foreign key ("workspaceOwnerId") references "User"("id") on delete cascade on update cascade;
+alter table "Customer" add constraint "Customer_collectorId_fkey" foreign key ("collectorId") references "User"("id") on delete set null on update cascade;
+alter table "Customer" add constraint "Customer_portalUserId_fkey" foreign key ("portalUserId") references "User"("id") on delete set null on update cascade;

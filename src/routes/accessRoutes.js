@@ -4,6 +4,7 @@ const controller = require('../controllers/accessController');
 const router = express.Router();
 router.use(auth);
 router.get('/me', controller.me);
+router.get('/audit', controller.auditTrail);
 router.get('/users', controller.list);
 router.post('/users', controller.create);
 router.put('/users/:id', controller.update);

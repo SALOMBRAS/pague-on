@@ -7,4 +7,6 @@ async function getDashboard(req, res) {
   return sendSuccess(res, serialize(dashboard));
 }
 
-module.exports = { getDashboard };
+async function financial(req, res) { return sendSuccess(res, serialize(await dashboardService.getFinancialDashboard(req.user.id, req.query))); }
+
+module.exports = { getDashboard, financial };

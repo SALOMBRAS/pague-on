@@ -4,5 +4,6 @@ const controller = require('../controllers/dashboardController');
 
 const router = express.Router();
 router.get('/', auth, controller.getDashboard);
+router.get('/financial', auth, controller.financial);
 
 module.exports = router;

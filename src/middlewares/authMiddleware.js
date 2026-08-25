@@ -12,6 +12,7 @@ async function authMiddleware(req, _res, next) {
     const payload = verifyToken(header.slice(7));
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user) throw new HttpError(401, 'INVALID_TOKEN', 'Sessão inválida ou expirada.');
+    if (payload.sv !== user.sessionVersion) throw new HttpError(401, 'INVALID_TOKEN', 'Esta sessão foi encerrada. Entre novamente.');
     req.user = user;
     next();
   } catch (error) {

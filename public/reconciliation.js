@@ -3,7 +3,7 @@
   const state = { statement: null, remote: false };
   const screen = () => document.querySelector('#reconcileScreen');
   const api = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
-  const token = () => localStorage.getItem('pagueon.token');
+  const token = () => window.pagueOnAuth?.getToken?.() || '';
   const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` });
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const money = (value) => window.pagueOnLock?.config?.hideValues ? '••••' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.abs(Number(value || 0)));

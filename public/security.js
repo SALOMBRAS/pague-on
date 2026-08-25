@@ -15,7 +15,7 @@
   const base64UrlToBuffer = (value) => { const base64 = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '='); return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0)); };
   const bufferToBase64Url = (buffer) => btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
   const api = () => location.port === '5500' ? 'http://localhost:3000/api/v1/auth' : '/api/v1/auth';
-  const authHeaders = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('pagueon.token') || ''}` });
+  const authHeaders = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${window.pagueOnAuth?.getToken?.() || ''}` });
 
   function renderLock(message = '') {
     const security = config(); const locked = security.lockedUntil > Date.now(); const dots = Array.from({ length: 6 }, (_, index) => `<i class="pin-dot ${index < pin.length ? 'filled' : ''}"></i>`).join('');
@@ -45,7 +45,7 @@
   }
   async function authenticateBiometric() {
     if (!window.PublicKeyCredential) return renderLock('Biometria não é suportada neste navegador.');
-    const token = localStorage.getItem('pagueon.token'); if (!token) return renderLock('Faça login na conta sincronizada para usar biometria.');
+    const token = window.pagueOnAuth?.getToken?.(); if (!token) return renderLock('Faça login na conta sincronizada para usar biometria.');
     try {
       const optionsResponse = await fetch(`${api()}/biometric/authentication/options`, { method: 'POST', headers: authHeaders() }); const optionsResult = await optionsResponse.json(); if (!optionsResponse.ok) throw new Error(optionsResult.error);
       const options = optionsResult.data; options.challenge = base64UrlToBuffer(options.challenge); options.allowCredentials = (options.allowCredentials || []).map((credential) => ({ ...credential, id: base64UrlToBuffer(credential.id) }));
@@ -55,7 +55,7 @@
   }
   async function registerBiometric() {
     if (!window.PublicKeyCredential || !(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())) throw new Error('Biometria ou Face ID não está disponível neste dispositivo.');
-    const token = localStorage.getItem('pagueon.token'); if (!token) throw new Error('Faça login na conta sincronizada antes de ativar biometria.');
+    const token = window.pagueOnAuth?.getToken?.(); if (!token) throw new Error('Faça login na conta sincronizada antes de ativar biometria.');
     const response = await fetch(`${api()}/biometric/registration/options`, { method: 'POST', headers: authHeaders() }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Não foi possível iniciar a biometria.'); const options = result.data; options.challenge = base64UrlToBuffer(options.challenge); options.user.id = base64UrlToBuffer(options.user.id); options.excludeCredentials = (options.excludeCredentials || []).map((credential) => ({ ...credential, id: base64UrlToBuffer(credential.id) }));
     const credential = await navigator.credentials.create({ publicKey: options }); const data = { id: credential.id, rawId: bufferToBase64Url(credential.rawId), type: credential.type, response: { clientDataJSON: bufferToBase64Url(credential.response.clientDataJSON), attestationObject: bufferToBase64Url(credential.response.attestationObject), transports: credential.response.getTransports?.() || [] } };
     const verify = await fetch(`${api()}/biometric/registration/verify`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ credential: data }) }); const verified = await verify.json(); if (!verify.ok) throw new Error(verified.error || 'Não foi possível ativar a biometria.'); const security = config(); security.biometricPreferred = true; save(security); emit();

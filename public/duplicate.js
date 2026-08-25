@@ -4,7 +4,7 @@
   const frequency = { Semanal: 'WEEKLY', Quinzenal: 'BIWEEKLY', Mensal: 'MONTHLY', Bimestral: 'BIMONTHLY', Trimestral: 'QUARTERLY', Semestral: 'SEMIANNUAL', Anual: 'ANNUAL' };
   const sensitivity = () => Number(localStorage.getItem(KEY) || 70);
   const api = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
-  const token = () => localStorage.getItem('pagueon.token');
+  const token = () => window.pagueOnAuth?.getToken?.() || '';
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const money = (value) => window.pagueOnLock?.config?.hideValues ? '••••' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
   const date = (value) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value));

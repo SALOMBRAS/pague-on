@@ -38,8 +38,9 @@ async function createSale(userId, input) {
       return { productId: product.id, name: product.name, quantity: item.quantity, unitPrice, unitCost: Number(product.costPrice), total };
     });
     const subtotal = items.reduce((total, item) => total + item.total, 0);
-    if (input.discount > subtotal) throw new HttpError(400, 'INVALID_DISCOUNT', 'O desconto não pode ser maior que o total da venda.');
-    const totalAmount = Number((subtotal - input.discount).toFixed(2));
+    const discount = Number(input.discount ?? 0);
+    if (discount > subtotal) throw new HttpError(400, 'INVALID_DISCOUNT', 'O desconto não pode ser maior que o total da venda.');
+    const totalAmount = Number((subtotal - discount).toFixed(2));
     if (totalAmount <= 0) throw new HttpError(400, 'INVALID_SALE_TOTAL', 'O total da venda deve ser maior que zero.');
     const installments = input.paymentType === 'INSTALLMENT'
       ? buildInstallments({ totalAmount, totalInstallments: input.totalInstallments, installmentAmount: input.installmentAmount, startDate, frequency: input.frequency })
@@ -51,7 +52,7 @@ async function createSale(userId, input) {
         userId,
         customerId,
         totalAmount,
-        discount: input.discount,
+        discount,
         interestRate: input.interestRate,
         interestType: input.interestType,
         paymentType: input.paymentType,

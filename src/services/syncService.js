@@ -76,9 +76,12 @@ function mapProductPayload(payload) {
   if (p.image !== undefined) mapped.image = p.image;
 
   // profitMargin é required sem default no schema; derivamos do custo/venda como
-  // o productService faz (usa 0 quando faltar um dos preços — mesmo do backend).
+  // o productService faz. Sem os dois preços não dá para derivar, então usamos 0
+  // (fallback igual ao do backend) para a criação não falhar.
   if (mapped.costPrice !== undefined && mapped.sellingPrice !== undefined) {
     mapped.profitMargin = calculateProfitMargin(mapped.costPrice, mapped.sellingPrice);
+  } else {
+    mapped.profitMargin = 0;
   }
   return mapped;
 }

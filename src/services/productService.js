@@ -11,7 +11,7 @@ async function findOwnedProduct(userId, id, options = {}) {
 function withMargin(input) {
   const costPrice = input.costPrice;
   const sellingPrice = input.sellingPrice;
-  if (costPrice === undefined || sellingPrice === undefined) return input;
+  if (costPrice === undefined || sellingPrice === undefined) return { ...input, profitMargin: 0 };
   return { ...input, profitMargin: calculateProfitMargin(costPrice, sellingPrice) };
 }
 

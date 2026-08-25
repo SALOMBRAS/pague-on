@@ -6,6 +6,7 @@ const ruleService = require('./ruleService');
 const budgetService = require('./budgetService');
 const currencyService = require('./currencyService');
 const goalService = require('./goalService');
+const { recordMovement } = require('./financialAccountService');
 
 const debtInclude = {
   installments: { orderBy: { number: 'asc' } },
@@ -102,6 +103,9 @@ async function createDebt(userId, input) {
       },
       include: debtInclude,
     });
+    if (debt.type === 'RECEIVABLE' && debt.category === 'LOAN') {
+      await recordMovement({ db: tx, userId, type: 'LOAN_DISBURSEMENT', amount: debt.totalAmount, occurredAt: debt.startDate, referenceId: `loan-disbursement:${debt.id}`, description: `Liberação: ${debt.description}`, principal: debt.totalAmount });
+    }
     return debt;
   });
   await ruleService.recordApplications(userId, debt, ruleResult.applications);
@@ -256,6 +260,7 @@ async function paySingleDebt(userId, id, paidAmount, goalId) {
       data: { status, isActive: !isComplete, paidAt: isComplete ? now : null, paidAmount: newPaidAmount },
     });
     await updateDailyCashFlow(tx, userId, debt.type, amount, now);
+    await recordMovement({ db: tx, userId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `debt-payment:${debt.id}:${now.toISOString()}`, description: `Pagamento: ${debt.description}`, principal: debt.category === 'LOAN' ? amount : 0 });
     await updateLinkedSalePayment(tx, debt, amount, status);
     await createNotification(tx, userId, {
       title: 'Pagamento registrado',
@@ -299,6 +304,8 @@ async function payInstallment(userId, debtId, installmentId, paidAmount) {
       include: debtInclude,
     });
     await updateDailyCashFlow(tx, userId, debt.type, amount, now);
+    const principal = Math.min(amount, Number(installment.amount));
+    await recordMovement({ db: tx, userId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `installment-payment:${installment.id}:${now.toISOString()}`, description: `Parcela ${installment.number}: ${debt.description}`, principal: debt.category === 'LOAN' ? principal : 0, interest: debt.category === 'LOAN' ? Math.max(0, amount - principal) : 0 });
     await updateLinkedSalePayment(tx, debt, amount, isComplete ? 'PAID' : 'PENDING');
     await createNotification(tx, userId, {
       title: 'Parcela registrada',
@@ -342,6 +349,7 @@ async function payRecurringDebt(userId, id, paidAmount) {
       include: debtInclude,
     });
     await updateDailyCashFlow(tx, userId, debt.type, amount, now);
+    await recordMovement({ db: tx, userId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `recurring-payment:${current.id}:${now.toISOString()}`, description: `Pagamento recorrente: ${debt.description}` });
     await updateLinkedSalePayment(tx, debt, amount, shouldEnd ? 'PAID' : 'PENDING');
     await createNotification(tx, userId, {
       title: 'Pagamento recorrente registrado',

@@ -43,12 +43,43 @@ async function recordMovement({ db = prisma, userId, accountId, type, amount, oc
   const resolvedReference = referenceId || `manual:${crypto.randomUUID()}`;
   const account = accountId ? await db.financialAccount.findFirst({ where: { id: accountId, userId, isActive: true } }) : await ensureDefaultAccount(userId, db);
   if (!account) throw new HttpError(400, 'FINANCIAL_ACCOUNT_UNAVAILABLE', 'Conta financeira não encontrada ou inativa.');
+  const closing = await db.financialCashClosing.findFirst({ where: { accountId: account.id, userId, closedThrough: { gte: startOfUtcDay(occurredAt) } }, orderBy: { closedThrough: 'desc' } });
+  if (closing) throw new HttpError(409, 'FINANCIAL_PERIOD_CLOSED', 'O período deste caixa já foi fechado. Faça um lançamento compensatório na data atual.');
   return db.financialMovement.upsert({
     where: { userId_referenceId: { userId, referenceId: resolvedReference } },
     create: { userId, accountId: account.id, type, amount, occurredAt: startOfUtcDay(occurredAt), referenceId: resolvedReference, description, category, origin, paymentMethod, customerId, debtId, collectorId, responsibleUserId, operationId, reversalOfId, principal, interest, penalty },
     update: {},
   });
 }
+
+async function adjustment(userId, input, responsibleUserId = null) {
+  const amount = input.direction === 'DEBIT' ? -Math.abs(input.amount) : Math.abs(input.amount);
+  return recordMovement({ userId, accountId: input.accountId, type: 'ADJUSTMENT', amount, occurredAt: input.occurredAt || new Date(), referenceId: `adjustment:${crypto.randomUUID()}`, description: input.reason, category: input.category || null, origin: 'COMPENSATING_ADJUSTMENT', responsibleUserId, operationId: crypto.randomUUID() });
+}
+
+async function reverseMovement(userId, movementId, reason, responsibleUserId = null) {
+  return prisma.$transaction(async (tx) => {
+    const original = await tx.financialMovement.findFirst({ where: { id: movementId, userId } });
+    if (!original) throw new HttpError(404, 'FINANCIAL_MOVEMENT_NOT_FOUND', 'Movimentação não encontrada.');
+    const priorReversal = await tx.financialMovement.findFirst({ where: { userId, reversalOfId: original.id } });
+    if (priorReversal) throw new HttpError(409, 'FINANCIAL_MOVEMENT_REVERSED', 'Esta movimentação já possui um estorno.');
+    const amount = signedAmount(original) < 0 ? Math.abs(Number(original.amount)) : -Math.abs(Number(original.amount));
+    return recordMovement({ db: tx, userId, accountId: original.accountId, type: 'REVERSAL', amount, occurredAt: new Date(), referenceId: `reversal:${original.id}`, description: `Estorno: ${reason}`, category: original.category, origin: 'REVERSAL', customerId: original.customerId, debtId: original.debtId, collectorId: original.collectorId, responsibleUserId, operationId: original.operationId || crypto.randomUUID(), reversalOfId: original.id, principal: -Number(original.principal), interest: -Number(original.interest), penalty: -Number(original.penalty) });
+  });
+}
+
+async function closeAccount(userId, input, responsibleUserId = null) {
+  return prisma.$transaction(async (tx) => {
+    const account = await getAccount(userId, input.accountId, tx);
+    const closedThrough = endOfUtcDay(`${input.closedThrough}T00:00:00.000Z`);
+    const movements = await tx.financialMovement.findMany({ where: { userId, accountId: account.id, occurredAt: { lte: closedThrough } }, select: { type: true, amount: true } });
+    const ledgerBalance = balanceFor(account, movements);
+    const countedBalance = Number(input.countedBalance);
+    return tx.financialCashClosing.create({ data: { userId, accountId: account.id, closedThrough, ledgerBalance, countedBalance, difference: Number((countedBalance - ledgerBalance).toFixed(2)), notes: input.notes || null, responsibleUserId } });
+  });
+}
+
+async function listClosings(userId, accountId = null) { return prisma.financialCashClosing.findMany({ where: { userId, ...(accountId ? { accountId } : {}) }, include: { account: { select: { id: true, name: true } } }, orderBy: { closedThrough: 'desc' } }); }
 
 async function transfer(userId, input, responsibleUserId = null) {
   if (input.fromAccountId === input.toAccountId) throw new HttpError(400, 'SAME_FINANCIAL_ACCOUNT', 'Escolha contas diferentes para a transferência.');
@@ -103,4 +134,4 @@ async function statement(userId, query = {}) {
   return { accounts: await listWithBalances(userId), rows };
 }
 
-module.exports = { ensureDefaultAccount, listWithBalances, getAccount, createAccount, updateAccount, recordMovement, transfer, statement, signedAmount, balanceFor };
+module.exports = { ensureDefaultAccount, listWithBalances, getAccount, createAccount, updateAccount, recordMovement, transfer, adjustment, reverseMovement, closeAccount, listClosings, statement, signedAmount, balanceFor };

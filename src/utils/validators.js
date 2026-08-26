@@ -129,6 +129,9 @@ const debtUpdateSchema = z.object({
 
 const paySchema = z.object({ paidAmount: optionalAmount.optional(), cashAccountId: uuid.optional(), goalId: uuid.optional() }).strict();
 const financialTransferSchema = z.object({ fromAccountId: uuid, toAccountId: uuid, amount: z.coerce.number().positive().max(9999999999), occurredAt: isoDate.optional(), description: z.string().trim().max(500).nullable().optional(), paymentMethod: z.string().trim().max(40).nullable().optional() }).strict().refine((value) => value.fromAccountId !== value.toAccountId, { path: ['toAccountId'], message: 'Escolha contas diferentes para a transferência.' });
+const financialAdjustmentSchema = z.object({ accountId: uuid, direction: z.enum(['CREDIT', 'DEBIT']), amount: z.coerce.number().positive().max(9999999999), occurredAt: isoDate.optional(), category: z.string().trim().max(80).nullable().optional(), reason: z.string().trim().min(5).max(500) }).strict();
+const financialReversalSchema = z.object({ reason: z.string().trim().min(5).max(500) }).strict();
+const financialClosingSchema = z.object({ accountId: uuid, closedThrough: z.string().date(), countedBalance: z.coerce.number().min(-9999999999).max(9999999999), notes: z.string().trim().max(1000).nullable().optional() }).strict();
 
 const productCreateSchema = z.object({
   name: z.string().trim().min(2).max(200),
@@ -319,6 +322,9 @@ module.exports = {
   debtUpdateSchema,
   paySchema,
   financialTransferSchema,
+  financialAdjustmentSchema,
+  financialReversalSchema,
+  financialClosingSchema,
   productCreateSchema,
   productUpdateSchema,
   purchaseCreateSchema,

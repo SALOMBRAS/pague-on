@@ -3,7 +3,7 @@ const prisma = require('../config/database');
 const HttpError = require('../utils/httpError');
 const { startOfUtcDay, endOfUtcDay } = require('../utils/dateHelpers');
 
-const debitTypes = new Set(['LOAN_DISBURSEMENT', 'EXPENSE_PAID']);
+const debitTypes = new Set(['LOAN_DISBURSEMENT', 'EXPENSE_PAID', 'TRANSFER_OUT']);
 const signedAmount = (movement) => debitTypes.has(movement.type) ? -Number(movement.amount) : Number(movement.amount);
 const balanceFor = (account, movements) => Number(account.openingBalance) + movements.reduce((sum, movement) => sum + signedAmount(movement), 0);
 
@@ -50,6 +50,20 @@ async function recordMovement({ db = prisma, userId, accountId, type, amount, oc
   });
 }
 
+async function transfer(userId, input, responsibleUserId = null) {
+  if (input.fromAccountId === input.toAccountId) throw new HttpError(400, 'SAME_FINANCIAL_ACCOUNT', 'Escolha contas diferentes para a transferência.');
+  return prisma.$transaction(async (tx) => {
+    const operationId = crypto.randomUUID();
+    const occurredAt = input.occurredAt || new Date();
+    const description = input.description || 'Transferência entre caixas';
+    const [debit, credit] = await Promise.all([
+      recordMovement({ db: tx, userId, accountId: input.fromAccountId, type: 'TRANSFER_OUT', amount: input.amount, occurredAt, referenceId: `transfer-out:${operationId}`, description, origin: 'TRANSFER', paymentMethod: input.paymentMethod, responsibleUserId, operationId }),
+      recordMovement({ db: tx, userId, accountId: input.toAccountId, type: 'TRANSFER_IN', amount: input.amount, occurredAt, referenceId: `transfer-in:${operationId}`, description, origin: 'TRANSFER', paymentMethod: input.paymentMethod, responsibleUserId, operationId }),
+    ]);
+    return { operationId, debit, credit };
+  });
+}
+
 function movementWhere(userId, query = {}) {
   const occurredAt = {};
   if (query.startDate) occurredAt.gte = startOfUtcDay(`${query.startDate}T00:00:00.000Z`);
@@ -89,4 +103,4 @@ async function statement(userId, query = {}) {
   return { accounts: await listWithBalances(userId), rows };
 }
 
-module.exports = { ensureDefaultAccount, listWithBalances, getAccount, createAccount, updateAccount, recordMovement, statement, signedAmount, balanceFor };
+module.exports = { ensureDefaultAccount, listWithBalances, getAccount, createAccount, updateAccount, recordMovement, transfer, statement, signedAmount, balanceFor };

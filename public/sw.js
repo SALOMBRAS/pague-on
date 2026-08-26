@@ -62,7 +62,12 @@ const store = (request, response) => { if (cacheable(response)) { const clone = 
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-  if (request.method !== 'GET' || new URL(request.url).pathname.startsWith('/api/')) return;
+  const url = new URL(request.url);
+  // Cross-origin não passa por aqui. A CSP do documento tem connect-src 'self',
+  // então um fetch() do worker para fonts.googleapis.com é bloqueado — e o
+  // fallback devolvia HTML no lugar do CSS, que o navegador recusa por MIME.
+  // Fora do worker o mesmo <link> é regido por style-src, que permite as fontes.
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 
   // Navegação: rede primeiro. O HTML é quem decide para onde o usuário vai —
   // servi-lo do cache prendia '/' numa versão antiga (o app em vez da landing)

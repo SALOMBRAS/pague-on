@@ -49,7 +49,7 @@ async function payInstallment(userId, id, input) {
     const principalBefore = Math.min(alreadyPaid, Number(current.amount));
     const principal = Math.min(value, Math.max(0, Number(current.amount) - principalBefore));
     await updateDailyCashFlow(tx, userId, 'RECEIVABLE', value, paidAt);
-    await recordMovement({ db: tx, userId, type: 'PAYMENT_RECEIVED', amount: value, occurredAt: paidAt, referenceId: `sale-installment-payment:${id}:${paidAt.toISOString()}`, description: `Parcela ${current.number}: ${current.debt.description}`, principal, interest: Math.max(0, value - principal) });
+    await recordMovement({ db: tx, userId, accountId: input.cashAccountId, type: 'PAYMENT_RECEIVED', amount: value, occurredAt: paidAt, referenceId: `sale-installment-payment:${id}:${paidAt.toISOString()}`, description: `Parcela ${current.number}: ${current.debt.description}`, category: current.debt.category, origin: 'SALE_INSTALLMENT_PAYMENT', debtId: current.debtId, customerId: current.debt.customerId, paymentMethod: input.paymentMethod, principal, interest: Math.max(0, value - principal) });
     await createNotification(tx, userId, { title: 'Parcela registrada', body: `${current.number}ª parcela de ${current.debt.description} ${isPaid ? 'foi paga' : 'recebeu pagamento parcial'}.`, type: 'PAYMENT_RECEIVED', data: { debtId: current.debtId, installmentId: id } });
     const installment = await tx.installment.findUnique({ where: { id } });
     return { installment, sale: summary };

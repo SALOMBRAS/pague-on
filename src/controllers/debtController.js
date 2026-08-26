@@ -54,14 +54,16 @@ async function remove(req, res) {
 }
 
 async function pay(req, res) {
-  const debt = await debtService.payDebt(req.user.id, parseId(req), paySchema.parse(req.body).paidAmount, req.body.goalId);
+  const input = paySchema.parse(req.body);
+  const debt = await debtService.payDebt(req.user.id, parseId(req), input.paidAmount, input.goalId, input.cashAccountId);
   return sendSuccess(res, serialize(debt), 'Pagamento registrado com sucesso.');
 }
 
 async function payInstallment(req, res) {
   const debtId = parseId(req);
   const installmentId = idSchema.parse({ id: req.params.installmentId }).id;
-  const debt = await debtService.payInstallment(req.user.id, debtId, installmentId, paySchema.parse(req.body).paidAmount);
+  const input = paySchema.parse(req.body);
+  const debt = await debtService.payInstallment(req.user.id, debtId, installmentId, input.paidAmount, input.cashAccountId);
   return sendSuccess(res, serialize(debt), 'Parcela marcada como paga.');
 }
 

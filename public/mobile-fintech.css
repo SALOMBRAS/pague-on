@@ -1,0 +1,160 @@
+/* Pague On mobile PWA — visual layer kept separate from the desktop dashboard. */
+:root {
+  --pague-bg: #07150e;
+  --pague-surface: #0f2117;
+  --pague-surface-raised: #152b1f;
+  --pague-line: rgba(194, 238, 211, .13);
+  --pague-text: #f3fbf6;
+  --pague-muted: #a9bdb0;
+  --pague-dim: #789083;
+  --pague-primary: #00c853;
+  --pague-primary-strong: #00a948;
+  --pague-primary-soft: rgba(0, 200, 83, .14);
+  --pague-danger: #ff7d7d;
+  --pague-danger-soft: rgba(255, 91, 91, .13);
+  --pague-warning: #ffd166;
+  --pague-warning-soft: rgba(255, 209, 102, .13);
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --bg: var(--pague-bg);
+    --panel: #0b1a11;
+    --surface: var(--pague-surface);
+    --hover: var(--pague-surface-raised);
+    --raised: #1a3525;
+    --line: var(--pague-line);
+    --text: var(--pague-text);
+    --muted: var(--pague-muted);
+    --dim: var(--pague-dim);
+    --green: var(--pague-primary);
+    --green-strong: var(--pague-primary-strong);
+    --green-bg: var(--pague-primary-soft);
+    --red: var(--pague-danger);
+    --red-bg: var(--pague-danger-soft);
+    --amber: var(--pague-warning);
+    --amber-bg: var(--pague-warning-soft);
+    --on-green: #032b13;
+    --shadow: 0 22px 54px rgba(0, 0, 0, .3);
+  }
+
+  html { background: var(--pague-bg); }
+  body {
+    background:
+      radial-gradient(circle at 88% -8%, rgba(0, 200, 83, .16), transparent 28rem),
+      radial-gradient(circle at -14% 32%, rgba(18, 115, 70, .16), transparent 22rem),
+      var(--pague-bg);
+  }
+
+  .app {
+    max-width: 680px;
+    background: transparent;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .top {
+    padding-top: max(18px, env(safe-area-inset-top));
+    background: linear-gradient(180deg, rgba(7, 21, 14, .97) 66%, rgba(7, 21, 14, 0));
+  }
+  .topline h1, .dashboard-head h1 { font-size: clamp(1.45rem, 6vw, 1.85rem); letter-spacing: -.04em; }
+  .eyebrow { color: var(--pague-dim); font-weight: 700; letter-spacing: .045em; text-transform: uppercase; }
+  .icon {
+    border-color: var(--pague-line);
+    border-radius: 14px;
+    background: rgba(21, 43, 31, .82);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .icon:active, .dash-action:active, .bottom-nav .nav:active { background: var(--pague-primary-soft); }
+
+  .tabs { gap: 22px; margin-top: 20px; }
+  .tab { min-height: 44px; color: var(--pague-muted); font-size: 13px; }
+  .tab.active { color: var(--pague-primary); border-bottom-width: 3px; }
+  .chips { gap: 8px; margin-top: 12px; }
+  .chip { min-height: 36px; padding-inline: 13px; border-color: var(--pague-line); background: rgba(15, 33, 23, .9); }
+  .chip.active { border-color: rgba(0, 200, 83, .56); background: var(--pague-primary-soft); }
+
+  .dash-hero, .wealth-hero, .home-widget {
+    border: 1px solid rgba(63, 224, 132, .28);
+    background:
+      radial-gradient(circle at 105% -20%, rgba(0, 225, 100, .28), transparent 48%),
+      linear-gradient(135deg, #123b26, #0b2417 68%);
+    box-shadow: 0 18px 34px rgba(0, 0, 0, .16);
+  }
+  .dash-hero { border-radius: 22px; }
+  .dash-hero small, .dash-hero p, .wealth-hero small, .wealth-hero p { color: #c2e4ce; }
+  .dash-hero b, .wealth-hero b { font-variant-numeric: tabular-nums; }
+
+  .stat, .dash-summary-card, .dash-quick, .dash-chart, .dash-section > .empty,
+  .debt, .recurring, .history, .product-card, .purchase-card, .settings-card,
+  .goal-card, .wealth-group, .financial-card {
+    border-color: var(--pague-line);
+    background: rgba(15, 33, 23, .94);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025), 0 10px 24px rgba(0, 0, 0, .12);
+  }
+  .stat, .dash-summary-card { border-radius: 16px; }
+  .stat span, .dash-summary-card span { color: var(--pague-muted); }
+  .stat b, .dash-summary-card b { font-variant-numeric: tabular-nums; }
+  .debt { border-left-width: 4px; border-radius: 18px; }
+  .debt.today { border-left-color: var(--pague-warning); }
+
+  .dash-action {
+    min-height: 82px;
+    border-color: var(--pague-line);
+    border-radius: 16px;
+    background: rgba(15, 33, 23, .94);
+  }
+  .dash-action i { background: var(--pague-primary-soft); color: var(--pague-primary); }
+  .dash-chart { border-radius: 20px; }
+  .dash-bar { background: linear-gradient(180deg, #35df82, #00a948); }
+  .dash-reminder { border-color: rgba(255, 209, 102, .38); background: linear-gradient(135deg, #392c12, #231d12); }
+
+  .bottom-nav {
+    left: 0;
+    width: 100%;
+    height: calc(74px + env(safe-area-inset-bottom));
+    padding: 7px 10px max(8px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--pague-line) !important;
+    border-radius: 20px 20px 0 0;
+    background: rgba(8, 24, 16, .96) !important;
+    box-shadow: 0 -12px 28px rgba(0,0,0,.18);
+    transform: none;
+  }
+  .bottom-nav .nav { min-width: 52px; min-height: 52px; border-radius: 13px; color: var(--pague-dim); }
+  .bottom-nav .nav.active { background: var(--pague-primary-soft); color: var(--pague-primary); }
+  .bottom-nav .add {
+    width: 52px;
+    height: 52px;
+    border-radius: 17px;
+    background: linear-gradient(145deg, #24dc73, #00ae4a);
+    box-shadow: 0 9px 22px rgba(0, 200, 83, .24);
+  }
+  .rules-quick { border-color: rgba(0, 200, 83, .38); background: rgba(9, 39, 22, .96); }
+
+  .sheet, .form-view, .full-panel, .detail, .stock-detail {
+    background: var(--pague-bg);
+    border-color: var(--pague-line);
+  }
+  .choice, .form-card, .field input, .field select, .field textarea {
+    border-color: var(--pague-line);
+    background: var(--pague-surface);
+  }
+  .form-next, .big-btn, .wealth-add, .goals-add, .export-primary, .people-primary {
+    background: linear-gradient(145deg, #22db71, #00ad49);
+    color: #032b13;
+    box-shadow: 0 10px 22px rgba(0, 200, 83, .18);
+  }
+  .form-next:disabled, .big-btn:disabled { box-shadow: none; }
+
+  .connection-status { color: #66e99b; }
+  .toast { border: 1px solid var(--pague-line); background: #173223; color: var(--pague-text); }
+}
+
+@media (min-width: 621px) and (max-width: 1023px) {
+  body { padding: 0; }
+  .app { min-height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
+  .bottom-nav { bottom: 0; border-radius: 20px 20px 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

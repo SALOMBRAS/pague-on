@@ -43,6 +43,10 @@ const collectorRoutes = require('./routes/collectorRoutes');
 const assetController = require('./controllers/assetController');
 
 const app = express();
+// Trust proxy: em serverless (Vercel) e atrás de proxy, o Express precisa confiar
+// no header X-Forwarded-For para req.ip e o rate-limit funcionarem. Sem isso,
+// express-rate-limit lança ERR_ERL_UNEXPECTED_X_FORWARDED_FOR (500 em toda rota).
+app.set('trust proxy', 1);
 const localOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 const configuredOrigins = (process.env.FRONTEND_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean);
 

@@ -1,34 +1,14 @@
-/* Pague On desktop dashboard — a dedicated large-screen visual shell. */
+/* Pague On desktop dashboard — a dedicated large-screen visual shell.
+   Tokens/temas vêm de tokens.css (tema claro no desktop por padrão; suporta
+   dark via data-theme). Aqui ficam só regras de layout + cores por papel. */
 @media (min-width: 1024px) {
-  :root {
-    --bg: #f6f8f7;
-    --panel: #ffffff;
-    --surface: #ffffff;
-    --hover: #edf6f0;
-    --raised: #e4f1e9;
-    --line: #dce8e1;
-    --text: #14221a;
-    --muted: #5f7267;
-    --dim: #829287;
-    --green: #008a4a;
-    --green-strong: #006f3c;
-    --green-bg: #e0f6e8;
-    --red: #bc2d2d;
-    --red-bg: #fce9e9;
-    --amber: #9a5d00;
-    --amber-bg: #fff4d9;
-    --blue: #1769aa;
-    --on-green: #ffffff;
-    --shadow: 0 14px 34px rgba(27, 60, 40, .08);
-  }
-
-  html, body { background: #f6f8f7; }
+  html, body { background: var(--bg); }
   body { color: var(--text); }
-  .app { background: #f6f8f7; }
+  .app { background: var(--bg); }
   .side-nav {
     width: 264px;
     padding: 24px 16px 18px;
-    background: #ffffff;
+    background: var(--surface);
     border-right-color: var(--line);
     box-shadow: 12px 0 34px rgba(27, 60, 40, .035);
   }
@@ -52,24 +32,26 @@
   .desk-top {
     min-height: 88px;
     padding: 24px 34px 12px;
-    background: rgba(246, 248, 247, .92);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
     backdrop-filter: blur(14px);
   }
   .desk-top h1 { color: var(--text); font-size: 26px; }
   .desk-top .new-charge {
     min-height: 46px;
     border-radius: 12px;
-    background: #008a4a;
-    color: #fff;
+    background: var(--green);
+    color: var(--on-green);
     box-shadow: 0 10px 18px rgba(0, 138, 74, .16);
   }
-  .desk-top .new-charge:hover { background: #006f3c; }
+  .desk-top .new-charge:hover { background: var(--green-strong); }
+  .desk-actions { display: flex; align-items: center; gap: 10px; }
+  .desk-top .icon { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
   .top { padding: 0 34px 8px; background: transparent; }
   .tabs { gap: 28px; border-bottom: 1px solid var(--line); }
   .tab { min-height: 44px; color: var(--muted); }
   .tab.active { color: var(--green); border-bottom-width: 3px; }
-  .chip { border-color: var(--line); background: #fff; color: var(--muted); }
-  .chip.active { border-color: #93d8ae; background: var(--green-bg); color: var(--green); }
+  .chip { border-color: var(--line); background: var(--surface); color: var(--muted); }
+  .chip.active { border-color: var(--green); background: var(--green-bg); color: var(--green); }
 
   main { max-width: 1540px; padding: 18px 34px 40px; }
   .home-view, .wealth-view, .stock-view, .profile-view { max-width: 1540px; padding-inline: 34px; }
@@ -84,27 +66,33 @@
   .stat, .debt, .recurring, .history, .product-card, .purchase-card, .settings-card,
   .goal-card, .wealth-group, .financial-card {
     border-color: var(--line);
-    background: #fff;
+    background: var(--surface);
     box-shadow: var(--shadow);
   }
   .dash-summary-card, .dash-quick, .stat { border-radius: 14px; }
   .dash-summary-card span, .dash-quick span, .stat span { color: var(--muted); }
   .dash-summary-card b, .dash-quick b, .stat b { font-variant-numeric: tabular-nums; }
-  .dash-action { border-color: var(--line); background: #fff; color: var(--text); }
-  .dash-action:hover { border-color: #a8dabb; background: var(--hover); }
+  .dash-action { border-color: var(--line); background: var(--surface); color: var(--text); }
+  .dash-action:hover { border-color: color-mix(in srgb, var(--green) 40%, var(--line)); background: var(--hover); }
   .dash-action i { background: var(--green-bg); color: var(--green); }
   .dash-chart { border-radius: 18px; }
-  .dash-bars { background: repeating-linear-gradient(to bottom, transparent 0 25px, #edf2ef 26px 27px); border-bottom-color: var(--line); }
+  .dash-bars { background: repeating-linear-gradient(to bottom, transparent 0 25px, var(--line) 26px 27px); border-bottom-color: var(--line); }
   .dash-bar { background: linear-gradient(180deg, #36c978, #008a4a); }
-  .dash-reminder { border-color: #ecd28f; background: #fff9e9; }
-  .dash-reminder span { color: #69531d; }
+  .dash-reminder { border-color: var(--amber); background: var(--amber-bg); }
+  .dash-reminder span { color: var(--amber); }
 
   .debt { border-left-width: 4px; }
-  .debt:hover { border-color: #b7dfc5; box-shadow: 0 16px 30px rgba(27, 60, 40, .1); }
-  .field input, .field select, .field textarea, .search-box { border-color: var(--line); background: #fff; color: var(--text); }
-  .detail, .stock-detail, .form-view, .full-panel, .sheet { background: #f6f8f7; }
-  .form-next, .big-btn, .wealth-add, .goals-add, .export-primary, .people-primary { background: #008a4a; color: #fff; }
-  .form-next:hover, .big-btn:hover, .wealth-add:hover, .goals-add:hover { background: #006f3c; }
-  .toast { border: 1px solid var(--line); background: #173a27; color: #fff; }
-  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline-color: #008a4a; }
+  .debt:hover { border-color: color-mix(in srgb, var(--green) 40%, var(--line)); box-shadow: 0 16px 30px rgba(27, 60, 40, .1); }
+  .field input, .field select, .field textarea, .search-box { border-color: var(--line); background: var(--surface); color: var(--text); }
+  .detail, .stock-detail, .form-view, .full-panel, .sheet { background: var(--bg); }
+  .form-next, .big-btn, .wealth-add, .goals-add, .export-primary, .people-primary { background: var(--green); color: var(--on-green); }
+  .form-next:hover, .big-btn:hover, .wealth-add:hover, .goals-add:hover { background: var(--green-strong); }
+  .toast { border: 1px solid var(--line); background: var(--green-strong); color: #fff; }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline-color: var(--focus-ring); }
+
+  /* foco visível em cards inteiros clicáveis (teclado) */
+  .debt:focus-visible, .financial-card:focus-visible, .dash-action:focus-visible,
+  .nav:focus-visible, .tab:focus-visible, .chip:focus-visible {
+    outline: 3px solid var(--focus-ring); outline-offset: 2px;
+  }
 }

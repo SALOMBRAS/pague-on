@@ -233,6 +233,7 @@ model User {
   customerClassifications CustomerClassification[]
   customerDocuments CustomerDocument[]
   customerConsents CustomerConsent[]
+  customerRegistrationInvites CustomerRegistrationInvite[]
   sales               Sale[]
   reminders           Reminder[]
   notifications       Notification[]
@@ -546,6 +547,7 @@ model Customer {
   financialMovements FinancialMovement[]
   documents CustomerDocument[]
   consents CustomerConsent[]
+  registrationInvites CustomerRegistrationInvite[]
 
   @@index([userId, isActive, name])
   @@index([collectorId, isActive])
@@ -594,6 +596,23 @@ model CustomerConsent {
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, purpose, grantedAt])
+}
+
+model CustomerRegistrationInvite {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  customerId String @db.Uuid
+  tokenHash String @unique @db.VarChar(64)
+  expiresAt DateTime
+  usedAt DateTime?
+  submittedAt DateTime?
+  submittedData Json?
+  createdById String? @db.Uuid
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, expiresAt])
 }
 
 model Sale {

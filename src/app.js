@@ -18,6 +18,7 @@ const debtRoutes = require('./routes/debtRoutes');
 const productRoutes = require('./routes/productRoutes');
 const purchaseRoutes = require('./routes/purchaseRoutes');
 const customerRoutes = require('./routes/customerRoutes');
+const customerRegistrationRoutes = require('./routes/customerRegistrationRoutes');
 const saleRoutes = require('./routes/saleRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
@@ -73,6 +74,7 @@ app.use(express.static(path.resolve('public')));
 
 app.get('/health', (_req, res) => sendSuccess(res, { status: 'ok', timestamp: new Date().toISOString() }));
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/customer-registration', customerRegistrationRoutes);
 app.use('/api/v1', (req, res, next) => auth(req, res, (error) => error ? next(error) : apiAccessPolicy(req, res, next)));
 app.use('/api/v1/access', accessRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);

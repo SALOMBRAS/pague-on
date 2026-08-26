@@ -170,6 +170,7 @@ const customerFields = {
 };
 const customerCreateSchema = z.object(customerFields).strict();
 const customerUpdateSchema = customerCreateSchema.partial().extend({ isActive: z.boolean().optional(), status: z.enum(['PENDING_REVIEW', 'APPROVED', 'INACTIVE', 'REJECTED']).optional() }).strict();
+const customerSelfRegistrationSchema = z.object({ name: customerFields.name.optional(), nickname: customerFields.nickname, personType: customerFields.personType.optional(), cpfCnpj: customerFields.cpfCnpj, documentNumber: customerFields.documentNumber, birthOrIncorporationDate: customerFields.birthOrIncorporationDate, professionOrActivity: customerFields.professionOrActivity, declaredIncome: customerFields.declaredIncome, phone: customerFields.phone, whatsapp: customerFields.whatsapp, email: customerFields.email, zipCode: customerFields.zipCode, address: customerFields.address, street: customerFields.street, streetNumber: customerFields.streetNumber, addressComplement: customerFields.addressComplement, neighborhood: customerFields.neighborhood, city: customerFields.city, state: customerFields.state, notes: customerFields.notes }).strict();
 
 const saleItemSchema = z.object({
   productId: uuid,
@@ -328,6 +329,7 @@ module.exports = {
   reminderCreateSchema,
   customerCreateSchema,
   customerUpdateSchema,
+  customerSelfRegistrationSchema,
   saleCreateSchema,
   saleUpdateSchema,
   addExtraSchema,

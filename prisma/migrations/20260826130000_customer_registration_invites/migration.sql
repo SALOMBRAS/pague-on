@@ -1,0 +1,5 @@
+create table "CustomerRegistrationInvite" ("id" uuid not null, "userId" uuid not null, "customerId" uuid not null, "tokenHash" varchar(64) not null, "expiresAt" timestamp(3) not null, "usedAt" timestamp(3), "submittedAt" timestamp(3), "submittedData" jsonb, "createdById" uuid, "createdAt" timestamp(3) not null default current_timestamp, constraint "CustomerRegistrationInvite_pkey" primary key ("id"));
+create unique index "CustomerRegistrationInvite_tokenHash_key" on "CustomerRegistrationInvite"("tokenHash");
+create index "CustomerRegistrationInvite_customerId_expiresAt_idx" on "CustomerRegistrationInvite"("customerId", "expiresAt");
+alter table "CustomerRegistrationInvite" add constraint "CustomerRegistrationInvite_userId_fkey" foreign key ("userId") references "User"("id") on delete cascade on update cascade;
+alter table "CustomerRegistrationInvite" add constraint "CustomerRegistrationInvite_customerId_fkey" foreign key ("customerId") references "Customer"("id") on delete cascade on update cascade;

@@ -5,6 +5,7 @@ const { recalculateSaleInterest } = require('./interestCalculator');
 const { saleInclude } = require('./saleService');
 const { updateDailyCashFlow } = require('./debtService');
 const { recordMovement } = require('./financialAccountService');
+const { recordCommission, reverseCommissionsForInstallment } = require('./collectorService');
 
 function round(value) { return Number(Number(value || 0).toFixed(2)); }
 const installmentInclude = { debt: { include: { sale: true, customer: true, installments: { orderBy: { number: 'asc' } } } } };
@@ -33,10 +34,10 @@ async function syncSaleAndDebt(tx, debtId) {
   return { status, paidAmount, remainingAmount: Math.max(0, round(totalDue - paidAmount)), paidInstallments: paidCount, pendingInstallments: unpaid.length };
 }
 
-async function payInstallment(userId, id, input) {
-  let current = await ownedInstallment(userId, id);
+async function payInstallment(userId, id, input, scope = {}) {
+  let current = await ownedInstallment(userId, id, scope);
   await recalculateSaleInterest(current.debt.sale.id);
-  current = await ownedInstallment(userId, id);
+  current = await ownedInstallment(userId, id, scope);
   if (current.status === 'PAID') throw new HttpError(409, 'INSTALLMENT_PAID', 'Esta parcela já foi paga.');
   const totalDue = Number(current.totalAmount || current.amount); const alreadyPaid = Number(current.paidAmount || 0);
   const value = round(input.paidAmount ?? totalDue - alreadyPaid);
@@ -49,7 +50,10 @@ async function payInstallment(userId, id, input) {
     const principalBefore = Math.min(alreadyPaid, Number(current.amount));
     const principal = Math.min(value, Math.max(0, Number(current.amount) - principalBefore));
     await updateDailyCashFlow(tx, userId, 'RECEIVABLE', value, paidAt);
-    await recordMovement({ db: tx, userId, accountId: input.cashAccountId, type: 'PAYMENT_RECEIVED', amount: value, occurredAt: paidAt, referenceId: `sale-installment-payment:${id}:${paidAt.toISOString()}`, description: `Parcela ${current.number}: ${current.debt.description}`, category: current.debt.category, origin: 'SALE_INSTALLMENT_PAYMENT', debtId: current.debtId, customerId: current.debt.customerId, paymentMethod: input.paymentMethod, principal, interest: Math.max(0, value - principal) });
+    const interest = Math.max(0, value - principal);
+    const collectorId = scope.role === 'COLLECTOR' ? scope.actorId : current.debt.customer?.collectorId || null;
+    await recordMovement({ db: tx, userId, accountId: input.cashAccountId, type: 'PAYMENT_RECEIVED', amount: value, occurredAt: paidAt, referenceId: `sale-installment-payment:${id}:${paidAt.toISOString()}`, description: `Parcela ${current.number}: ${current.debt.description}`, category: current.debt.category, origin: 'SALE_INSTALLMENT_PAYMENT', debtId: current.debtId, customerId: current.debt.customerId, collectorId, paymentMethod: input.paymentMethod, principal, interest });
+    await recordCommission(tx, { workspaceOwnerId: userId, collectorId, customerId: current.debt.customerId, debtId: current.debtId, installmentId: id, paymentAmount: value, principal, interest, penalty: 0 });
     await createNotification(tx, userId, { title: 'Parcela registrada', body: `${current.number}ª parcela de ${current.debt.description} ${isPaid ? 'foi paga' : 'recebeu pagamento parcial'}.`, type: 'PAYMENT_RECEIVED', data: { debtId: current.debtId, installmentId: id } });
     const installment = await tx.installment.findUnique({ where: { id } });
     return { installment, sale: summary };
@@ -64,6 +68,7 @@ async function unpayInstallment(userId, id) {
     await tx.installment.update({ where: { id }, data: { paidAmount: null, paidAt: null, paymentMethod: null, note: null, status: new Date(current.dueDate) < new Date() ? 'OVERDUE' : 'PENDING' } });
     await updateDailyCashFlow(tx, userId, 'RECEIVABLE', -Number(current.paidAmount || 0), paidAt);
     await recordMovement({ db: tx, userId, type: 'ADJUSTMENT', amount: -Number(current.paidAmount || 0), occurredAt: paidAt, referenceId: `sale-installment-reversal:${id}:${paidAt.toISOString()}`, description: `Estorno da parcela ${current.number}: ${current.debt.description}` });
+    await reverseCommissionsForInstallment(tx, id, 'Recebimento da parcela estornado.');
     return { installment: await tx.installment.findUnique({ where: { id } }), sale: await syncSaleAndDebt(tx, current.debtId) };
   });
 }

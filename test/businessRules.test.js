@@ -7,6 +7,7 @@ const { applyToDebtInput } = require('../src/services/ruleService');
 const { parseStatement, score } = require('../src/services/reconciliationService');
 const { effectiveLimit } = require('../src/services/budgetService');
 const { buildInstallments } = require('../src/services/debtService');
+const { calculateCommission } = require('../src/services/collectorService');
 const { calculateInterest } = require('../src/services/interestCalculator');
 const { duplicateScore, similarity } = require('../src/services/duplicateService');
 const { convertAmount } = require('../src/services/currencyService');
@@ -128,4 +129,10 @@ test('valida divisão de empréstimo e transferência entre caixas', () => {
   assert.equal(debtCreateSchema.safeParse({ ...loan, cashAllocations: [{ accountId: accountA, amount: 700 }] }).success, false);
   assert.equal(financialTransferSchema.safeParse({ fromAccountId: accountA, toAccountId: accountB, amount: 200 }).success, true);
   assert.equal(financialTransferSchema.safeParse({ fromAccountId: accountA, toAccountId: accountA, amount: 200 }).success, false);
+});
+
+test('calcula comissão pela base configurada e preserva valores de recebimento parcial', () => {
+  assert.deepEqual(calculateCommission({ commissionType: 'PERCENTAGE', commissionRate: 10, commissionBase: 'PRINCIPAL', paymentAmount: 75, principal: 60, interest: 10, penalty: 5 }), { baseAmount: 60, commissionAmount: 6 });
+  assert.deepEqual(calculateCommission({ commissionType: 'PERCENTAGE', commissionRate: 25, commissionBase: 'INTEREST', paymentAmount: 75, principal: 60, interest: 10, penalty: 5 }), { baseAmount: 10, commissionAmount: 2.5 });
+  assert.deepEqual(calculateCommission({ commissionType: 'FIXED', commissionRate: 8, commissionBase: 'TOTAL', paymentAmount: 75, principal: 60, interest: 10, penalty: 5 }), { baseAmount: 75, commissionAmount: 8 });
 });

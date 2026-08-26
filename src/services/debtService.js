@@ -7,6 +7,7 @@ const budgetService = require('./budgetService');
 const currencyService = require('./currencyService');
 const goalService = require('./goalService');
 const { recordMovement } = require('./financialAccountService');
+const { recordCommission } = require('./collectorService');
 
 const debtInclude = {
   installments: { orderBy: { number: 'asc' } },
@@ -248,7 +249,7 @@ async function updateLinkedSalePayment(tx, debt, amount, debtStatus) {
 
 async function paySingleDebt(userId, id, paidAmount, goalId, cashAccountId) {
   return prisma.$transaction(async (tx) => {
-    const debt = await tx.debt.findFirst({ where: { id, userId } });
+    const debt = await tx.debt.findFirst({ where: { id, userId }, include: { customer: true } });
     if (!debt) throw new HttpError(404, 'DEBT_NOT_FOUND', 'Dívida não encontrada.');
     if (debt.paymentType !== 'SINGLE') throw new HttpError(400, 'INVALID_PAYMENT_TYPE', 'Use a rota de parcela ou recorrência para esta dívida.');
     if (debt.status === 'PAID' || debt.status === 'CANCELLED') throw new HttpError(409, 'DEBT_UNAVAILABLE', 'Esta dívida não pode mais ser paga.');
@@ -264,7 +265,10 @@ async function paySingleDebt(userId, id, paidAmount, goalId, cashAccountId) {
       data: { status, isActive: !isComplete, paidAt: isComplete ? now : null, paidAmount: newPaidAmount },
     });
     await updateDailyCashFlow(tx, userId, debt.type, amount, now);
-    await recordMovement({ db: tx, userId, accountId: cashAccountId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `debt-payment:${debt.id}:${now.toISOString()}`, description: `Pagamento: ${debt.description}`, category: debt.category, origin: 'DEBT_PAYMENT', debtId: debt.id, customerId: debt.customerId, principal: debt.category === 'LOAN' ? amount : 0 });
+    const principal = debt.category === 'LOAN' ? amount : 0;
+    const collectorId = debt.customer?.collectorId || null;
+    await recordMovement({ db: tx, userId, accountId: cashAccountId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `debt-payment:${debt.id}:${now.toISOString()}`, description: `Pagamento: ${debt.description}`, category: debt.category, origin: 'DEBT_PAYMENT', debtId: debt.id, customerId: debt.customerId, collectorId, principal });
+    if (debt.type === 'RECEIVABLE') await recordCommission(tx, { workspaceOwnerId: userId, collectorId, customerId: debt.customerId, debtId: debt.id, paymentAmount: amount, principal, interest: Math.max(0, amount - principal) });
     await updateLinkedSalePayment(tx, debt, amount, status);
     await createNotification(tx, userId, {
       title: 'Pagamento registrado',
@@ -283,7 +287,7 @@ async function paySingleDebt(userId, id, paidAmount, goalId, cashAccountId) {
 
 async function payInstallment(userId, debtId, installmentId, paidAmount, cashAccountId) {
   return prisma.$transaction(async (tx) => {
-    const debt = await tx.debt.findFirst({ where: { id: debtId, userId }, include: { installments: true } });
+    const debt = await tx.debt.findFirst({ where: { id: debtId, userId }, include: { installments: true, customer: true } });
     if (!debt) throw new HttpError(404, 'DEBT_NOT_FOUND', 'Dívida não encontrada.');
     if (debt.paymentType !== 'INSTALLMENT') throw new HttpError(400, 'INVALID_PAYMENT_TYPE', 'Esta dívida não é parcelada.');
     const installment = debt.installments.find((item) => item.id === installmentId);
@@ -309,7 +313,11 @@ async function payInstallment(userId, debtId, installmentId, paidAmount, cashAcc
     });
     await updateDailyCashFlow(tx, userId, debt.type, amount, now);
     const principal = Math.min(amount, Number(installment.amount));
-    await recordMovement({ db: tx, userId, accountId: cashAccountId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `installment-payment:${installment.id}:${now.toISOString()}`, description: `Parcela ${installment.number}: ${debt.description}`, category: debt.category, origin: 'INSTALLMENT_PAYMENT', debtId: debt.id, customerId: debt.customerId, principal: debt.category === 'LOAN' ? principal : 0, interest: debt.category === 'LOAN' ? Math.max(0, amount - principal) : 0 });
+    const commissionPrincipal = debt.category === 'LOAN' ? principal : 0;
+    const interest = debt.category === 'LOAN' ? Math.max(0, amount - principal) : 0;
+    const collectorId = debt.customer?.collectorId || null;
+    await recordMovement({ db: tx, userId, accountId: cashAccountId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `installment-payment:${installment.id}:${now.toISOString()}`, description: `Parcela ${installment.number}: ${debt.description}`, category: debt.category, origin: 'INSTALLMENT_PAYMENT', debtId: debt.id, customerId: debt.customerId, collectorId, principal: commissionPrincipal, interest });
+    if (debt.type === 'RECEIVABLE') await recordCommission(tx, { workspaceOwnerId: userId, collectorId, customerId: debt.customerId, debtId: debt.id, installmentId, paymentAmount: amount, principal: commissionPrincipal, interest });
     await updateLinkedSalePayment(tx, debt, amount, isComplete ? 'PAID' : 'PENDING');
     await createNotification(tx, userId, {
       title: 'Parcela registrada',

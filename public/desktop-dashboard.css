@@ -1,0 +1,110 @@
+/* Pague On desktop dashboard — a dedicated large-screen visual shell. */
+@media (min-width: 1024px) {
+  :root {
+    --bg: #f6f8f7;
+    --panel: #ffffff;
+    --surface: #ffffff;
+    --hover: #edf6f0;
+    --raised: #e4f1e9;
+    --line: #dce8e1;
+    --text: #14221a;
+    --muted: #5f7267;
+    --dim: #829287;
+    --green: #008a4a;
+    --green-strong: #006f3c;
+    --green-bg: #e0f6e8;
+    --red: #bc2d2d;
+    --red-bg: #fce9e9;
+    --amber: #9a5d00;
+    --amber-bg: #fff4d9;
+    --blue: #1769aa;
+    --on-green: #ffffff;
+    --shadow: 0 14px 34px rgba(27, 60, 40, .08);
+  }
+
+  html, body { background: #f6f8f7; }
+  body { color: var(--text); }
+  .app { background: #f6f8f7; }
+  .side-nav {
+    width: 264px;
+    padding: 24px 16px 18px;
+    background: #ffffff;
+    border-right-color: var(--line);
+    box-shadow: 12px 0 34px rgba(27, 60, 40, .035);
+  }
+  .app { width: calc(100% - 264px); margin-left: 264px; }
+  .side-nav .brand { padding: 3px 10px 28px; }
+  .side-nav .brand i {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+    background: linear-gradient(145deg, #14b95d, #008a4a);
+    color: #fff;
+    box-shadow: 0 8px 16px rgba(0, 138, 74, .2);
+  }
+  .side-nav .brand b { font-size: 17px; color: var(--text); }
+  .side-nav .nav { min-height: 46px; margin: 1px 0; color: var(--muted); }
+  .side-nav .nav:hover { background: var(--hover); color: var(--green); }
+  .side-nav .nav.active { background: var(--green-bg); color: var(--green); }
+  .side-nav .side-foot { color: var(--muted); border-top-color: var(--line); }
+  .side-nav .side-foot b { color: var(--text); }
+
+  .desk-top {
+    min-height: 88px;
+    padding: 24px 34px 12px;
+    background: rgba(246, 248, 247, .92);
+    backdrop-filter: blur(14px);
+  }
+  .desk-top h1 { color: var(--text); font-size: 26px; }
+  .desk-top .new-charge {
+    min-height: 46px;
+    border-radius: 12px;
+    background: #008a4a;
+    color: #fff;
+    box-shadow: 0 10px 18px rgba(0, 138, 74, .16);
+  }
+  .desk-top .new-charge:hover { background: #006f3c; }
+  .top { padding: 0 34px 8px; background: transparent; }
+  .tabs { gap: 28px; border-bottom: 1px solid var(--line); }
+  .tab { min-height: 44px; color: var(--muted); }
+  .tab.active { color: var(--green); border-bottom-width: 3px; }
+  .chip { border-color: var(--line); background: #fff; color: var(--muted); }
+  .chip.active { border-color: #93d8ae; background: var(--green-bg); color: var(--green); }
+
+  main { max-width: 1540px; padding: 18px 34px 40px; }
+  .home-view, .wealth-view, .stock-view, .profile-view { max-width: 1540px; padding-inline: 34px; }
+  .dash-hero, .wealth-hero {
+    border-color: #c4e7d0;
+    background: radial-gradient(circle at 88% 0, rgba(39, 186, 97, .2), transparent 35%), linear-gradient(135deg, #0e7a42, #075c31);
+    box-shadow: 0 16px 30px rgba(0, 111, 60, .15);
+  }
+  .dash-hero b, .wealth-hero b { color: #fff; }
+  .dash-hero small, .dash-hero p, .wealth-hero small, .wealth-hero p { color: #d5f2df; }
+  .dash-summary-card, .dash-quick, .dash-chart, .dash-section > .empty,
+  .stat, .debt, .recurring, .history, .product-card, .purchase-card, .settings-card,
+  .goal-card, .wealth-group, .financial-card {
+    border-color: var(--line);
+    background: #fff;
+    box-shadow: var(--shadow);
+  }
+  .dash-summary-card, .dash-quick, .stat { border-radius: 14px; }
+  .dash-summary-card span, .dash-quick span, .stat span { color: var(--muted); }
+  .dash-summary-card b, .dash-quick b, .stat b { font-variant-numeric: tabular-nums; }
+  .dash-action { border-color: var(--line); background: #fff; color: var(--text); }
+  .dash-action:hover { border-color: #a8dabb; background: var(--hover); }
+  .dash-action i { background: var(--green-bg); color: var(--green); }
+  .dash-chart { border-radius: 18px; }
+  .dash-bars { background: repeating-linear-gradient(to bottom, transparent 0 25px, #edf2ef 26px 27px); border-bottom-color: var(--line); }
+  .dash-bar { background: linear-gradient(180deg, #36c978, #008a4a); }
+  .dash-reminder { border-color: #ecd28f; background: #fff9e9; }
+  .dash-reminder span { color: #69531d; }
+
+  .debt { border-left-width: 4px; }
+  .debt:hover { border-color: #b7dfc5; box-shadow: 0 16px 30px rgba(27, 60, 40, .1); }
+  .field input, .field select, .field textarea, .search-box { border-color: var(--line); background: #fff; color: var(--text); }
+  .detail, .stock-detail, .form-view, .full-panel, .sheet { background: #f6f8f7; }
+  .form-next, .big-btn, .wealth-add, .goals-add, .export-primary, .people-primary { background: #008a4a; color: #fff; }
+  .form-next:hover, .big-btn:hover, .wealth-add:hover, .goals-add:hover { background: #006f3c; }
+  .toast { border: 1px solid var(--line); background: #173a27; color: #fff; }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline-color: #008a4a; }
+}

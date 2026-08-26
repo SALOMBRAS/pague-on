@@ -29,7 +29,7 @@ function addMonths(value, months) {
 }
 
 function nextDueDate(value, frequency) {
-  const days = { WEEKLY: 7, BIWEEKLY: 14 };
+  const days = { DAILY: 1, WEEKLY: 7, BIWEEKLY: 14 };
   const months = {
     MONTHLY: 1,
     BIMONTHLY: 2,

@@ -8,17 +8,19 @@ async function findOwnedCustomer(userId, id, options = {}) {
 }
 
 async function listCustomers(userId, query) {
-  const where = { userId, isActive: query.includeInactive === 'true' ? undefined : true };
+  const where = { userId, ...(query.includeInactive === 'true' ? {} : { isActive: true }), ...(query.category ? { category: query.category } : {}), ...(query.collectorId ? { collectorId: query.collectorId } : {}), ...(query.status ? { status: query.status } : {}), ...(query.classificationId ? { classificationId: query.classificationId } : {}) };
   if (query.search) {
     where.OR = [
       { name: { contains: query.search, mode: 'insensitive' } },
+      { nickname: { contains: query.search, mode: 'insensitive' } },
+      { cpfCnpj: { contains: query.search, mode: 'insensitive' } },
       { phone: { contains: query.search, mode: 'insensitive' } },
       { email: { contains: query.search, mode: 'insensitive' } },
     ];
   }
   return prisma.customer.findMany({
     where,
-    include: { _count: { select: { sales: true, debts: true } } },
+    include: { classification: true, collector: { select: { id: true, name: true } }, _count: { select: { sales: true, debts: true } } },
     orderBy: { name: 'asc' },
   });
 }
@@ -28,12 +30,13 @@ async function customerDetail(userId, id) {
     include: {
       sales: { orderBy: { soldAt: 'desc' }, take: 20, include: { debt: true } },
       debts: { orderBy: { dueDate: 'asc' }, take: 20 },
+      documents: { orderBy: { uploadedAt: 'desc' } }, consents: { orderBy: { grantedAt: 'desc' } }, classification: true, collector: { select: { id: true, name: true } }, approvedBy: { select: { id: true, name: true } },
     },
   });
 }
 
 async function createCustomer(userId, input) {
-  return prisma.customer.create({ data: { userId, ...input } });
+  return prisma.customer.create({ data: { userId, ...input, status: 'PENDING_REVIEW', isActive: true } });
 }
 
 async function updateCustomer(userId, id, input) {

@@ -9,6 +9,7 @@ const DAY_INTERVALS = { DAILY: 1, WEEKLY: 7, BIWEEKLY: 14 };
 const MONTH_INTERVALS = { MONTHLY: 1, BIMONTHLY: 2, QUARTERLY: 3, SEMIANNUAL: 6, ANNUAL: 12 };
 const round = (value) => Number(Number(value).toFixed(2));
 const dateKey = (value) => new Date(value).toISOString().slice(0, 10);
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
 function installmentDate(firstDueDate, frequency, index, skipSundays, holidays) {
   let dueDate = DAY_INTERVALS[frequency]
@@ -106,7 +107,7 @@ async function simulation(userId, input, options = {}) {
 }
 
 function buildContractPreview(customer, configuration, input, calculation) {
-  return `<h1>Resumo contratual de empréstimo</h1><p>Cliente: ${customer.name}</p><p>Modalidade: ${configuration.displayName} (${configuration.formulaVersion})</p><p>Principal: R$ ${calculation.totalPrincipal.toFixed(2)}. Juros: R$ ${calculation.totalInterest.toFixed(2)}. Total: R$ ${calculation.totalCost.toFixed(2)}.</p><p>Taxa por período: ${Number(input.interestRate || 0).toFixed(4)}%.</p><p>Fórmula: ${configuration.formulaPolicy}</p><p>O cliente consentiu expressamente; não há renovação ou capitalização automática.</p>`;
+  return `<h1>Resumo contratual de empréstimo</h1><p>Cliente: ${escapeHtml(customer.name)}</p><p>Modalidade: ${escapeHtml(configuration.displayName)} (${escapeHtml(configuration.formulaVersion)})</p><p>Principal: R$ ${calculation.totalPrincipal.toFixed(2)}. Juros: R$ ${calculation.totalInterest.toFixed(2)}. Total: R$ ${calculation.totalCost.toFixed(2)}.</p><p>Taxa por período: ${Number(input.interestRate || 0).toFixed(4)}%.</p><p>Fórmula: ${escapeHtml(configuration.formulaPolicy)}</p><p>O cliente consentiu expressamente; não há renovação ou capitalização automática.</p>`;
 }
 
 async function confirm(userId, actor, input, req = null) {

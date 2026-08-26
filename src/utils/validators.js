@@ -11,7 +11,7 @@ const enums = {
   paymentType: z.enum(['SINGLE', 'INSTALLMENT', 'RECURRING']),
   category: z.enum(['PRODUCT', 'SERVICE', 'LOAN', 'RENT', 'SUBSCRIPTION', 'TRANSPORT', 'UTILITIES', 'OTHER']),
   debtStatus: z.enum(['PENDING', 'PAID', 'OVERDUE', 'PARTIAL', 'CANCELLED']),
-  frequency: z.enum(['WEEKLY', 'BIWEEKLY', 'MONTHLY', 'BIMONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL']),
+  frequency: z.enum(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'BIMONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL']),
   reminderType: z.enum(['PUSH', 'WHATSAPP', 'SMS']),
   assetType: z.enum(['CASH', 'INVESTMENT_STOCK', 'INVESTMENT_CRYPTO', 'INVESTMENT_FIXED', 'PROPERTY', 'VEHICLE', 'OTHER']),
 };
@@ -310,6 +310,74 @@ const currencyConvertSchema = z.object({ amount: z.coerce.number().nonnegative()
 const statementImportSchema = z.object({ fileName: z.string().trim().min(1).max(255), accountName: z.string().trim().max(160).nullable().optional(), transactions: z.array(z.object({ date: isoDate, description: z.string().trim().min(1).max(500), amount: z.coerce.number().refine((value) => Number.isFinite(value) && value !== 0), externalId: z.string().trim().max(200).nullable().optional() }).strict()).min(1).max(5000) }).strict();
 const pushSubscriptionSchema = z.object({ endpoint: z.string().url().max(2048), expirationTime: z.coerce.date().nullable().optional(), keys: z.object({ p256dh: z.string().min(16).max(1024), auth: z.string().min(8).max(1024) }).strict() }).strict();
 const pushUnsubscribeSchema = z.object({ endpoint: z.string().url().max(2048) }).strict();
+const loanModality = z.enum(['INSTALLMENT', 'SIMPLE_INTEREST', 'PRICE', 'RENEWAL']);
+const loanFrequency = z.enum(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'BIMONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL']);
+const loanConfigurationSchema = z.object({
+  modality: loanModality,
+  displayName: z.string().trim().min(2).max(120),
+  formulaVersion: z.string().trim().min(1).max(80),
+  formulaPolicy: z.string().trim().min(10).max(2000),
+  termsTemplate: z.string().trim().max(12000).nullable().optional(),
+  skipSundays: z.boolean().default(false),
+  holidayDates: z.array(z.string().date()).max(500).default([]),
+  legalReviewReference: z.string().trim().min(3).max(250),
+  isActive: z.boolean().default(true),
+}).strict();
+const loanSimulationSchema = z.object({
+  customerId: uuid,
+  configurationId: uuid,
+  modality: loanModality,
+  principalAmount: z.coerce.number().positive().max(9999999999),
+  interestRate: z.coerce.number().min(0).max(1000000).optional(),
+  totalInstallments: z.coerce.number().int().min(1).max(360),
+  frequency: loanFrequency,
+  releaseDate: isoDate,
+  firstDueDate: isoDate,
+  cashAllocations: z.array(z.object({ accountId: uuid, amount: z.coerce.number().positive().max(9999999999) }).strict()).min(1).max(20),
+  notes: z.string().trim().max(2000).nullable().optional(),
+  renewalOfDebtId: uuid.optional(),
+  renewalPaymentAmount: z.coerce.number().min(0).max(9999999999).optional(),
+  renewalPaymentCashAccountId: uuid.optional(),
+  contractConsent: z.boolean().optional(),
+  rateOverrideReason: z.string().trim().min(5).max(500).optional(),
+}).strict().superRefine((value, context) => {
+  if (value.firstDueDate < value.releaseDate) context.addIssue({ code: z.ZodIssueCode.custom, path: ['firstDueDate'], message: 'O primeiro vencimento não pode ser anterior à liberação.' });
+  const allocated = value.cashAllocations.reduce((sum, item) => sum + item.amount, 0);
+  if (Math.abs(allocated - value.principalAmount) > 0.01) context.addIssue({ code: z.ZodIssueCode.custom, path: ['cashAllocations'], message: 'A soma dos caixas deve ser igual ao principal liberado.' });
+  if (new Set(value.cashAllocations.map((item) => item.accountId)).size !== value.cashAllocations.length) context.addIssue({ code: z.ZodIssueCode.custom, path: ['cashAllocations'], message: 'Cada caixa deve aparecer apenas uma vez.' });
+  if (value.modality === 'RENEWAL' && !value.renewalOfDebtId) context.addIssue({ code: z.ZodIssueCode.custom, path: ['renewalOfDebtId'], message: 'Informe o empréstimo que será renovado.' });
+  if (value.renewalPaymentAmount && !value.renewalPaymentCashAccountId) context.addIssue({ code: z.ZodIssueCode.custom, path: ['renewalPaymentCashAccountId'], message: 'Selecione o caixa de recebimento da renovação.' });
+});
+const loanConfirmationSchema = loanSimulationSchema.refine((value) => value.contractConsent === true, { path: ['contractConsent'], message: 'O consentimento expresso ao contrato é obrigatório.' });
+const installmentReceiptFields = {
+  amount: z.coerce.number().positive().max(9999999999),
+  discountType: z.enum(['FIXED', 'PERCENTAGE']).optional(),
+  discountValue: z.coerce.number().min(0).max(1000000).optional(),
+  discountReason: z.string().trim().min(5).max(500).optional(),
+  promiseDate: isoDate.optional(),
+  renewalConfirmed: z.boolean().optional(),
+  renewalAmount: z.coerce.number().positive().max(9999999999).optional(),
+  renewalDueDate: isoDate.optional(),
+  renewalReason: z.string().trim().min(5).max(500).optional(),
+};
+const receiptRules = (value, context) => {
+  if (value.discountValue && !value.discountReason) context.addIssue({ code: z.ZodIssueCode.custom, path: ['discountReason'], message: 'Informe a justificativa do desconto.' });
+  if (value.renewalConfirmed && (!value.renewalAmount || !value.renewalDueDate || !value.renewalReason)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['renewalAmount'], message: 'Informe valor, vencimento e justificativa da renovação.' });
+};
+const installmentReceiptPreviewSchema = z.object(installmentReceiptFields).strict().superRefine(receiptRules);
+const installmentReceiptSchema = z.object({ ...installmentReceiptFields,
+  idempotencyKey: z.string().uuid(),
+  paymentMethod: z.enum(['CASH', 'PIX', 'CARD', 'TRANSFER', 'OTHER']),
+  cashAllocations: z.array(z.object({ accountId: uuid, amount: z.coerce.number().positive().max(9999999999) }).strict()).min(1).max(20),
+  proofUrl: z.string().trim().max(500).nullable().optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+}).strict().superRefine((value, context) => {
+  receiptRules(value, context);
+  const allocated = value.cashAllocations.reduce((sum, item) => sum + item.amount, 0);
+  if (Math.abs(allocated - value.amount) > 0.01) context.addIssue({ code: z.ZodIssueCode.custom, path: ['cashAllocations'], message: 'A soma dos caixas deve ser igual ao valor recebido.' });
+  if (new Set(value.cashAllocations.map((item) => item.accountId)).size !== value.cashAllocations.length) context.addIssue({ code: z.ZodIssueCode.custom, path: ['cashAllocations'], message: 'Cada caixa deve aparecer somente uma vez.' });
+});
+const installmentReceiptReversalSchema = z.object({ reason: z.string().trim().min(5).max(500) }).strict();
 
 module.exports = {
   enums,
@@ -368,5 +436,11 @@ module.exports = {
   statementImportSchema,
   pushSubscriptionSchema,
   pushUnsubscribeSchema,
+  loanConfigurationSchema,
+  loanSimulationSchema,
+  loanConfirmationSchema,
+  installmentReceiptPreviewSchema,
+  installmentReceiptSchema,
+  installmentReceiptReversalSchema,
   idSchema,
 };

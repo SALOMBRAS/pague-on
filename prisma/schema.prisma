@@ -171,7 +171,9 @@ enum SaleStatus {
 enum FinancialAccountType {
   CASH
   BANK
+  PAYMENT_ACCOUNT
   DIGITAL_WALLET
+  LOAN_CAPITAL
   OTHER
 }
 
@@ -241,6 +243,8 @@ model User {
   syncLogs            SyncLog[]
   financialAccounts   FinancialAccount[]
   financialMovements  FinancialMovement[]
+  collectedFinancialMovements FinancialMovement[] @relation("FinancialMovementCollector")
+  responsibleFinancialMovements FinancialMovement[] @relation("FinancialMovementResponsible")
 }
 
 model FinancialAccount {
@@ -248,9 +252,11 @@ model FinancialAccount {
   userId                String               @db.Uuid
   name                  String               @db.VarChar(120)
   type                  FinancialAccountType @default(CASH)
+  institution           String?              @db.VarChar(160)
   openingBalance        Decimal              @default(0) @db.Decimal(12, 2)
   isActive              Boolean              @default(true)
   includeInAvailability Boolean              @default(true)
+  notes                 String?              @db.VarChar(1000)
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
   user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -268,16 +274,35 @@ model FinancialMovement {
   occurredAt  DateTime
   referenceId String?               @db.VarChar(120)
   description String?               @db.VarChar(500)
+  category    String?               @db.VarChar(80)
+  origin      String?               @db.VarChar(80)
+  paymentMethod String?             @db.VarChar(40)
+  customerId  String?               @db.Uuid
+  debtId      String?               @db.Uuid
+  collectorId String?               @db.Uuid
+  responsibleUserId String?         @db.Uuid
+  operationId String?               @db.Uuid
+  reversalOfId String?              @db.Uuid
+  isConfirmed Boolean               @default(true)
   principal   Decimal               @default(0) @db.Decimal(12, 2)
   interest    Decimal               @default(0) @db.Decimal(12, 2)
   penalty     Decimal               @default(0) @db.Decimal(12, 2)
   createdAt   DateTime              @default(now())
   user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   account     FinancialAccount      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  customer    Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  debt        Debt?                 @relation(fields: [debtId], references: [id], onDelete: SetNull)
+  collector   User?                 @relation("FinancialMovementCollector", fields: [collectorId], references: [id], onDelete: SetNull)
+  responsibleUser User?             @relation("FinancialMovementResponsible", fields: [responsibleUserId], references: [id], onDelete: SetNull)
+  reversalOf  FinancialMovement?    @relation("FinancialMovementReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversals   FinancialMovement[]   @relation("FinancialMovementReversal")
 
   @@unique([userId, referenceId])
   @@index([userId, occurredAt])
   @@index([accountId, occurredAt])
+  @@index([customerId, occurredAt])
+  @@index([debtId, occurredAt])
+  @@index([operationId])
 }
 
 model PasswordResetToken {
@@ -367,6 +392,7 @@ model Debt {
   reminders         Reminder[]
   ruleExecutions    RuleExecution[]
   bankTransactions BankTransaction[]
+  financialMovements FinancialMovement[]
 
   @@index([userId, status, dueDate])
   @@index([productId])
@@ -456,6 +482,7 @@ model Customer {
   portalUser User?   @relation("ClientPortal", fields: [portalUserId], references: [id], onDelete: SetNull)
   debts     Debt[]
   sales     Sale[]
+  financialMovements FinancialMovement[]
 
   @@index([userId, isActive, name])
   @@index([collectorId, isActive])

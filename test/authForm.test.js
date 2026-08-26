@@ -16,3 +16,9 @@ test('todo botão .auth-primary declara type="submit"', () => {
     assert.match(button, /type="submit"/, `botão sem type="submit": ${button}`);
   }
 });
+
+test('mantém a referência do formulário durante chamadas assíncronas', () => {
+  assert.match(source, /const formElement = event\.currentTarget/);
+  assert.match(source, /actionError\(formElement,/);
+  assert.match(source, /element\?\.querySelector\('\.auth-error'\)/);
+});

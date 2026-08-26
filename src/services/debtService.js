@@ -58,6 +58,7 @@ async function resolveCounterparty(db, userId, input) {
   if (!input.customerId) return { counterparty: input.counterparty, counterpartyPhone: input.counterpartyPhone || null };
   const customer = await db.customer.findFirst({ where: { id: input.customerId, userId, isActive: true } });
   if (!customer) throw new HttpError(400, 'INVALID_CUSTOMER', 'O cliente selecionado não existe ou está inativo.');
+  if (input.category === 'LOAN' && customer.status !== 'APPROVED') throw new HttpError(409, 'CUSTOMER_PENDING_REVIEW', 'Apenas clientes aprovados podem receber empréstimos.');
   return {
     counterparty: input.counterparty || customer.name,
     counterpartyPhone: input.counterpartyPhone === undefined ? customer.phone : input.counterpartyPhone,

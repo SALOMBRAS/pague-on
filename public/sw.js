@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pagueon-shell-v20';
+const CACHE_NAME = 'pagueon-shell-v21';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -69,20 +69,14 @@ self.addEventListener('fetch', (event) => {
   // Fora do worker o mesmo <link> é regido por style-src, que permite as fontes.
   if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 
-  // Navegação: rede primeiro. O HTML é quem decide para onde o usuário vai —
-  // servi-lo do cache prendia '/' numa versão antiga (o app em vez da landing)
-  // até alguém lembrar de trocar o CACHE_NAME.
-  if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).then((response) => store(request, response)).catch(() => caches.match(request).then((cached) => cached || caches.match('/index.html'))));
-    return;
-  }
-
-  // Assets: stale-while-revalidate. Responde do cache e revalida em segundo
-  // plano, então uma versão nova entra no load seguinte em vez de nunca.
-  event.respondWith(caches.match(request).then((cached) => {
-    const network = fetch(request).then((response) => store(request, response)).catch(() => cached);
-    return cached || network;
-  }));
+  // Rede primeiro para TUDO, cache como plano B offline. O cache existe para o
+  // app abrir sem conexão — não para escolher qual versão do código roda.
+  // Responder do cache, mesmo revalidando em segundo plano, ainda entrega o
+  // arquivo velho no load em que o usuário está: foi assim que uma correção já
+  // publicada continuou invisível no navegador de quem tinha o shell antigo.
+  event.respondWith(fetch(request)
+    .then((response) => store(request, response))
+    .catch(() => caches.match(request).then((cached) => cached || (request.mode === 'navigate' ? caches.match('/index.html') : undefined))));
 });
 
 const DEFAULT_WIDGET = { enabled: false, balance: true, receive: true, pay: true, urgent: true, upcoming: false, addDebt: true, collect: true, interval: 15 };

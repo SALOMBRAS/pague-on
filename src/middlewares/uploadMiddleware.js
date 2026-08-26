@@ -8,7 +8,13 @@ const uploadRoot = path.resolve(process.env.UPLOAD_PATH || './uploads');
 const extensions = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
 
 function ensureDirectory(folder) {
-  fs.mkdirSync(path.join(uploadRoot, folder), { recursive: true });
+  try {
+    fs.mkdirSync(path.join(uploadRoot, folder), { recursive: true });
+  } catch (_error) {
+    // Em serverless (Vercel) o filesystem é read-only (exceto /tmp); uploads não
+    // críticos devem ser tolerantes — o multer usará o disco se não der, e a
+    // falha NÃO pode derrubar o boot do app.
+  }
 }
 
 function createUploader(folder) {

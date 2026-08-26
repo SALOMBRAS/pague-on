@@ -4,4 +4,7 @@ const controller = require('../controllers/financialAccountController');
 const router = express.Router();
 router.use(auth);
 router.get('/', controller.list);
+router.post('/', controller.create);
+router.patch('/:id', controller.update);
+router.get('/statement', controller.statement);
 module.exports = router;

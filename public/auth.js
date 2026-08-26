@@ -33,7 +33,7 @@
     element = document.createElement('section'); element.id = 'auth-shell'; element.setAttribute('aria-live', 'polite'); document.body.append(element); return element;
   }
   const form = (content) => `<form class="auth-card" novalidate><h1>Pague-On</h1>${content}<div class="auth-error" role="alert" hidden></div></form>`;
-  const actionError = (element, message) => { const error = element.querySelector('.auth-error'); error.textContent = message; error.hidden = false; error.focus(); };
+  const actionError = (element, message) => { const error = element?.querySelector('.auth-error'); if (!error) return; error.textContent = message; error.hidden = false; error.focus(); };
   function show(mode = 'login', message = '') {
     const target = shell(); target.hidden = false; const resetToken = new URLSearchParams(location.search).get('reset');
     if (mode === 'forgot') target.innerHTML = form('<p>Informe seu e-mail ou telefone para receber as instruções de recuperação.</p><label class="auth-field">E-mail ou telefone<input name="identity" autocomplete="username" required></label><button class="auth-primary" type="submit">Enviar instruções</button><p class="auth-help"><button class="auth-link" type="button" data-mode="login">Voltar ao acesso</button></p>');
@@ -42,7 +42,7 @@
     else target.innerHTML = form(`<p>${message || 'Entre para acompanhar suas finanças com segurança.'}</p><label class="auth-field">E-mail ou telefone<input name="identity" autocomplete="username" required></label><label class="auth-field">Senha<input name="password" type="password" autocomplete="current-password" required></label><label class="auth-check"><input name="remember" type="checkbox" checked> Manter conectado neste dispositivo</label><button class="auth-primary" type="submit">Entrar</button><button class="auth-secondary" type="button" data-pwa-install hidden>Instalar aplicativo</button><p class="auth-help"><button class="auth-link" type="button" data-mode="forgot">Esqueci minha senha</button><br>Não possui conta? <button class="auth-link" type="button" data-mode="register">Criar conta</button></p>`);
     target.querySelectorAll('[data-mode]').forEach((button) => button.onclick = () => show(button.dataset.mode));
     target.querySelector('form').onsubmit = async (event) => {
-      event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget)); const submit = event.currentTarget.querySelector('[type=submit]'); if (submit) submit.disabled = true;
+      event.preventDefault(); const formElement = event.currentTarget; const values = Object.fromEntries(new FormData(formElement)); const submit = formElement.querySelector('[type=submit]'); if (submit) submit.disabled = true;
       try {
         let path; let body;
         if (mode === 'forgot') { path = '/auth/password-reset/request'; body = { identity: values.identity }; }
@@ -50,7 +50,7 @@
         else { if (mode === 'register' && values.password !== values.confirm) throw new Error('As senhas precisam ser iguais.'); path = `/auth/${mode === 'register' ? 'register' : 'login'}`; body = mode === 'register' ? { name: values.name, email: values.email, phone: values.phone || undefined, password: values.password, remember: values.remember === 'on' } : { identity: values.identity, password: values.password, remember: values.remember === 'on' }; }
         const response = await rawFetch(`${apiBase()}${path}`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const result = await response.json().catch(() => ({})); if (!response.ok || !result.success) throw new Error(result.error || 'Não foi possível concluir a solicitação.');
         if (mode === 'forgot') show('login', 'Se houver uma conta compatível, você receberá as instruções.'); else if (mode === 'reset') { history.replaceState({}, '', location.pathname); show('login', 'Senha atualizada. Entre novamente.'); } else { setSession(result.data); startSession(); }
-      } catch (error) { actionError(event.currentTarget, error.message || 'Verifique os dados e tente novamente.'); } finally { if (submit) submit.disabled = false; }
+      } catch (error) { actionError(formElement, error.message || 'Verifique os dados e tente novamente.'); } finally { if (submit) submit.disabled = false; }
     };
     target.querySelector('input')?.focus(); window.dispatchEvent(new CustomEvent('pagueon:auth-ui-ready')); window.pagueOnPwa?.bind(target);
   }

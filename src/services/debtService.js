@@ -34,7 +34,7 @@ function buildInstallments(input) {
   }
   const values = [];
   let remaining = totalCents;
-  const dayIntervals = { WEEKLY: 7, BIWEEKLY: 14 };
+  const dayIntervals = { DAILY: 1, WEEKLY: 7, BIWEEKLY: 14 };
   const monthIntervals = { MONTHLY: 1, BIMONTHLY: 2, QUARTERLY: 3, SEMIANNUAL: 6, ANNUAL: 12 };
   const frequency = input.frequency || 'MONTHLY';
   for (let index = 0; index < count; index += 1) {

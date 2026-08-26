@@ -46,6 +46,41 @@ async function createTestUser(overrides = {}) {
 // e só então o user (que limpa o resto via cascade: sales, goals, syncLogs…).
 async function cleanup(userId) {
   if (!userId) return;
+
+  // O AuditLog é append-only graças a um trigger no banco: qualquer UPDATE/DELETE
+  // de auditoria é abortado. O cascade do delete do usuário faz SET NULL nas FKs
+  // de auditoria (actorId/workspaceOwnerId), o que violaria esse trigger. Por isso
+  // apagamos as linhas de auditoria do usuário primeiro, desabilitando o trigger
+  // APENAS dentro desta transação. O `ALTER TABLE DISABLE TRIGGER` é DDL
+  // transacional: com tudo na mesma transação, o estado "disabled" vale só para a
+  // nossa própria conexão até o commit e o `ENABLE` ao final devolve o estado
+  // original. Nenhuma outra limpeza paralela (os arquivos rodam em paralelo com
+  // `node --test`) pode intercalar DISABLE/ENABLE entre processos — o lock
+  // ACCESS EXCLUSIVE da tabela segura concorrência até o commit.
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe('ALTER TABLE "AuditLog" DISABLE TRIGGER audit_log_no_update');
+    await tx.auditLog.deleteMany({
+      where: { OR: [{ workspaceOwnerId: userId }, { actorId: userId }] },
+    });
+    await tx.$executeRawUnsafe('ALTER TABLE "AuditLog" ENABLE TRIGGER audit_log_no_update');
+  });
+
+  // Delegações que giram em torno do usuário mas que têm FKs Restrict para
+  // tabelas que o cascade do user tentaria apagar depois. Apagamos na ordem
+  // correta para o delete do user não estourar.
+  await prisma.installmentPayment.deleteMany({ where: { userId } });
+  await prisma.collectorCommission.deleteMany({ where: { userId } });
+  await prisma.collectorContact.deleteMany({ where: { userId } });
+  await prisma.customerRegistrationInvite.deleteMany({ where: { userId } });
+  await prisma.financialMovement.deleteMany({ where: { userId } });
+  await prisma.financialCashClosing.deleteMany({ where: { userId } });
+  await prisma.financialAccount.deleteMany({ where: { userId } });
+
+  // Membros do workspace (cobradores/coletores) criados pelos testes tornam-se
+  // órfãos se não forem removidos junto com o owner.
+  const members = await prisma.user.findMany({ where: { workspaceOwnerId: userId }, select: { id: true } });
+  await prisma.user.deleteMany({ where: { workspaceOwnerId: userId } });
+
   await prisma.$transaction([
     prisma.saleItem.deleteMany({ where: { sale: { userId } } }),
     prisma.debt.deleteMany({ where: { userId } }),

@@ -188,6 +188,18 @@ enum FinancialMovementType {
   ADJUSTMENT
 }
 
+enum CustomerPersonType {
+  INDIVIDUAL
+  LEGAL
+}
+
+enum CustomerStatus {
+  PENDING_REVIEW
+  APPROVED
+  INACTIVE
+  REJECTED
+}
+
 model User {
   id                  String         @id @default(uuid()) @db.Uuid
   name                String
@@ -218,6 +230,9 @@ model User {
   products            Product[]
   purchases           Purchase[]
   customers           Customer[]
+  customerClassifications CustomerClassification[]
+  customerDocuments CustomerDocument[]
+  customerConsents CustomerConsent[]
   sales               Sale[]
   reminders           Reminder[]
   notifications       Notification[]
@@ -239,6 +254,7 @@ model User {
   workspaceMembers    User[]         @relation("WorkspaceMembers")
   clientProfile       Customer?      @relation("ClientPortal")
   assignedCustomers   Customer[]     @relation("CollectorAssignments")
+  approvedCustomers   Customer[]     @relation("CustomerApprovals")
   auditEvents         AuditLog[]     @relation("AuditActor")
   workspaceAuditEvents AuditLog[]    @relation("AuditWorkspace")
   goals               Goal[]
@@ -494,6 +510,26 @@ model Customer {
   phone     String?
   email     String?
   cpfCnpj   String?
+  personType CustomerPersonType @default(INDIVIDUAL)
+  documentNumber String?
+  birthOrIncorporationDate DateTime?
+  category String?
+  professionOrActivity String?
+  declaredIncome Decimal? @db.Decimal(12, 2)
+  creditLimit Decimal? @db.Decimal(12, 2)
+  approvedInterestRate Decimal? @db.Decimal(7, 4)
+  whatsapp String?
+  zipCode String?
+  street String?
+  streetNumber String?
+  addressComplement String?
+  neighborhood String?
+  city String?
+  state String?
+  classificationId String? @db.Uuid
+  status CustomerStatus @default(APPROVED)
+  approvedAt DateTime?
+  approvedById String? @db.Uuid
   address   String?
   avatar    String?
   notes     String?
@@ -503,12 +539,61 @@ model Customer {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   collector User?    @relation("CollectorAssignments", fields: [collectorId], references: [id], onDelete: SetNull)
   portalUser User?   @relation("ClientPortal", fields: [portalUserId], references: [id], onDelete: SetNull)
+  approvedBy User? @relation("CustomerApprovals", fields: [approvedById], references: [id], onDelete: SetNull)
+  classification CustomerClassification? @relation(fields: [classificationId], references: [id], onDelete: SetNull)
   debts     Debt[]
   sales     Sale[]
   financialMovements FinancialMovement[]
+  documents CustomerDocument[]
+  consents CustomerConsent[]
 
   @@index([userId, isActive, name])
   @@index([collectorId, isActive])
+  @@index([userId, status, classificationId])
+}
+
+model CustomerClassification {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  name String @db.VarChar(100)
+  criteria Json?
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customers Customer[]
+
+  @@unique([userId, name])
+  @@index([userId, isActive])
+}
+
+model CustomerDocument {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  customerId String @db.Uuid
+  fileName String @db.VarChar(255)
+  storagePath String @db.VarChar(500)
+  mimeType String @db.VarChar(120)
+  uploadedAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, uploadedAt])
+}
+
+model CustomerConsent {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  customerId String @db.Uuid
+  purpose String @db.VarChar(80)
+  granted Boolean
+  source String @db.VarChar(80)
+  grantedAt DateTime @default(now())
+  revokedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, purpose, grantedAt])
 }
 
 model Sale {

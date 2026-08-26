@@ -161,18 +161,15 @@ const reminderCreateSchema = z.object({
   message: z.string().trim().max(2000).nullable().optional(),
 }).strict();
 
-const customerCreateSchema = z.object({
-  name: z.string().trim().min(2).max(200),
-  nickname: z.string().trim().max(100).nullable().optional(),
-  phone: z.string().trim().max(30).nullable().optional(),
-  email: z.string().trim().email().max(255).nullable().optional(),
-  cpfCnpj: z.string().trim().max(30).nullable().optional(),
-  address: z.string().trim().max(500).nullable().optional(),
-  avatar: z.string().url().max(500).nullable().optional(),
-  notes: z.string().trim().max(2000).nullable().optional(),
-}).strict();
-
-const customerUpdateSchema = customerCreateSchema.partial().extend({ isActive: z.boolean().optional() }).strict();
+const customerFields = {
+  name: z.string().trim().min(2).max(200), nickname: z.string().trim().max(100).nullable().optional(), personType: z.enum(['INDIVIDUAL', 'LEGAL']).default('INDIVIDUAL'),
+  cpfCnpj: z.string().trim().max(30).nullable().optional(), documentNumber: z.string().trim().max(30).nullable().optional(), birthOrIncorporationDate: isoDate.nullable().optional(), category: z.string().trim().max(100).nullable().optional(),
+  classificationId: uuid.nullable().optional(), professionOrActivity: z.string().trim().max(200).nullable().optional(), declaredIncome: z.coerce.number().nonnegative().max(9999999999).nullable().optional(), creditLimit: z.coerce.number().nonnegative().max(9999999999).nullable().optional(), approvedInterestRate: z.coerce.number().min(0).max(1000000).nullable().optional(),
+  phone: z.string().trim().max(30).nullable().optional(), whatsapp: z.string().trim().max(30).nullable().optional(), email: z.string().trim().email().max(255).nullable().optional(), zipCode: z.string().trim().max(12).nullable().optional(), address: z.string().trim().max(500).nullable().optional(), street: z.string().trim().max(200).nullable().optional(), streetNumber: z.string().trim().max(30).nullable().optional(), addressComplement: z.string().trim().max(200).nullable().optional(), neighborhood: z.string().trim().max(120).nullable().optional(), city: z.string().trim().max(120).nullable().optional(), state: z.string().trim().length(2).nullable().optional(),
+  collectorId: uuid.nullable().optional(), avatar: z.string().url().max(500).nullable().optional(), notes: z.string().trim().max(2000).nullable().optional(),
+};
+const customerCreateSchema = z.object(customerFields).strict();
+const customerUpdateSchema = customerCreateSchema.partial().extend({ isActive: z.boolean().optional(), status: z.enum(['PENDING_REVIEW', 'APPROVED', 'INACTIVE', 'REJECTED']).optional() }).strict();
 
 const saleItemSchema = z.object({
   productId: uuid,

@@ -61,5 +61,5 @@
   async function loadUser() { if (!getToken() && !(await renew())) return null; const response = await rawFetch(`${apiBase()}/auth/me`, { credentials: 'include', headers: { Authorization: `Bearer ${getToken()}` } }); if (!response.ok) return null; const result = await response.json(); if (!result.success) return null; setSession({ token: getToken(), user: result.data }); return result.data; }
   window.pagueOnAuth = { getToken, getUser, isAuthenticated: () => Boolean(getToken()), fetchWithAuth, logout, loadUser };
   window.fetch = (input, options) => fetchWithAuth(input, options);
-  (async () => { const reset = new URLSearchParams(location.search).get('reset'); const user = reset ? null : await loadUser(); if (user) startSession(); else { clearSession(); show(reset ? 'reset' : 'login'); } })();
+  (async () => { const params = new URLSearchParams(location.search); const reset = params.get('reset'); const requestedMode = params.get('auth'); const user = reset ? null : await loadUser(); if (user) startSession(); else { clearSession(); show(reset ? 'reset' : requestedMode === 'register' ? 'register' : 'login'); } })();
 })();

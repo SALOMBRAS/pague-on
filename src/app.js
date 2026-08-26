@@ -68,6 +68,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.resolve(process.env.UPLOAD_PATH || './uploads')));
 app.get('/', (_req, res) => res.sendFile(path.resolve('public/landing.html')));
+app.get('/app', (_req, res) => res.sendFile(path.resolve('public/index.html')));
 app.use(express.static(path.resolve('public')));
 
 app.get('/health', (_req, res) => sendSuccess(res, { status: 'ok', timestamp: new Date().toISOString() }));

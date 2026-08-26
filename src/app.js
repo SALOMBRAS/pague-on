@@ -37,6 +37,7 @@ const peopleRoutes = require('./routes/peopleRoutes');
 const installmentRoutes = require('./routes/installmentRoutes');
 const syncRoutes = require('./routes/syncRoutes');
 const goalRoutes = require('./routes/goalRoutes');
+const collectorRoutes = require('./routes/collectorRoutes');
 const assetController = require('./controllers/assetController');
 
 const app = express();
@@ -77,6 +78,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/customer-registration', customerRegistrationRoutes);
 app.use('/api/v1', (req, res, next) => auth(req, res, (error) => error ? next(error) : apiAccessPolicy(req, res, next)));
 app.use('/api/v1/access', accessRoutes);
+app.use('/api/v1/collectors', collectorRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/financial-accounts', financialAccountRoutes);
 app.use('/api/v1/debts', debtRoutes);

@@ -39,6 +39,12 @@ const passwordResetConfirmSchema = z.object({
 
 const memberCreateSchema = z.object({ name: z.string().trim().min(2).max(120), email: z.string().trim().email().max(255).transform((value) => value.toLowerCase()), password: z.string().min(6).max(128), role: z.enum(['MANAGER', 'COLLECTOR', 'CLIENT']), customerId: uuid.optional() }).strict();
 const memberUpdateSchema = z.object({ role: z.enum(['MANAGER', 'COLLECTOR', 'CLIENT']).optional(), customerId: uuid.nullable().optional(), customerIds: z.array(uuid).max(1000).optional() }).strict();
+const collectorPermissionsSchema = z.object({ recordPayments: z.boolean().optional(), registerContacts: z.boolean().optional(), viewContactHistory: z.boolean().optional() }).strict();
+const collectorCreateSchema = z.object({ name: z.string().trim().min(2).max(120), email: z.string().trim().email().max(255).transform((value) => value.toLowerCase()), password: z.string().min(6).max(128), phone: z.string().trim().max(30).nullable().optional(), whatsapp: z.string().trim().max(30).nullable().optional(), documentNumber: z.string().trim().min(3).max(40).nullable().optional(), isActive: z.boolean().default(true), commissionType: z.enum(['PERCENTAGE', 'FIXED']).default('PERCENTAGE'), commissionRate: z.coerce.number().min(0).max(100000).default(0), commissionBase: z.enum(['PRINCIPAL', 'INTEREST', 'PENALTY', 'TOTAL']).default('TOTAL'), permissions: collectorPermissionsSchema.optional(), notes: z.string().trim().max(2000).nullable().optional() }).strict();
+const collectorUpdateSchema = collectorCreateSchema.omit({ password: true }).partial().strict();
+const collectorCustomerAssignmentSchema = z.object({ customerIds: z.array(uuid).max(1000) }).strict();
+const collectorContactSchema = z.object({ customerId: uuid, debtId: uuid.optional(), installmentId: uuid.optional(), type: z.enum(['CALL', 'WHATSAPP', 'SMS', 'VISIT', 'PAYMENT_PROMISE', 'NOTE']), note: z.string().trim().max(2000).nullable().optional(), promisedDate: isoDate.optional(), promisedAmount: z.coerce.number().positive().max(9999999999).optional() }).strict().superRefine((value, context) => { if (value.type === 'PAYMENT_PROMISE' && !value.promisedDate) context.addIssue({ code: z.ZodIssueCode.custom, path: ['promisedDate'], message: 'Informe a data da promessa de pagamento.' }); });
+const collectorCommissionQuerySchema = z.object({ startDate: z.string().date().optional(), endDate: z.string().date().optional(), customerId: uuid.optional(), debtId: uuid.optional(), status: z.enum(['ACTIVE', 'REVERSED']).optional(), paymentStatus: z.enum(['PENDING', 'PARTIAL', 'PAID', 'OVERDUE']).optional() }).strict().superRefine((value, context) => { if (value.startDate && value.endDate && value.startDate > value.endDate) context.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'A data final deve ser posterior à inicial.' }); });
 
 const refreshTokenSchema = z.object({
   refreshToken: z.string().min(32).max(512),
@@ -313,6 +319,11 @@ module.exports = {
   passwordResetConfirmSchema,
   memberCreateSchema,
   memberUpdateSchema,
+  collectorCreateSchema,
+  collectorUpdateSchema,
+  collectorCustomerAssignmentSchema,
+  collectorContactSchema,
+  collectorCommissionQuerySchema,
   refreshTokenSchema,
   profileSchema,
   passwordSchema,

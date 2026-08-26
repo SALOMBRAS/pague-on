@@ -2,6 +2,7 @@ const customerService = require('../services/customerService');
 const { customerCreateSchema, customerUpdateSchema, idSchema } = require('../utils/validators');
 const { sendSuccess } = require('../utils/responseHelper');
 const { serialize } = require('../utils/serializers');
+const audit = require('../services/auditService');
 
 function parseId(req) { return idSchema.parse(req.params).id; }
 
@@ -29,5 +30,6 @@ async function remove(req, res) {
   const customer = await customerService.updateCustomer(req.user.id, parseId(req), { isActive: false });
   return sendSuccess(res, serialize(customer), 'Cliente arquivado com sucesso.');
 }
+async function approve(req, res) { const customer = await customerService.approveCustomer(req.user.id, parseId(req), req.actor.id); await audit.record({ eventType: 'customer_approved', req, actor: req.actor, workspaceOwnerId: req.user.id, targetId: customer.id, targetType: 'customer' }); return sendSuccess(res, serialize(customer), 'Cliente aprovado com sucesso.'); }
 
-module.exports = { list, getById, create, update, remove };
+module.exports = { list, getById, create, update, remove, approve };

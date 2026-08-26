@@ -43,5 +43,9 @@ async function updateCustomer(userId, id, input) {
   await findOwnedCustomer(userId, id);
   return prisma.customer.update({ where: { id }, data: input });
 }
+async function approveCustomer(userId, id, approvedById) {
+  await findOwnedCustomer(userId, id);
+  return prisma.customer.update({ where: { id }, data: { status: 'APPROVED', isActive: true, approvedAt: new Date(), approvedById } });
+}
 
-module.exports = { findOwnedCustomer, listCustomers, customerDetail, createCustomer, updateCustomer };
+module.exports = { findOwnedCustomer, listCustomers, customerDetail, createCustomer, updateCustomer, approveCustomer };

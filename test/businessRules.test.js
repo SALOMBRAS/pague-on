@@ -12,6 +12,7 @@ const { duplicateScore, similarity } = require('../src/services/duplicateService
 const { convertAmount } = require('../src/services/currencyService');
 const { rangeFor } = require('../src/services/dashboardService');
 const { calculateSchedule } = require('../src/services/loanService');
+const { allocationPreview } = require('../src/services/loanReceiptService');
 
 test('preserva o último dia válido ao avançar meses', () => {
   const januaryThirtyFirst = new Date('2026-01-31T00:00:00.000Z');
@@ -115,6 +116,16 @@ test('simula Price, juros simples e desloca domingos conforme configuração', (
   const price = calculateSchedule({ ...base, modality: 'PRICE', firstDueDate: new Date('2026-02-02T00:00:00.000Z') }, { skipSundays: false, holidayDates: [] });
   assert.equal(price.totalPrincipal, 1000);
   assert.equal(price.schedule[0].total, price.schedule[1].total);
+});
+
+test('apropria recebimento de parcela entre juros, principal e desconto', () => {
+  const installment = { amount: 100, interestAmount: 20, paidAmount: 0, payments: [] };
+  const preview = allocationPreview(installment, { amount: 70, discountType: 'FIXED', discountValue: 10, discountReason: 'Acordo antecipado' }, true);
+  assert.equal(preview.discount, 10);
+  assert.equal(preview.interest, 10);
+  assert.equal(preview.principal, 60);
+  assert.equal(preview.remaining, 40);
+  assert.throws(() => allocationPreview(installment, { amount: 121 }, false), /saldo pendente/);
 });
 
 test('calcula juros diário e composto apenas para parcela vencida', () => {

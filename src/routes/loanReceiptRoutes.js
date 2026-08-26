@@ -1,0 +1,12 @@
+const express = require('express');
+const auth = require('../middlewares/authMiddleware');
+const controller = require('../controllers/loanReceiptController');
+const { paymentProofUpload } = require('../middlewares/uploadMiddleware');
+const router = express.Router();
+router.use(auth);
+router.get('/:debtId', controller.details);
+router.post('/installments/:installmentId/proof', paymentProofUpload, controller.uploadProof);
+router.post('/installments/:installmentId/preview-receipt', controller.preview);
+router.post('/installments/:installmentId/receipts', controller.receive);
+router.post('/receipts/:paymentId/reverse', controller.reverse);
+module.exports = router;

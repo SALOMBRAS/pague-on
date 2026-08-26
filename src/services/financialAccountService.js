@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { Prisma } = require('@prisma/client');
 const prisma = require('../config/database');
 const HttpError = require('../utils/httpError');
 const { startOfUtcDay, endOfUtcDay } = require('../utils/dateHelpers');
@@ -45,16 +46,19 @@ async function recordMovement({ db = prisma, userId, accountId, type, amount, oc
   if (!account) throw new HttpError(400, 'FINANCIAL_ACCOUNT_UNAVAILABLE', 'Conta financeira não encontrada ou inativa.');
   const closing = await db.financialCashClosing.findFirst({ where: { accountId: account.id, userId, closedThrough: { gte: startOfUtcDay(occurredAt) } }, orderBy: { closedThrough: 'desc' } });
   if (closing) throw new HttpError(409, 'FINANCIAL_PERIOD_CLOSED', 'O período deste caixa já foi fechado. Faça um lançamento compensatório na data atual.');
-  return db.financialMovement.upsert({
-    where: { userId_referenceId: { userId, referenceId: resolvedReference } },
-    create: { userId, accountId: account.id, type, amount, occurredAt: startOfUtcDay(occurredAt), referenceId: resolvedReference, description, category, origin, paymentMethod, customerId, debtId, collectorId, responsibleUserId, operationId, reversalOfId, principal, interest, penalty },
-    update: {},
-  });
+  try {
+    return await db.financialMovement.create({
+      data: { userId, accountId: account.id, type, amount, occurredAt: startOfUtcDay(occurredAt), referenceId: resolvedReference, description, category, origin, paymentMethod, customerId, debtId, collectorId, responsibleUserId, operationId, reversalOfId, principal, interest, penalty },
+    });
+  } catch (error) {
+    if (error.code === 'P2002') throw new HttpError(409, 'DUPLICATE_REFERENCE', 'Já existe um lançamento com este referenceId para o usuário.');
+    throw error;
+  }
 }
 
 async function adjustment(userId, input, responsibleUserId = null) {
   const amount = input.direction === 'DEBIT' ? -Math.abs(input.amount) : Math.abs(input.amount);
-  return recordMovement({ userId, accountId: input.accountId, type: 'ADJUSTMENT', amount, occurredAt: input.occurredAt || new Date(), referenceId: `adjustment:${crypto.randomUUID()}`, description: input.reason, category: input.category || null, origin: 'COMPENSATING_ADJUSTMENT', responsibleUserId, operationId: crypto.randomUUID() });
+  return prisma.$transaction((tx) => recordMovement({ db: tx, userId, accountId: input.accountId, type: 'ADJUSTMENT', amount, occurredAt: input.occurredAt || new Date(), referenceId: `adjustment:${crypto.randomUUID()}`, description: input.reason, category: input.category || null, origin: 'COMPENSATING_ADJUSTMENT', responsibleUserId, operationId: crypto.randomUUID() }));
 }
 
 async function reverseMovement(userId, movementId, reason, responsibleUserId = null) {
@@ -70,6 +74,7 @@ async function reverseMovement(userId, movementId, reason, responsibleUserId = n
 
 async function closeAccount(userId, input, responsibleUserId = null) {
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw(Prisma.sql`select "id" from "FinancialAccount" where "id" = cast(${input.accountId} as uuid) and "userId" = cast(${userId} as uuid) for update`);
     const account = await getAccount(userId, input.accountId, tx);
     const closedThrough = endOfUtcDay(`${input.closedThrough}T00:00:00.000Z`);
     const movements = await tx.financialMovement.findMany({ where: { userId, accountId: account.id, occurredAt: { lte: closedThrough } }, select: { type: true, amount: true } });

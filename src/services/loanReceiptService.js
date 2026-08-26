@@ -18,16 +18,20 @@ const loanInclude = {
 
 function activePayments(installment) { return (installment.payments || []).filter((item) => !item.isReversed); }
 function totals(installment) {
-  const payments = activePayments(installment);
-  const receiptPrincipal = round(payments.reduce((sum, item) => sum + Number(item.principalAmount), 0));
-  const receiptInterest = round(payments.reduce((sum, item) => sum + Number(item.interestAmount), 0));
-  const paidPenalty = round(payments.reduce((sum, item) => sum + Number(item.penaltyAmount), 0));
-  const discounted = round(payments.reduce((sum, item) => sum + Number(item.discountAmount), 0));
-  const receiptCash = round(payments.reduce((sum, item) => sum + Number(item.amount), 0));
+  const payments = installment.payments || [];
+  const active = activePayments(installment);
+  const receiptCash = round(active.reduce((sum, item) => sum + Number(item.amount), 0));
+  const allCash = round(payments.reduce((sum, item) => sum + Number(item.amount), 0));
+  const receiptPrincipal = round(active.reduce((sum, item) => sum + Number(item.principalAmount), 0));
+  const receiptInterest = round(active.reduce((sum, item) => sum + Number(item.interestAmount), 0));
+  const paidPenalty = round(active.reduce((sum, item) => sum + Number(item.penaltyAmount), 0));
+  const discounted = round(active.reduce((sum, item) => sum + Number(item.discountAmount), 0));
   const principal = Number(installment.amount);
   const interest = Number(installment.interestAmount || 0);
   const penalty = 0;
-  const legacyCash = round(Math.max(0, Number(installment.paidAmount || 0) - receiptCash));
+  // Legacy = pagamentos fora de recibo (gravados direto no paidAmount). Subtrai o total de
+  // TODOS os recibos (inclusive estornados) para o valor estornado não vazar de volta.
+  const legacyCash = round(Math.max(0, Number(installment.paidAmount || 0) - allCash));
   const paidPrincipal = round(receiptPrincipal + Math.min(legacyCash, Math.max(0, principal - receiptPrincipal)));
   const paidInterest = round(receiptInterest + Math.max(0, legacyCash - Math.min(legacyCash, Math.max(0, principal - receiptPrincipal))));
   const paidCash = round(receiptCash + legacyCash);
@@ -67,12 +71,12 @@ function receiptHtml(debt, installment, payment, preview) {
 }
 
 async function lockInstallment(tx, installmentId) {
-  await tx.$queryRaw(Prisma.sql`select "id" from "Installment" where "id" = ${installmentId} for update`);
+  await tx.$queryRaw(Prisma.sql`select "id" from "Installment" where "id" = cast(${installmentId} as uuid) for update`);
 }
 
 async function lockAccounts(tx, accountIds) {
   const ordered = [...new Set(accountIds)].sort();
-  if (ordered.length) await tx.$queryRaw(Prisma.sql`select "id" from "FinancialAccount" where "id" in (${Prisma.join(ordered)}) order by "id" for update`);
+  if (ordered.length) await tx.$queryRaw(Prisma.sql`select "id" from "FinancialAccount" where "id"::text in (${Prisma.join(ordered)}) order by "id" for update`);
 }
 
 async function findInstallment(userId, installmentId, db = prisma) {

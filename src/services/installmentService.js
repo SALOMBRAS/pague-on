@@ -1,3 +1,4 @@
+const { Prisma } = require('@prisma/client');
 const prisma = require('../config/database');
 const HttpError = require('../utils/httpError');
 const { createNotification } = require('./notificationService');
@@ -35,14 +36,17 @@ async function syncSaleAndDebt(tx, debtId) {
 }
 
 async function payInstallment(userId, id, input, scope = {}) {
-  let current = await ownedInstallment(userId, id, scope);
-  await recalculateSaleInterest(current.debt.sale.id);
-  current = await ownedInstallment(userId, id, scope);
-  if (current.status === 'PAID') throw new HttpError(409, 'INSTALLMENT_PAID', 'Esta parcela já foi paga.');
-  const totalDue = Number(current.totalAmount || current.amount); const alreadyPaid = Number(current.paidAmount || 0);
-  const value = round(input.paidAmount ?? totalDue - alreadyPaid);
-  if (value <= 0 || value > totalDue - alreadyPaid + 0.01) throw new HttpError(400, 'INVALID_PAYMENT', 'Informe um valor de pagamento válido.');
+  const initial = await ownedInstallment(userId, id, scope);
+  await recalculateSaleInterest(initial.debt.sale.id);
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw(Prisma.sql`select "id" from "Installment" where "id" = cast(${id} as uuid) for update`);
+    const current = await tx.installment.findFirst({ where: { id, debt: scopedDebt(userId, scope) }, include: installmentInclude });
+    if (!current) throw new HttpError(404, 'INSTALLMENT_NOT_FOUND', 'Parcela não encontrada.');
+    if (!current.debt.sale) throw new HttpError(409, 'SALE_NOT_FOUND', 'Esta parcela não pertence a uma venda.');
+    if (current.status === 'PAID') throw new HttpError(409, 'INSTALLMENT_PAID', 'Esta parcela já foi paga.');
+    const totalDue = Number(current.totalAmount || current.amount); const alreadyPaid = Number(current.paidAmount || 0);
+    const value = round(input.paidAmount ?? totalDue - alreadyPaid);
+    if (value <= 0 || value > totalDue - alreadyPaid + 0.01) throw new HttpError(400, 'INVALID_PAYMENT', 'Informe um valor de pagamento válido.');
     const paidAmount = round(alreadyPaid + value); const isPaid = paidAmount >= totalDue - 0.01;
     const paidAt = input.paymentDate || new Date();
     await tx.installment.update({ where: { id }, data: { paidAmount, paidAt, paymentMethod: input.paymentMethod || null, note: input.note || null, status: isPaid ? 'PAID' : 'PARTIAL' } });

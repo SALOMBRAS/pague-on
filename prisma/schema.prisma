@@ -819,6 +819,8 @@ model CustomerRegistrationInvite {
   customerId String @db.Uuid
   tokenHash String @unique @db.VarChar(64)
   expiresAt DateTime
+  attempts Int @default(0)
+  revokedAt DateTime?
   usedAt DateTime?
   submittedAt DateTime?
   submittedData Json?

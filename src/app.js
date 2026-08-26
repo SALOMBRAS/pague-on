@@ -68,6 +68,9 @@ app.use(cors({
   credentials: true,
 }));
 app.use(rateLimit({ windowMs: 60 * 1000, limit: 100, standardHeaders: 'draft-8', legacyHeaders: false }));
+// Rotas públicas de auto-cadastro: limiter dedicado para conter brute-force de token.
+const registrationLimiter = rateLimit({ windowMs: 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false });
+app.use('/api/v1/customer-registration', (req, res, next) => { if (req.path === '/customers' || req.path.startsWith('/invites') || req.path.startsWith('/customers/')) return next(); return registrationLimiter(req, res, next); });
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.resolve(process.env.UPLOAD_PATH || './uploads')));

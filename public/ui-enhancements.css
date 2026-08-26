@@ -1,50 +1,4 @@
-:root {
-  --blue-700: #1e40af;
-  --blue-500: #3b82f6;
-  --green-600: #059669;
-  --slate-950: #0f172a;
-  --slate-900: #192134;
-  --slate-800: #233047;
-  --slate-700: #3d4b60;
-  --slate-300: #cbd5e1;
-  --slate-400: #94a3b8;
-  --danger-500: #ef4444;
-  --warning-400: #fbbf24;
-  --surface-primary: var(--slate-950);
-  --surface-card: var(--slate-900);
-  --surface-raised: var(--slate-800);
-  --text-primary: #f8fafc;
-  --text-secondary: var(--slate-300);
-  --border-subtle: rgba(203, 213, 225, .16);
-  --focus-ring: #93c5fd;
-  --radius-sm: 12px;
-  --radius-md: 16px;
-  --radius-lg: 22px;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --bg: var(--surface-primary);
-  --panel: #111b2d;
-  --surface: var(--surface-card);
-  --hover: var(--surface-raised);
-  --raised: #2d3b52;
-  --line: var(--border-subtle);
-  --text: var(--text-primary);
-  --muted: var(--text-secondary);
-  --dim: var(--slate-400);
-  --green: #34d399;
-  --green-bg: #123c32;
-  --red: #fca5a5;
-  --red-bg: #482431;
-  --amber: #fcd34d;
-  --amber-bg: #4a381d;
-  --blue: #93c5fd;
-  --radius: var(--radius-md);
-  --shadow: 0 20px 48px rgba(2, 6, 23, .42);
-}
+/* Papéis semânticos e temas vêm de tokens.css (fonte única de verdade). */
 
 html { background: var(--surface-primary); }
 body { min-width: 320px; background: radial-gradient(circle at 8% 0, rgba(30,64,175,.23), transparent 30rem), var(--surface-primary); }
@@ -65,7 +19,7 @@ input, select, textarea { min-height: 44px; border-color: var(--border-subtle) !
 .stat { padding: var(--space-4); }
 .stat b { font-size: clamp(1rem, 4vw, 1.25rem); overflow-wrap: anywhere; }
 .chips, .tabs { scroll-padding-inline: var(--space-4); }
-.chip, .tab { min-height: 40px; }
+.chip, .tab { min-height: 44px; }
 .chip { white-space: nowrap; }
 .debt, .recurring, .history { padding: var(--space-4); }
 .description, .person, .product-name, .stock-detail-title, .setting label, .setting small { overflow-wrap: anywhere; }

@@ -1,43 +1,6 @@
-/* Pague On mobile PWA — visual layer kept separate from the desktop dashboard. */
-:root {
-  --pague-bg: #07150e;
-  --pague-surface: #0f2117;
-  --pague-surface-raised: #152b1f;
-  --pague-line: rgba(194, 238, 211, .13);
-  --pague-text: #f3fbf6;
-  --pague-muted: #a9bdb0;
-  --pague-dim: #789083;
-  --pague-primary: #00c853;
-  --pague-primary-strong: #00a948;
-  --pague-primary-soft: rgba(0, 200, 83, .14);
-  --pague-danger: #ff7d7d;
-  --pague-danger-soft: rgba(255, 91, 91, .13);
-  --pague-warning: #ffd166;
-  --pague-warning-soft: rgba(255, 209, 102, .13);
-}
-
+/* Pague On mobile PWA — visual layer kept separate from the desktop dashboard.
+   Tokens/temas vêm de tokens.css; aqui ficam só os estilos móveis (uso direto das vars semânticas). */
 @media (max-width: 1023px) {
-  :root {
-    --bg: var(--pague-bg);
-    --panel: #0b1a11;
-    --surface: var(--pague-surface);
-    --hover: var(--pague-surface-raised);
-    --raised: #1a3525;
-    --line: var(--pague-line);
-    --text: var(--pague-text);
-    --muted: var(--pague-muted);
-    --dim: var(--pague-dim);
-    --green: var(--pague-primary);
-    --green-strong: var(--pague-primary-strong);
-    --green-bg: var(--pague-primary-soft);
-    --red: var(--pague-danger);
-    --red-bg: var(--pague-danger-soft);
-    --amber: var(--pague-warning);
-    --amber-bg: var(--pague-warning-soft);
-    --on-green: #032b13;
-    --shadow: 0 22px 54px rgba(0, 0, 0, .3);
-  }
-
   html { background: var(--pague-bg); }
   body {
     background:
@@ -70,7 +33,7 @@
   .tab { min-height: 44px; color: var(--pague-muted); font-size: 13px; }
   .tab.active { color: var(--pague-primary); border-bottom-width: 3px; }
   .chips { gap: 8px; margin-top: 12px; }
-  .chip { min-height: 36px; padding-inline: 13px; border-color: var(--pague-line); background: rgba(15, 33, 23, .9); }
+  .chip { min-height: 44px; padding-inline: 13px; border-color: var(--pague-line); background: rgba(15, 33, 23, .9); }
   .chip.active { border-color: rgba(0, 200, 83, .56); background: var(--pague-primary-soft); }
 
   .dash-hero, .wealth-hero, .home-widget {

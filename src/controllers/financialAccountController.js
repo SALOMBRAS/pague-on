@@ -1,6 +1,6 @@
 const service = require('../services/financialAccountService');
 const audit = require('../services/auditService');
-const { financialAccountCreateSchema, financialAccountUpdateSchema, financialStatementQuerySchema, idSchema } = require('../utils/validators');
+const { financialAccountCreateSchema, financialAccountUpdateSchema, financialStatementQuerySchema, financialTransferSchema, idSchema } = require('../utils/validators');
 const { sendSuccess } = require('../utils/responseHelper');
 const { serialize } = require('../utils/serializers');
 
@@ -18,5 +18,10 @@ async function update(req, res) {
   return sendSuccess(res, serialize(account), 'Caixa atualizado com sucesso.');
 }
 async function statement(req, res) { return sendSuccess(res, serialize(await service.statement(req.user.id, financialStatementQuerySchema.parse(req.query)))); }
+async function transfer(req, res) {
+  const result = await service.transfer(req.user.id, financialTransferSchema.parse(req.body), req.actor.id);
+  await audit.record({ eventType: 'financial_transfer_created', req, actor: req.actor, workspaceOwnerId: req.user.id, targetId: result.operationId, targetType: 'financial_transfer', payload: { fromAccountId: result.debit.accountId, toAccountId: result.credit.accountId, amount: result.debit.amount } });
+  return sendSuccess(res, serialize(result), 'Transferência registrada com sucesso.', 201);
+}
 
-module.exports = { list, create, update, statement };
+module.exports = { list, create, update, statement, transfer };

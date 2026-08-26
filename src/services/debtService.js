@@ -83,6 +83,8 @@ async function createDebt(userId, input) {
   const convertedInput = await currencyService.convertDebtInput(debtInput);
   const ruleResult = await ruleService.applyToDebtInput(userId, convertedInput);
   const data = normalizeDebtInput(ruleResult.input);
+  const cashAllocations = data.cashAllocations || [];
+  delete data.cashAllocations;
   await assertOwnedProduct(prisma, userId, data.productId);
   const installments = data.paymentType === 'INSTALLMENT' ? buildInstallments(data) : [];
   const dueDate = installments[0]?.dueDate || data.startDate;
@@ -104,7 +106,8 @@ async function createDebt(userId, input) {
       include: debtInclude,
     });
     if (debt.type === 'RECEIVABLE' && debt.category === 'LOAN') {
-      await recordMovement({ db: tx, userId, type: 'LOAN_DISBURSEMENT', amount: debt.totalAmount, occurredAt: debt.startDate, referenceId: `loan-disbursement:${debt.id}`, description: `Liberação: ${debt.description}`, principal: debt.totalAmount });
+      const allocations = cashAllocations.length ? cashAllocations : [{ accountId: null, amount: debt.totalAmount }];
+      await Promise.all(allocations.map((allocation) => recordMovement({ db: tx, userId, accountId: allocation.accountId, type: 'LOAN_DISBURSEMENT', amount: allocation.amount, occurredAt: debt.startDate, referenceId: `loan-disbursement:${debt.id}:${allocation.accountId || 'default'}`, description: `Liberação: ${debt.description}`, origin: 'LOAN_DISBURSEMENT', debtId: debt.id, customerId: debt.customerId, principal: allocation.amount, operationId: debt.id })));
     }
     return debt;
   });
@@ -242,7 +245,7 @@ async function updateLinkedSalePayment(tx, debt, amount, debtStatus) {
   await tx.sale.update({ where: { id: sale.id }, data: { status } });
 }
 
-async function paySingleDebt(userId, id, paidAmount, goalId) {
+async function paySingleDebt(userId, id, paidAmount, goalId, cashAccountId) {
   return prisma.$transaction(async (tx) => {
     const debt = await tx.debt.findFirst({ where: { id, userId } });
     if (!debt) throw new HttpError(404, 'DEBT_NOT_FOUND', 'Dívida não encontrada.');
@@ -260,7 +263,7 @@ async function paySingleDebt(userId, id, paidAmount, goalId) {
       data: { status, isActive: !isComplete, paidAt: isComplete ? now : null, paidAmount: newPaidAmount },
     });
     await updateDailyCashFlow(tx, userId, debt.type, amount, now);
-    await recordMovement({ db: tx, userId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `debt-payment:${debt.id}:${now.toISOString()}`, description: `Pagamento: ${debt.description}`, principal: debt.category === 'LOAN' ? amount : 0 });
+    await recordMovement({ db: tx, userId, accountId: cashAccountId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `debt-payment:${debt.id}:${now.toISOString()}`, description: `Pagamento: ${debt.description}`, category: debt.category, origin: 'DEBT_PAYMENT', debtId: debt.id, customerId: debt.customerId, principal: debt.category === 'LOAN' ? amount : 0 });
     await updateLinkedSalePayment(tx, debt, amount, status);
     await createNotification(tx, userId, {
       title: 'Pagamento registrado',
@@ -277,7 +280,7 @@ async function paySingleDebt(userId, id, paidAmount, goalId) {
   });
 }
 
-async function payInstallment(userId, debtId, installmentId, paidAmount) {
+async function payInstallment(userId, debtId, installmentId, paidAmount, cashAccountId) {
   return prisma.$transaction(async (tx) => {
     const debt = await tx.debt.findFirst({ where: { id: debtId, userId }, include: { installments: true } });
     if (!debt) throw new HttpError(404, 'DEBT_NOT_FOUND', 'Dívida não encontrada.');
@@ -305,7 +308,7 @@ async function payInstallment(userId, debtId, installmentId, paidAmount) {
     });
     await updateDailyCashFlow(tx, userId, debt.type, amount, now);
     const principal = Math.min(amount, Number(installment.amount));
-    await recordMovement({ db: tx, userId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `installment-payment:${installment.id}:${now.toISOString()}`, description: `Parcela ${installment.number}: ${debt.description}`, principal: debt.category === 'LOAN' ? principal : 0, interest: debt.category === 'LOAN' ? Math.max(0, amount - principal) : 0 });
+    await recordMovement({ db: tx, userId, accountId: cashAccountId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `installment-payment:${installment.id}:${now.toISOString()}`, description: `Parcela ${installment.number}: ${debt.description}`, category: debt.category, origin: 'INSTALLMENT_PAYMENT', debtId: debt.id, customerId: debt.customerId, principal: debt.category === 'LOAN' ? principal : 0, interest: debt.category === 'LOAN' ? Math.max(0, amount - principal) : 0 });
     await updateLinkedSalePayment(tx, debt, amount, isComplete ? 'PAID' : 'PENDING');
     await createNotification(tx, userId, {
       title: 'Parcela registrada',
@@ -317,7 +320,7 @@ async function payInstallment(userId, debtId, installmentId, paidAmount) {
   });
 }
 
-async function payRecurringDebt(userId, id, paidAmount) {
+async function payRecurringDebt(userId, id, paidAmount, cashAccountId) {
   return prisma.$transaction(async (tx) => {
     const debt = await tx.debt.findFirst({
       where: { id, userId },
@@ -349,7 +352,7 @@ async function payRecurringDebt(userId, id, paidAmount) {
       include: debtInclude,
     });
     await updateDailyCashFlow(tx, userId, debt.type, amount, now);
-    await recordMovement({ db: tx, userId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `recurring-payment:${current.id}:${now.toISOString()}`, description: `Pagamento recorrente: ${debt.description}` });
+    await recordMovement({ db: tx, userId, accountId: cashAccountId, type: debt.type === 'RECEIVABLE' ? 'PAYMENT_RECEIVED' : 'EXPENSE_PAID', amount, occurredAt: now, referenceId: `recurring-payment:${current.id}:${now.toISOString()}`, description: `Pagamento recorrente: ${debt.description}`, category: debt.category, origin: 'RECURRING_PAYMENT', debtId: debt.id, customerId: debt.customerId });
     await updateLinkedSalePayment(tx, debt, amount, shouldEnd ? 'PAID' : 'PENDING');
     await createNotification(tx, userId, {
       title: 'Pagamento recorrente registrado',
@@ -361,15 +364,15 @@ async function payRecurringDebt(userId, id, paidAmount) {
   });
 }
 
-async function payDebt(userId, id, paidAmount, goalId) {
+async function payDebt(userId, id, paidAmount, goalId, cashAccountId) {
   const debt = await findDebt(userId, id, false);
   if (debt.paymentType === 'INSTALLMENT') {
     const next = await prisma.installment.findFirst({ where: { debtId: id, status: { in: ['PENDING', 'OVERDUE'] } }, orderBy: { dueDate: 'asc' } });
     if (!next) throw new HttpError(409, 'INSTALLMENT_UNAVAILABLE', 'Não há parcela pendente para pagar.');
-    return payInstallment(userId, id, next.id, paidAmount);
+    return payInstallment(userId, id, next.id, paidAmount, cashAccountId);
   }
-  if (debt.paymentType === 'RECURRING') return payRecurringDebt(userId, id, paidAmount);
-  return paySingleDebt(userId, id, paidAmount, goalId);
+  if (debt.paymentType === 'RECURRING') return payRecurringDebt(userId, id, paidAmount, cashAccountId);
+  return paySingleDebt(userId, id, paidAmount, goalId, cashAccountId);
 }
 
 async function cancelRecurringDebt(userId, id) {

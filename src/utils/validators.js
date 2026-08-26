@@ -84,6 +84,7 @@ const debtFields = {
   repeatCount: z.coerce.number().int().min(1).max(10000).nullable().optional(),
   productId: uuid.nullable().optional(),
   quantity: z.coerce.number().int().positive().nullable().optional(),
+  cashAllocations: z.array(z.object({ accountId: uuid, amount: z.coerce.number().positive().max(9999999999) }).strict()).min(1).max(20).optional(),
   allowDuplicate: z.boolean().optional(),
   currency: currencyCode.default('BRL'),
 };
@@ -100,6 +101,12 @@ const debtCreateSchema = z.object(debtFields).strict().superRefine((value, conte
   }
   if (value.endDate && value.endDate < value.startDate) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'A data final deve ser posterior ao início.' });
+  }
+  if (value.cashAllocations?.length) {
+    if (value.type !== 'RECEIVABLE' || value.category !== 'LOAN') context.addIssue({ code: z.ZodIssueCode.custom, path: ['cashAllocations'], message: 'A divisão entre caixas só se aplica à liberação de empréstimos.' });
+    const allocated = value.cashAllocations.reduce((sum, item) => sum + item.amount, 0);
+    if (Math.abs(allocated - value.totalAmount) > 0.01) context.addIssue({ code: z.ZodIssueCode.custom, path: ['cashAllocations'], message: 'A soma dos caixas deve ser igual ao valor do empréstimo.' });
+    if (new Set(value.cashAllocations.map((item) => item.accountId)).size !== value.cashAllocations.length) context.addIssue({ code: z.ZodIssueCode.custom, path: ['cashAllocations'], message: 'Cada caixa deve aparecer uma única vez na divisão.' });
   }
 });
 
@@ -120,7 +127,8 @@ const debtUpdateSchema = z.object({
   quantity: debtFields.quantity,
 }).strict();
 
-const paySchema = z.object({ paidAmount: optionalAmount.optional() }).strict();
+const paySchema = z.object({ paidAmount: optionalAmount.optional(), cashAccountId: uuid.optional(), goalId: uuid.optional() }).strict();
+const financialTransferSchema = z.object({ fromAccountId: uuid, toAccountId: uuid, amount: z.coerce.number().positive().max(9999999999), occurredAt: isoDate.optional(), description: z.string().trim().max(500).nullable().optional(), paymentMethod: z.string().trim().max(40).nullable().optional() }).strict().refine((value) => value.fromAccountId !== value.toAccountId, { path: ['toAccountId'], message: 'Escolha contas diferentes para a transferência.' });
 
 const productCreateSchema = z.object({
   name: z.string().trim().min(2).max(200),
@@ -224,7 +232,7 @@ const addExtraSchema = z.object({
   amount: amount,
   dueDate: isoDate.optional(),
 }).strict();
-const installmentPaySchema = z.object({ paidAmount: z.coerce.number().positive().max(9999999999).optional(), paymentDate: isoDate.optional(), paymentMethod: z.enum(['CASH', 'PIX', 'CARD', 'TRANSFER', 'OTHER']).optional(), note: z.string().trim().max(1000).nullable().optional() }).strict();
+const installmentPaySchema = z.object({ paidAmount: z.coerce.number().positive().max(9999999999).optional(), paymentDate: isoDate.optional(), paymentMethod: z.enum(['CASH', 'PIX', 'CARD', 'TRANSFER', 'OTHER']).optional(), cashAccountId: uuid.optional(), note: z.string().trim().max(1000).nullable().optional() }).strict();
 
 const idSchema = z.object({ id: uuid });
 
@@ -310,6 +318,7 @@ module.exports = {
   debtCreateSchema,
   debtUpdateSchema,
   paySchema,
+  financialTransferSchema,
   productCreateSchema,
   productUpdateSchema,
   purchaseCreateSchema,

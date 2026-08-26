@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { addMonths, nextDueDate, recurringPeriod } = require('../src/utils/dateHelpers');
 const { calculateProfitMargin } = require('../src/utils/calculateProfit');
-const { debtCreateSchema, saleCreateSchema, statementImportSchema, pushSubscriptionSchema, dashboardQuerySchema } = require('../src/utils/validators');
+const { debtCreateSchema, saleCreateSchema, statementImportSchema, pushSubscriptionSchema, dashboardQuerySchema, financialTransferSchema } = require('../src/utils/validators');
 const { applyToDebtInput } = require('../src/services/ruleService');
 const { parseStatement, score } = require('../src/services/reconciliationService');
 const { effectiveLimit } = require('../src/services/budgetService');
@@ -119,4 +119,13 @@ test('valida o período personalizado do dashboard no backend', () => {
   const range = rangeFor({ period: 'CUSTOM', startDate: '2026-08-01', endDate: '2026-08-31' });
   assert.equal(range.start.toISOString(), '2026-08-01T00:00:00.000Z');
   assert.equal(range.end.toISOString(), '2026-08-31T23:59:59.999Z');
+});
+
+test('valida divisão de empréstimo e transferência entre caixas', () => {
+  const accountA = '8adf1eb7-9a9d-4e88-83b6-51e2db0d72f6'; const accountB = '9e1c9a36-38d9-4f6f-a693-6fd1a5b87320';
+  const loan = { type: 'RECEIVABLE', paymentType: 'SINGLE', description: 'Empréstimo Ana', category: 'LOAN', counterparty: 'Ana', totalAmount: 1000, startDate: '2026-08-26', cashAllocations: [{ accountId: accountA, amount: 500 }, { accountId: accountB, amount: 500 }] };
+  assert.equal(debtCreateSchema.safeParse(loan).success, true);
+  assert.equal(debtCreateSchema.safeParse({ ...loan, cashAllocations: [{ accountId: accountA, amount: 700 }] }).success, false);
+  assert.equal(financialTransferSchema.safeParse({ fromAccountId: accountA, toAccountId: accountB, amount: 200 }).success, true);
+  assert.equal(financialTransferSchema.safeParse({ fromAccountId: accountA, toAccountId: accountA, amount: 200 }).success, false);
 });

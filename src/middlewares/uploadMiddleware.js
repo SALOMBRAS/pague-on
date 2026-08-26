@@ -33,6 +33,7 @@ function fileUrl(file) {
 module.exports = {
   avatarUpload: createUploader('avatars'),
   productUpload: createUploader('products'),
+  paymentProofUpload: createUploader('payment-proofs'),
   fileUrl,
   ensureDirectory,
 };

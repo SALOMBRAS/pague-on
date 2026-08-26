@@ -300,6 +300,8 @@ model User {
   financialCashClosings FinancialCashClosing[]
   loanModalityConfigurations LoanModalityConfiguration[]
   loanContracts LoanContract[]
+  installmentPaymentsCreated InstallmentPayment[] @relation("InstallmentPaymentCreatedBy")
+  installmentPayments InstallmentPayment[]
   collectedFinancialMovements FinancialMovement[] @relation("FinancialMovementCollector")
   responsibleFinancialMovements FinancialMovement[] @relation("FinancialMovementResponsible")
   collectorProfile    CollectorProfile?
@@ -321,6 +323,7 @@ model FinancialAccount {
   updatedAt             DateTime             @updatedAt
   user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   movements             FinancialMovement[]
+  installmentPaymentAllocations InstallmentPaymentAllocation[]
   closings              FinancialCashClosing[]
 
   @@index([userId, isActive, includeInAvailability])
@@ -550,9 +553,58 @@ model Installment {
   debt                    Debt          @relation(fields: [debtId], references: [id], onDelete: Cascade)
   collectorContacts       CollectorContact[]
   collectorCommissions    CollectorCommission[]
+  payments                InstallmentPayment[]
 
   @@unique([debtId, number])
   @@index([debtId, status, dueDate])
+}
+
+model InstallmentPayment {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  installmentId    String   @db.Uuid
+  receiptNumber    String   @db.VarChar(80)
+  idempotencyKey   String   @db.VarChar(120)
+  amount           Decimal  @db.Decimal(12, 2)
+  principalAmount  Decimal  @default(0) @db.Decimal(12, 2)
+  interestAmount   Decimal  @default(0) @db.Decimal(12, 2)
+  penaltyAmount    Decimal  @default(0) @db.Decimal(12, 2)
+  discountAmount   Decimal  @default(0) @db.Decimal(12, 2)
+  paymentMethod    String   @db.VarChar(40)
+  proofUrl         String?  @db.VarChar(500)
+  promiseDate      DateTime?
+  notes            String?  @db.VarChar(2000)
+  discountReason   String?  @db.VarChar(500)
+  renewalReason    String?  @db.VarChar(500)
+  receiptHtml      String   @db.VarChar(16000)
+  isReversed       Boolean  @default(false)
+  reversedAt       DateTime?
+  reversalReason   String?  @db.VarChar(500)
+  createdById      String   @db.Uuid
+  createdAt        DateTime @default(now())
+  installment      Installment @relation(fields: [installmentId], references: [id], onDelete: Restrict)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdBy        User     @relation("InstallmentPaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  allocations      InstallmentPaymentAllocation[]
+
+  @@unique([userId, receiptNumber])
+  @@unique([userId, idempotencyKey])
+  @@index([installmentId, createdAt])
+}
+
+model InstallmentPaymentAllocation {
+  id          String   @id @default(uuid()) @db.Uuid
+  paymentId   String   @db.Uuid
+  accountId   String   @db.Uuid
+  movementId  String   @db.Uuid
+  amount      Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  payment     InstallmentPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  account     FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, accountId])
+  @@unique([movementId])
+  @@index([accountId, createdAt])
 }
 
 model RecurringPayment {

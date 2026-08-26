@@ -16,7 +16,7 @@
     "db:reset": "prisma migrate reset --force",
     "postinstall": "prisma generate",
     "build": "prisma generate",
-    "test": "node --test test/businessRules.test.js",
+    "test": "node --test test/*.test.js",
     "test:integration": "DATABASE_URL=\"postgresql://pagueon_user:pagueon_local_dev_password@localhost:5432/pagueon?schema=public\" DIRECT_URL=\"postgresql://pagueon_user:pagueon_local_dev_password@localhost:5432/pagueon?schema=public\" node --test \"test/integration/*.test.js\""
   },
   "prisma": {

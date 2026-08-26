@@ -1,4 +1,3 @@
-const puppeteer = require('puppeteer');
 const prisma = require('../config/database');
 const { parseRange } = require('./reportService');
 
@@ -20,7 +19,7 @@ async function generateReport(userId, query) {
     prisma.product.findMany({ where: { userId, isActive: true }, orderBy: { name: 'asc' } }),
   ]);
   const totals = debts.reduce((result, debt) => { result[debt.type === 'RECEIVABLE' ? 'receivable' : 'payable'] += Number(debt.totalAmount); return result; }, { receivable: 0, payable: 0 });
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await (await import('puppeteer')).default.launch({ headless: true });
   try {
     const page = await browser.newPage();
     await page.setContent(reportHtml({ debts, products, startDate, endDate, totals }), { waitUntil: 'networkidle0' });

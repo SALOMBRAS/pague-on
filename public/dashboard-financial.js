@@ -70,6 +70,7 @@
     section.querySelectorAll('[data-period]').forEach((button) => { button.onclick = () => { form.elements.period.value = button.dataset.period; section.querySelector('.financial-custom').hidden = button.dataset.period !== 'CUSTOM'; if (button.dataset.period !== 'CUSTOM' || (form.elements.startDate.value && form.elements.endDate.value)) apply(); }; });
     form.querySelectorAll('select,input[type=date]').forEach((control) => { control.onchange = () => { if (form.elements.period.value !== 'CUSTOM' || (form.elements.startDate.value && form.elements.endDate.value)) apply(); }; });
     section.querySelectorAll('[data-financial-report]').forEach((button) => { button.onclick = () => openReport(button.dataset.financialReport); });
+    document.dispatchEvent(new CustomEvent('pagueon:financial-dashboard', { detail: { section, data } }));
   }
 
   window.addEventListener('pagueon:auth', () => setTimeout(render, 0));

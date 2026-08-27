@@ -146,3 +146,21 @@
 .duetracker-row .dot { width: 9px; height: 9px; } 
 .empty.small { padding: 20px; }
 .debt[role="button"], .debt:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+/* Perfil Neon — espelha a composição de identidade + ajustes dos protótipos. */
+.profile-hero { position:relative; overflow:hidden; text-align:center; padding:26px 16px 22px; border:1px solid var(--line); border-radius:var(--radius-lg); background:radial-gradient(circle at 50% 0,rgba(163,230,53,.12),transparent 15rem),var(--surface); box-shadow:var(--shadow); }
+.profile-hero::before { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(120deg,transparent 36%,rgba(163,230,53,.035),transparent 64%); }
+.profile-hero .top-actions { position:absolute; top:14px; right:14px; }
+.profile-avatar { width:88px; height:88px; margin:8px auto 14px; border:1px solid rgba(163,230,53,.4); background:linear-gradient(135deg,var(--green),var(--green-strong)); color:var(--on-green); box-shadow:0 0 32px rgba(163,230,53,.28); }
+.profile-hero h1 { position:relative; font-size:24px; }
+.profile-hero p { position:relative; color:var(--muted); }
+.plan-badge { border-color:rgba(163,230,53,.3); background:var(--green-bg); color:var(--green); }
+.upgrade { position:relative; border-color:rgba(163,230,53,.38); background:var(--green-bg); color:var(--green); }
+.profile-section > h2 { color:var(--muted); font-size:11px; letter-spacing:.09em; }
+.settings-card { overflow:hidden; border-radius:var(--radius-sm); }
+.setting { min-height:58px; padding:14px 16px; border-bottom-color:var(--line); }
+.setting:hover { background:var(--hover); }
+.setting label { color:var(--text); font-size:14px; font-weight:700; }
+.setting > span { color:var(--muted); }
+.switch.on { background:linear-gradient(135deg,var(--green),var(--green-strong)); box-shadow:0 0 14px rgba(163,230,53,.25); }
+.signout { border-color:rgba(248,113,113,.35); background:rgba(248,113,113,.06); }

@@ -146,6 +146,7 @@
         else result = await submitAuth('/auth/login', { identity: values.identity.trim(), password: values.password, remember: values.remember === 'on' });
         if (mode === 'forgot') show('login', result.message || 'Se houver uma conta compatível, você receberá as instruções.');
         else if (mode === 'reset') { history.replaceState({}, '', location.pathname); show('login', result.message || 'Senha atualizada. Entre novamente.'); }
+        else if (mode === 'register') show('login', result.message || 'Conta criada com sucesso. Entre com seu e-mail e senha para continuar.');
         else { setSession(result.data); startSession(); }
       } catch (error) {
         actionError(submittedForm, error.message || 'Verifique os dados e tente novamente.', error.code);

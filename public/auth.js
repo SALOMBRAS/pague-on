@@ -207,6 +207,16 @@
     const params = new URLSearchParams(location.search);
     const reset = params.get('reset');
     const requestedMode = params.get('auth');
+    const cachedToken = getToken();
+    const cachedUser = getUser();
+    if (!reset && cachedUser && cachedToken) {
+      // Já tem sessão em cache (sessionStorage): entra imediatamente sem esperar
+      // rede, e revalida /auth/me em segundo plano — atualiza dados e detecta
+      // sessão expirada/revogada sem travar a entrada.
+      startSession();
+      loadUser().then((user) => { if (user) { setSession({ token: getToken(), user }); startSession(); } else { endSession(); } }).catch(() => {});
+      return;
+    }
     const user = reset ? null : await loadUser();
     if (user) startSession(); else { clearSession(); show(reset ? 'reset' : requestedMode === 'register' ? 'register' : 'login'); }
   })();

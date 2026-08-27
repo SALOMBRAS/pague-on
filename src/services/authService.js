@@ -5,6 +5,11 @@ const HttpError = require('../utils/httpError');
 const { signToken } = require('../utils/jwt');
 const { publicUser } = require('../utils/serializers');
 
+// Custo do bcrypt. 12 era ~400ms; 10 ~100ms e ainda cumpre OWASP (>=10).
+// Deixar o cost como constante central para ajuste único futuro.
+const BCRYPT_COST = 10;
+const hashPassword = (password) => bcrypt.hash(password, BCRYPT_COST);
+
 const refreshLifetimeMs = Number(process.env.REFRESH_TOKEN_TTL_DAYS || 30) * 24 * 60 * 60 * 1000;
 const resetLifetimeMs = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30) * 60 * 1000;
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
@@ -29,7 +34,7 @@ async function register(input) {
   if (existing) throw new HttpError(409, 'EMAIL_IN_USE', 'Este e-mail já está em uso.');
   const phoneNormalized = normalizePhone(input.phone);
   if (phoneNormalized && await prisma.user.findUnique({ where: { phoneNormalized } })) throw new HttpError(409, 'PHONE_IN_USE', 'Este telefone já está em uso.');
-  const user = await prisma.user.create({ data: { ...input, phoneNormalized, password: await bcrypt.hash(input.password, 12) } });
+  const user = await prisma.user.create({ data: { ...input, phoneNormalized, password: await hashPassword(input.password) } });
   return publicUser(user);
 }
 
@@ -57,7 +62,7 @@ async function logout(userId) {
 async function changePassword(user, oldPassword, newPassword) {
   if (!(await bcrypt.compare(oldPassword, user.password))) throw new HttpError(400, 'INVALID_PASSWORD', 'A senha atual está incorreta.');
   await prisma.$transaction([
-    prisma.user.update({ where: { id: user.id }, data: { password: await bcrypt.hash(newPassword, 12), sessionVersion: { increment: 1 } } }),
+    prisma.user.update({ where: { id: user.id }, data: { password: await hashPassword(newPassword), sessionVersion: { increment: 1 } } }),
     prisma.refreshToken.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } }),
   ]);
 }
@@ -88,9 +93,9 @@ async function resetPassword(token, newPassword) {
   const used = await prisma.passwordResetToken.updateMany({ where: { id: reset.id, usedAt: null }, data: { usedAt: new Date() } });
   if (used.count !== 1) throw new HttpError(400, 'INVALID_RESET_TOKEN', 'O link de recuperação já foi utilizado.');
   await prisma.$transaction([
-    prisma.user.update({ where: { id: reset.userId }, data: { password: await bcrypt.hash(newPassword, 12), sessionVersion: { increment: 1 } } }),
+    prisma.user.update({ where: { id: reset.userId }, data: { password: await hashPassword(newPassword), sessionVersion: { increment: 1 } } }),
     prisma.refreshToken.updateMany({ where: { userId: reset.userId, revokedAt: null }, data: { revokedAt: new Date() } }),
   ]);
 }
 
-module.exports = { register, login, refresh, logout, changePassword, requestPasswordReset, resetPassword, normalizePhone };
+module.exports = { register, login, refresh, logout, changePassword, requestPasswordReset, resetPassword, normalizePhone, BCRYPT_COST, hashPassword };

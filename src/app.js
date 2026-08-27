@@ -1,5 +1,5 @@
 const dotenvPath = process.env.DOTENV_CONFIG_PATH || '.env';
-require('dotenv').config({ path: dotenvPath, override: Boolean(process.env.DOTENV_CONFIG_PATH) });
+require('dotenv').config({ path: dotenvPath, override: process.env.VERCEL !== '1' });
 
 const path = require('path');
 const express = require('express');

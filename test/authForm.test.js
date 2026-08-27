@@ -59,5 +59,5 @@ test('indisponibilidade do banco não expõe detalhes do Prisma na tela', () => 
 
 test('permite iniciar localmente com o ambiente seguro da Vercel', () => {
   assert.match(appSource, /DOTENV_CONFIG_PATH \|\| '\.env'/);
-  assert.match(appSource, /override: Boolean\(process\.env\.DOTENV_CONFIG_PATH\)/);
+  assert.match(appSource, /override: process\.env\.VERCEL !== '1'/);
 });

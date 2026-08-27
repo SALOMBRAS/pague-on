@@ -31,9 +31,16 @@ test('exibe conflitos de cadastro, bloqueia reenvio e anuncia o erro', () => {
 });
 
 test('cadastro concluído direciona a pessoa para o login, sem abrir sessão', () => {
-  assert.match(source, /else if \(mode === 'register'\) show\('login', result\.message/);
+  assert.match(source, /else if \(mode === 'register'\) \{/);
+  assert.match(source, /loginUrl\.search = 'auth=login'/);
+  assert.match(source, /show\('login', result\.message/);
   assert.match(authControllerSource, /sendSuccess\(res, \{ user \}, 'Conta criada com sucesso\. Entre com seu e-mail e senha para continuar\.'/);
   assert.doesNotMatch(authControllerSource, /async function register[^\n]*sendSession/);
+});
+
+test('sessão autenticada remove parâmetros de cadastro da URL', () => {
+  assert.match(source, /appUrl\.searchParams\.delete\('auth'\)/);
+  assert.match(source, /appUrl\.searchParams\.delete\('reset'\)/);
 });
 
 test('ausência de cookie de refresh é tratada como visitante sem sessão', () => {

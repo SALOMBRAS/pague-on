@@ -6,3 +6,4 @@ uploads/avatars/*
 uploads/products/*
 !uploads/avatars/.gitkeep
 !uploads/products/.gitkeep
+.vercel

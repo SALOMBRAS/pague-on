@@ -42,7 +42,17 @@
     const key = params.toString();
     if (key === lastKey && existing) return;
     lastKey = key;
-    const response = await window.fetch(`${api()}/dashboard/financial?${params}`);
+    let response;
+    try {
+      response = await window.fetch(`${api()}/dashboard/financial?${params}`);
+    } catch (_error) {
+      // Falha de rede: sai do estado de carregamento, mostra falha e permite retry.
+      lastKey = '';
+      existing.setAttribute('aria-busy', 'false');
+      const status = existing.querySelector('.eyebrow');
+      if (status) status.textContent = 'Não foi possível atualizar agora. Seus dados aparecerão quando a conexão for restabelecida.';
+      return;
+    }
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.success) {
       existing.setAttribute('aria-busy', 'false');

@@ -1,4 +1,5 @@
-require('dotenv').config();
+const dotenvPath = process.env.DOTENV_CONFIG_PATH || '.env';
+require('dotenv').config({ path: dotenvPath, override: process.env.VERCEL !== '1' });
 
 const path = require('path');
 const express = require('express');
@@ -9,6 +10,7 @@ const auth = require('./middlewares/authMiddleware');
 const apiAccessPolicy = require('./middlewares/apiAccessPolicy');
 const { sendSuccess } = require('./utils/responseHelper');
 const { notFoundHandler, errorHandler } = require('./middlewares/errorHandler');
+const HttpError = require('./utils/httpError');
 
 const authRoutes = require('./routes/authRoutes');
 const accessRoutes = require('./routes/accessRoutes');
@@ -48,6 +50,7 @@ const app = express();
 // express-rate-limit lança ERR_ERL_UNEXPECTED_X_FORWARDED_FOR (500 em toda rota).
 app.set('trust proxy', 1);
 const localOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const vercelProjectOrigin = /^https:\/\/pague-on-git-[a-z0-9-]+-pedrosalomao22099-4358s-projects\.vercel\.app$/;
 const configuredOrigins = (process.env.FRONTEND_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean);
 
 app.use(helmet({
@@ -66,12 +69,14 @@ app.use(helmet({
 }));
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || localOrigin.test(origin) || configuredOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Origin não permitida pelo CORS.'));
+    if (!origin || localOrigin.test(origin) || vercelProjectOrigin.test(origin) || configuredOrigins.includes(origin)) return callback(null, true);
+    return callback(new HttpError(403, 'CORS_ORIGIN_FORBIDDEN', 'Origem não permitida pelo CORS.'));
   },
   credentials: true,
 }));
-app.use(rateLimit({ windowMs: 60 * 1000, limit: 100, standardHeaders: 'draft-8', legacyHeaders: false }));
+// O limite é da API. Aplicá-lo ao app inteiro bloqueava a própria tela e seus
+// arquivos estáticos depois de muitas requisições no mesmo minuto.
+app.use('/api/v1', rateLimit({ windowMs: 60 * 1000, limit: 100, standardHeaders: 'draft-8', legacyHeaders: false }));
 // Rotas públicas de auto-cadastro: limiter dedicado para conter brute-force de token.
 const registrationLimiter = rateLimit({ windowMs: 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false });
 app.use('/api/v1/customer-registration', (req, res, next) => { if (req.path === '/customers' || req.path.startsWith('/invites') || req.path.startsWith('/customers/')) return next(); return registrationLimiter(req, res, next); });

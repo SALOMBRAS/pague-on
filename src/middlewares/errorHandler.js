@@ -19,6 +19,9 @@ function errorHandler(error, _req, res, _next) {
   if (error.code === 'LIMIT_FILE_SIZE') {
     return sendError(res, 'A imagem pode ter no máximo 5 MB.', 'UPLOAD_TOO_LARGE', 400);
   }
+  if (error.code === 'P1000' || error.code === 'P1001' || error.code === 'P1017' || /ECIRCUITBREAKER|authentication failures/i.test(error.message || '')) {
+    return sendError(res, 'Não foi possível conectar ao banco de dados agora. Verifique a conexão configurada e tente novamente.', 'DATABASE_UNAVAILABLE', 503);
+  }
   if (error.code === 'P2002') return sendError(res, 'Este registro já existe.', 'DUPLICATE_RECORD', 409);
   if (error.code === 'P2025') return sendError(res, 'Registro não encontrado.', 'NOT_FOUND', 404);
 

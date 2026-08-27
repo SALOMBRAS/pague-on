@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pagueon-shell-v21';
+const CACHE_NAME = 'pagueon-shell-v22';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -37,7 +37,6 @@ const APP_SHELL = [
   '/collectors.js',
   '/loan-origination.js',
   '/loan-receipts.js',
-  '/views/home.js',
   '/views/caixa.js',
   '/views/estoque.js',
   '/views/metas.js',

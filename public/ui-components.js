@@ -5,6 +5,14 @@
    $, format, relative, kind, state. Não roda nada na carga.
    ============================================================ */
 (function () {
+  // Escape HTML central — previne XSS ao renderizar dados de origem externa
+  // (extrato importado, religioso, dashboard, remote). Usado por todas as views.
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
   function skeleton(rows) {
     var n = (rows && typeof rows === 'number') ? rows : 4;
     var out = '';
@@ -83,13 +91,13 @@
       '<button class="edit" data-action="edit" data-id="' + debt.id + '">✎<br>Editar</button>' +
       '<button class="delete" data-action="delete" data-id="' + debt.id + '">⌫<br>Excluir</button>' +
       '</div>' +
-      '<div class="debt ' + (receive ? '' : 'payable') + ' ' + tone + '" data-detail="' + debt.id + '" tabindex="0" role="button" aria-label="Ver cobrança de ' + debt.counterparty + '">' +
+      '<div class="debt ' + (receive ? '' : 'payable') + ' ' + tone + '" data-detail="' + debt.id + '" tabindex="0" role="button" aria-label="Ver cobrança de ' + esc(debt.counterparty) + '">' +
       '<div class="debt-top">' +
       '<div class="meta"><i class="dot ' + (receive ? '' : 'payable') + '"></i>' + (receive ? 'A RECEBER' : 'A PAGAR') + ' <span>│</span><span class="payment-type">' + kind(debt) + '</span></div>' +
       '<span class="badge ' + (debt.status === 'OVERDUE' ? 'overdue' : paid ? 'paid' : 'pending') + '">' + statusBadge + '</span>' +
       '</div>' +
-      '<div class="person">' + debt.counterparty + '</div>' +
-      '<div class="description">“' + debt.description + '”</div>' +
+      '<div class="person">' + esc(debt.counterparty) + '</div>' +
+      '<div class="description">“' + esc(debt.description) + '”</div>' +
       '<div class="amountline"><span class="value">' + format(debt.amount) + '</span></div>' +
       '<div class="due-chip ' + tone + '" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + progress + '" aria-label="' + label + '"><span>' + dueTxt + ' · ' + label + '</span></div>' +
       '<div class="actions">' + (debt.paymentType === 'INSTALLMENT' ? '<button class="small-btn" data-detail="' + debt.id + '">▤ Ver parcelas</button>' : '') + (receive ? '<button class="small-btn collect" data-action="collect" data-id="' + debt.id + '">💬 Cobrar</button>' : '') + '<button class="small-btn pay ' + (receive ? '' : 'out') + '" data-action="done" data-id="' + debt.id + '">✓ ' + (receive ? 'Receber' : 'Pagar') + '</button></div>' +
@@ -110,11 +118,12 @@
     return '<div class="duetracker">' + slice.map(function (d) {
       var days = dueDays(d.due);
       var tone = toneFor(days);
-      return '<div class="duetracker-row"><span class="dot ' + (d.type === 'RECEIVABLE' ? '' : 'payable') + ' ' + tone + '"></span><span class="duetracker-name">' + d.counterparty + '</span><span class="duetracker-amt">' + format(d.amount) + '</span><span class="duetracker-label ' + tone + '">' + dueLabel(days) + '</span></div>';
+      return '<div class="duetracker-row"><span class="dot ' + (d.type === 'RECEIVABLE' ? '' : 'payable') + ' ' + tone + '"></span><span class="duetracker-name">' + esc(d.counterparty) + '</span><span class="duetracker-amt">' + format(d.amount) + '</span><span class="duetracker-label ' + tone + '">' + dueLabel(days) + '</span></div>';
     }).join('') + '</div>';
   }
 
   window.pagueOnUI = {
+    esc: esc,
     cardCobranca: cardCobranca,
     emptyState: emptyState,
     skeleton: skeleton,

@@ -276,12 +276,12 @@ async function paySingleDebt(userId, id, paidAmount, goalId, cashAccountId) {
       type: 'PAYMENT_RECEIVED',
       data: { debtId: debt.id },
     });
-    return updated;
-  }).then((debt) => {
-    if (debt.type === 'RECEIVABLE' && debt.status === 'PAID' && goalId) {
-      goalService.deposit(userId, goalId, amount).catch((error) => console.warn('Falha ao depositar na meta:', error.message));
+    // Depósito na meta dentro da MESMA transação: se falhar, o pagamento como
+    // um todo é revertido — sem perda silenciosa de crédito na meta.
+    if (debt.type === 'RECEIVABLE' && status === 'PAID' && goalId) {
+      await goalService.depositWithTx(tx, userId, goalId, amount);
     }
-    return debt;
+    return updated;
   });
 }
 

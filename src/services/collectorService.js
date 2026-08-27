@@ -37,9 +37,11 @@ async function listCollectors(workspaceOwnerId) {
 }
 
 async function createCollector(workspaceOwnerId, input) {
-  const user = await prisma.user.create({ data: { name: input.name, email: input.email, phone: input.phone || null, password: await bcrypt.hash(input.password, 10), role: 'COLLECTOR', workspaceOwnerId } });
-  const profile = await prisma.collectorProfile.create({ data: { userId: user.id, documentNumber: input.documentNumber || null, whatsapp: input.whatsapp || null, isActive: input.isActive, commissionType: input.commissionType, commissionRate: input.commissionRate, commissionBase: input.commissionBase, permissions: input.permissions || DEFAULT_PERMISSIONS, notes: input.notes || null }, include: { user: { include: { _count: { select: { assignedCustomers: true } } } } } });
-  return publicCollector(profile);
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({ data: { name: input.name, email: input.email, phone: input.phone || null, password: await bcrypt.hash(input.password, 10), role: 'COLLECTOR', workspaceOwnerId } });
+    const profile = await tx.collectorProfile.create({ data: { userId: user.id, documentNumber: input.documentNumber || null, whatsapp: input.whatsapp || null, isActive: input.isActive, commissionType: input.commissionType, commissionRate: input.commissionRate, commissionBase: input.commissionBase, permissions: input.permissions || DEFAULT_PERMISSIONS, notes: input.notes || null }, include: { user: { include: { _count: { select: { assignedCustomers: true } } } } } });
+    return publicCollector(profile);
+  });
 }
 
 async function updateCollector(workspaceOwnerId, collectorId, input) {

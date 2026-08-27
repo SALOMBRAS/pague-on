@@ -366,6 +366,8 @@ model FinancialMovement {
   @@index([accountId, occurredAt])
   @@index([customerId, occurredAt])
   @@index([debtId, occurredAt])
+  @@index([responsibleUserId, occurredAt])
+  @@index([collectorId, occurredAt])
   @@index([operationId])
 }
 

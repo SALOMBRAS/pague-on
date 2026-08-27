@@ -134,18 +134,26 @@ async function push(userId, changes = []) {
       if (modelKey && SUPPORTED_OPS.has(op) && data) {
         const model = prisma[modelKey];
         if (op === 'INSERT' || op === 'CREATE') {
-          const mapped = mapper ? { ...mapper(data, { forCreate: true }), userId } : { ...data, userId };
+          const mapped = { ...(mapper ? mapper(data, { forCreate: true }) : data), userId };
           await model.create({ data: mapped });
         } else if (op === 'UPDATE') {
+          // Escopo por userId: um registro só pode ser alterado pelo seu dono.
+          const owned = await model.findFirst({ where: { id: recordId, userId } });
+          if (!owned) throw Object.assign(new Error('Registro não encontrado ou sem permissão.'), { code: 'NOT_FOUND' });
           const mapped = mapper ? mapper(data, { forCreate: false }) : data;
+          // Impede payload de sobrescrever o dono via payload cru.
+          if (!mapper) { delete mapped.userId; }
           await model.update({ where: { id: recordId }, data: mapped });
         } else if (op === 'DELETE') {
+          // Escopo por ownership antes de apagar.
+          const owned = await model.findFirst({ where: { id: recordId, userId } });
+          if (!owned) throw Object.assign(new Error('Registro não encontrado ou sem permissão.'), { code: 'NOT_FOUND' });
           await model.delete({ where: { id: recordId } });
         }
       }
       processedIds.push(change.id || recordId);
     } catch (error) {
-      errors.push({ id: change.id || null, entity, recordId, op, message: error.message });
+      errors.push({ id: change.id || null, entity, recordId, op, code: error.code || 'SYNC_FAILED', message: error.code === 'NOT_FOUND' ? error.message : 'Não foi possível sincronizar esta alteração.' });
     }
   }
 

@@ -25,9 +25,18 @@
     document.dispatchEvent(new CustomEvent('pagueon:financial-report', { detail: { report } }));
   }
 
+  function ensurePanel(host) {
+    const panels = [...host.querySelectorAll('#financial-dashboard')];
+    panels.slice(1).forEach((panel) => panel.remove());
+    if (panels[0]) return;
+    host.innerHTML = '<section id="financial-dashboard" data-query="period=MONTH" aria-busy="true"><h2 class="financial-title">Resumo financeiro</h2><p class="eyebrow">Carregando dados financeiros…</p></section>';
+  }
+
   async function render() {
     const host = document.getElementById('homeView');
-    if (!host || !window.pagueOnAuth?.getToken?.()) return;
+    if (!host) return;
+    ensurePanel(host);
+    if (!window.pagueOnAuth?.getToken?.()) return;
     const existing = host.querySelector('#financial-dashboard');
     const params = new URLSearchParams(existing?.dataset.query || 'period=MONTH');
     const key = params.toString();
@@ -35,7 +44,12 @@
     lastKey = key;
     const response = await window.fetch(`${api()}/dashboard/financial?${params}`);
     const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.success) return;
+    if (!response.ok || !result?.success) {
+      existing.setAttribute('aria-busy', 'false');
+      const status = existing.querySelector('.eyebrow');
+      if (status) status.textContent = 'Não foi possível atualizar agora. Seus dados aparecerão quando a conexão for restabelecida.';
+      return;
+    }
 
     const data = result.data;
     const period = data.filters.period || 'MONTH';
@@ -74,5 +88,6 @@
   }
 
   window.addEventListener('pagueon:auth', () => setTimeout(render, 0));
+  document.addEventListener('pagueon:dashboard-request', () => setTimeout(render, 0));
   new MutationObserver(() => { if (document.getElementById('homeView')?.classList.contains('show')) render(); }).observe(document.body, { childList: true, subtree: true });
 })();

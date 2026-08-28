@@ -16,6 +16,7 @@ const goalService = require('../../src/services/goalService');
 const syncService = require('../../src/services/syncService');
 const saleService = require('../../src/services/saleService');
 const installmentService = require('../../src/services/installmentService');
+const debtService = require('../../src/services/debtService');
 const dashboardService = require('../../src/services/dashboardService');
 
 let counter = 0;
@@ -107,5 +108,6 @@ module.exports = {
   syncService,
   saleService,
   installmentService,
+  debtService,
   dashboardService,
 };

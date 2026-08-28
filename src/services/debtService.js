@@ -244,7 +244,12 @@ async function updateLinkedSalePayment(tx, debt, amount, debtStatus) {
   const paidAmount = Number(sale.paidAmount);
   const totalAmount = Number(sale.totalAmount);
   const status = debtStatus === 'PAID' || paidAmount >= totalAmount ? 'PAID' : paidAmount > 0 ? 'PARTIAL' : 'PENDING';
-  await tx.sale.update({ where: { id: sale.id }, data: { status } });
+  // remainingAmount é dado derivado: total - pago. Centraliza aqui para não
+  // divergir do syncSaleAndDebt (installmentService), que já o atualizava — os
+  // pagamentos de venda única/recorrente passavam por este caminho e ficavam
+  // com remainingAmount stale (saldo errado no relatório/front).
+  const remaining = Number((totalAmount - paidAmount).toFixed(2));
+  await tx.sale.update({ where: { id: sale.id }, data: { status, remainingAmount: remaining > 0 ? remaining : 0 } });
 }
 
 async function paySingleDebt(userId, id, paidAmount, goalId, cashAccountId) {

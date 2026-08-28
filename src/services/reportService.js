@@ -39,11 +39,21 @@ async function profitReport(userId, query) {
     ...singleDebts.map((debt) => ({ amount: Number(debt.totalAmount), debt })),
   ];
   const productMap = new Map();
-  for (const payment of payments.filter((entry) => entry.debt.productId && entry.debt.type === 'RECEIVABLE')) {
-    const product = payment.debt.product;
+  // Agrupa por débito (venda) para o lucro NÃO ser somado N vezes quando a mesma
+  // venda tem várias parcelas/recorrências pagas no período. `received` soma todos
+  // os pagamentos da venda; `estimatedProfit` entra UMA vez por venda (quantity||1).
+  const byDebt = new Map();
+  for (const entry of payments.filter((entry) => entry.debt.productId && entry.debt.type === 'RECEIVABLE')) {
+    const debtId = entry.debt.id;
+    const agg = byDebt.get(debtId) || { received: 0, debt: entry.debt };
+    agg.received += entry.amount;
+    byDebt.set(debtId, agg);
+  }
+  for (const { received, debt } of byDebt.values()) {
+    const product = debt.product;
     const current = productMap.get(product.id) || { productId: product.id, productName: product.name, received: 0, estimatedProfit: 0 };
-    current.received += payment.amount;
-    current.estimatedProfit += (Number(product.sellingPrice) - Number(product.costPrice)) * (payment.debt.quantity || 1);
+    current.received += received;
+    current.estimatedProfit += (Number(product.sellingPrice) - Number(product.costPrice)) * (Number(debt.quantity) || 1);
     productMap.set(product.id, current);
   }
   return {

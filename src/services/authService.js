@@ -46,7 +46,19 @@ async function login({ identity, password }) {
 
 async function refresh(refreshToken) {
   const stored = await prisma.refreshToken.findUnique({ where: { tokenHash: hashToken(refreshToken) }, include: { user: true } });
-  if (!stored || stored.revokedAt || stored.expiresAt <= new Date()) throw new HttpError(401, 'INVALID_REFRESH_TOKEN', 'Sua sessão expirou. Entre novamente.');
+  if (!stored || stored.expiresAt <= new Date()) throw new HttpError(401, 'INVALID_REFRESH_TOKEN', 'Sua sessão expirou. Entre novamente.');
+
+  // Reuso (token já revogado): sinal de comprometimento. Revoga toda a família de
+  // refresh tokens e incrementa sessionVersion (invalida o access token vigente),
+  // impedindo que um token roubado continue abrindo sessões por até 30 dias.
+  if (stored.revokedAt) {
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: stored.userId }, data: { sessionVersion: { increment: 1 } } }),
+      prisma.refreshToken.updateMany({ where: { userId: stored.userId, revokedAt: null }, data: { revokedAt: new Date() } }),
+    ]);
+    throw new HttpError(401, 'INVALID_REFRESH_TOKEN', 'Sessão comprometida. Entre novamente.');
+  }
+
   const revoked = await prisma.refreshToken.updateMany({ where: { id: stored.id, revokedAt: null }, data: { revokedAt: new Date() } });
   if (revoked.count !== 1) throw new HttpError(401, 'INVALID_REFRESH_TOKEN', 'Sua sessão expirou. Entre novamente.');
   return issueSession(stored.user);

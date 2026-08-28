@@ -17,8 +17,21 @@ async function ensureDefaultAccount(userId, db = prisma) {
 
 async function listWithBalances(userId) {
   await ensureDefaultAccount(userId);
-  const accounts = await prisma.financialAccount.findMany({ where: { userId }, include: { movements: { select: { type: true, amount: true } } }, orderBy: { createdAt: 'asc' } });
-  return accounts.map(({ movements, ...account }) => ({ ...account, balance: balanceFor(account, movements) }));
+  const accounts = await prisma.financialAccount.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } });
+  if (!accounts.length) return [];
+  // Soma no banco (groupBy por accountId+type) em vez de puxar todos os movimentos
+  // para a memória (N+1). Movimentos débito entram negativos no saldo.
+  const sums = await prisma.financialMovement.groupBy({
+    by: ['accountId', 'type'],
+    where: { userId, accountId: { in: accounts.map((account) => account.id) } },
+    _sum: { amount: true },
+  });
+  const netByAccount = new Map();
+  for (const row of sums) {
+    const signed = debitTypes.has(row.type) ? -Number(row._sum.amount || 0) : Number(row._sum.amount || 0);
+    netByAccount.set(row.accountId, (netByAccount.get(row.accountId) || 0) + signed);
+  }
+  return accounts.map((account) => ({ ...account, balance: Number((Number(account.openingBalance) + (netByAccount.get(account.id) || 0)).toFixed(2)) }));
 }
 
 async function getAccount(userId, id, db = prisma) {

@@ -1,0 +1,141 @@
+/* Pague-On Neon — linguagem visual única, inspirada nos protótipos aprovados.
+   Esta camada vem após os estilos legados e usa apenas os tokens semânticos
+   do app, mantendo todos os fluxos e telas existentes funcionais. */
+:root,
+html[data-theme="light"],
+html[data-theme="dark"],
+html[data-theme="system"] {
+  color-scheme: dark;
+  --bg: #000;
+  --panel: #050505;
+  --surface: #0a0a0a;
+  --hover: #111;
+  --raised: #151515;
+  --line: #202020;
+  --text: #fff;
+  --muted: #a1a1aa;
+  --dim: #71717a;
+  --green: #a3e635;
+  --green-strong: #bef264;
+  --green-bg: rgba(163, 230, 53, .09);
+  --red: #f87171;
+  --red-bg: rgba(248, 113, 113, .1);
+  --amber: #fbbf24;
+  --amber-bg: rgba(251, 191, 36, .1);
+  --blue: #60a5fa;
+  --on-green: #080d03;
+  --shadow: 0 16px 38px rgba(0, 0, 0, .45);
+  --focus-ring: #bef264;
+  --color-brand: var(--green);
+  --color-brand-strong: var(--green-strong);
+  --ink: var(--text);
+  --primary: var(--green);
+  --on-primary: var(--on-green);
+  --success: #4ade80;
+  --warning: var(--amber);
+  --danger: var(--red);
+  --surface-primary: var(--bg);
+  --surface-card: var(--surface);
+  --surface-raised: var(--raised);
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
+  --border-subtle: var(--line);
+  --green-soft: var(--green-bg);
+  --line-soft: var(--line);
+  --pague-bg: var(--bg);
+  --pague-surface: var(--surface);
+  --pague-surface-raised: var(--raised);
+  --pague-line: var(--line);
+  --pague-text: var(--text);
+  --pague-muted: var(--muted);
+  --pague-dim: var(--dim);
+  --pague-primary: var(--green);
+  --pague-primary-strong: var(--green-strong);
+  --pague-primary-soft: var(--green-bg);
+  --pague-danger: var(--red);
+  --pague-danger-soft: var(--red-bg);
+  --pague-warning: var(--amber);
+  --pague-warning-soft: var(--amber-bg);
+  --radius-sm: 16px;
+  --radius-md: 20px;
+  --radius-lg: 24px;
+}
+
+html, body { background: var(--bg); }
+body {
+  background: radial-gradient(circle at 92% -12%, rgba(163,230,53,.1), transparent 30rem), var(--bg);
+}
+button, input, select, textarea { transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* Superfícies, listas e cards compartilhados por todas as telas. */
+.stat, .debt, .recurring, .history, .product-card, .purchase-card, .settings-card,
+.goal-card, .wealth-group, .financial-card, .dash-summary-card, .dash-quick,
+.dash-chart, .dash-action, .analysis-card, .bar-chart, .low-alert, .choice,
+.form-card, .search-box, .sheet, .form-view, .full-panel, .detail, .stock-detail {
+  border-color: var(--line) !important;
+  background: var(--surface) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), var(--shadow);
+}
+.stat, .debt, .recurring, .history, .product-card, .purchase-card, .settings-card,
+.goal-card, .wealth-group, .financial-card, .dash-summary-card, .dash-quick,
+.dash-chart, .dash-action, .analysis-card, .bar-chart, .low-alert { border-radius: var(--radius-sm); }
+.debt:hover, .product-card:hover, .purchase-card:hover, .dash-action:hover, .financial-card:hover, .choice:hover {
+  border-color: rgba(163,230,53,.45) !important;
+  box-shadow: 0 0 24px rgba(163,230,53,.16), var(--shadow) !important;
+}
+.debt:hover, .choice:hover { transform: translateX(4px); }
+
+/* Controles e formulários. */
+.field input, .field select, .field textarea, .search-box, .auth-field input,
+.scan-field input, .export-select, .widget-row select {
+  border-color: var(--line) !important;
+  border-radius: 14px !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+}
+.field input:focus, .field select:focus, .field textarea:focus, .auth-field input:focus,
+.scan-field input:focus, .export-select:focus, .widget-row select:focus {
+  border-color: var(--green) !important;
+  box-shadow: 0 0 0 3px var(--green-bg), 0 0 20px rgba(163,230,53,.18) !important;
+}
+.form-next, .big-btn:not(.secondary), .wealth-add, .goals-add, .export-primary,
+.people-primary, .new-charge, .auth-primary {
+  background: linear-gradient(135deg, var(--green), var(--green-strong)) !important;
+  color: var(--on-green) !important;
+  border-color: var(--green) !important;
+  box-shadow: 0 0 20px rgba(163,230,53,.22), 0 7px 20px rgba(0,0,0,.3) !important;
+}
+.form-next:hover, .big-btn:not(.secondary):hover, .wealth-add:hover, .goals-add:hover,
+.export-primary:hover, .people-primary:hover, .new-charge:hover, .auth-primary:hover { transform: translateY(-2px); }
+.chip, .tab, .stock-tab, .icon, .auth-secondary, .sheet-cancel, .export-secondary {
+  border-color: var(--line) !important;
+  background: var(--surface) !important;
+  color: var(--muted) !important;
+}
+.chip.active, .tab.active, .stock-tab.active {
+  border-color: rgba(163,230,53,.48) !important;
+  background: var(--green-bg) !important;
+  color: var(--green) !important;
+  box-shadow: 0 0 16px rgba(163,230,53,.14);
+}
+
+/* Autenticação usa o mesmo sistema, inclusive quando o CSS é injetado em runtime. */
+#auth-shell { background: radial-gradient(circle at 50% 0, rgba(163,230,53,.1), transparent 26rem), #000 !important; }
+#auth-shell .auth-card { border-color: var(--line) !important; background: #0a0a0a !important; box-shadow: 0 24px 70px #000 !important; }
+#auth-shell .auth-card p, #auth-shell .auth-check { color: var(--muted) !important; }
+#auth-shell .auth-link { color: var(--green) !important; }
+
+/* Navegação fixa: desktop lateral e mobile inferior. */
+.side-nav, .bottom-nav { background: rgba(5,5,5,.96) !important; border-color: var(--line) !important; }
+.side-nav .brand i { background: linear-gradient(135deg, var(--green), var(--green-strong)) !important; color: var(--on-green) !important; box-shadow: 0 0 20px rgba(163,230,53,.3) !important; }
+.side-nav .nav.active, .bottom-nav .nav.active { background: var(--green-bg) !important; color: var(--green) !important; }
+.bottom-nav .add { background: linear-gradient(135deg, var(--green), var(--green-strong)) !important; color: var(--on-green) !important; box-shadow: 0 0 24px rgba(163,230,53,.3) !important; }
+.desk-top { background: rgba(5,5,5,.9) !important; border-bottom: 1px solid var(--line); }
+
+@media (max-width: 1023px) {
+  .app { background: transparent; }
+  .top { background: linear-gradient(180deg, rgba(0,0,0,.97) 70%, transparent) !important; }
+  .bottom-nav { border-radius: 22px 22px 0 0 !important; }
+  .form-view, .full-panel, .detail, .stock-detail, .sheet { background: #050505 !important; }
+}

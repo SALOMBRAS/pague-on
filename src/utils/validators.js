@@ -246,6 +246,15 @@ const saleUpdateSchema = z.object({
   discount: z.coerce.number().min(0).max(100000000).optional(),
 }).strict();
 
+const quickProductPreviewSchema = z.object({
+  description: z.string().trim().min(2).max(500),
+  downPaymentAmount: z.coerce.number().min(0).max(100000000).default(0),
+  totalInstallments: z.coerce.number().int().min(1).max(360),
+  installmentAmount: z.coerce.number().positive().max(100000000),
+  frequency: enums.frequency,
+  firstDueDate: isoDate,
+}).strict();
+
 const addExtraSchema = z.object({
   amount: amount,
   dueDate: isoDate.optional(),
@@ -422,6 +431,7 @@ module.exports = {
   customerSelfRegistrationSchema,
   saleCreateSchema,
   saleUpdateSchema,
+  quickProductPreviewSchema,
   addExtraSchema,
   paymentCreateSchema,
   installmentPaySchema,

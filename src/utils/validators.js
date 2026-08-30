@@ -179,10 +179,15 @@ const customerUpdateSchema = customerCreateSchema.partial().extend({ isActive: z
 const customerSelfRegistrationSchema = z.object({ name: customerFields.name.optional(), nickname: customerFields.nickname, personType: customerFields.personType.optional(), cpfCnpj: customerFields.cpfCnpj, documentNumber: customerFields.documentNumber, birthOrIncorporationDate: customerFields.birthOrIncorporationDate, professionOrActivity: customerFields.professionOrActivity, declaredIncome: customerFields.declaredIncome, phone: customerFields.phone, whatsapp: customerFields.whatsapp, email: customerFields.email, zipCode: customerFields.zipCode, address: customerFields.address, street: customerFields.street, streetNumber: customerFields.streetNumber, addressComplement: customerFields.addressComplement, neighborhood: customerFields.neighborhood, city: customerFields.city, state: customerFields.state, notes: customerFields.notes }).strict();
 
 const saleItemSchema = z.object({
-  productId: uuid,
+  productId: uuid.optional(),
+  name: z.string().trim().min(2).max(200).optional(),
   quantity: z.coerce.number().int().positive().max(1000000),
   unitPrice: optionalAmount.optional(),
-}).strict();
+}).strict().superRefine((value, context) => {
+  if (!value.productId && (!value.name || !value.unitPrice)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: 'Informe o produto cadastrado ou uma descrição e valor.' });
+  }
+});
 
 const saleCreateSchema = z.object({
   customerId: uuid.nullable().optional(),
@@ -193,6 +198,9 @@ const saleCreateSchema = z.object({
   quantity: z.coerce.number().int().positive().max(1000000).default(1),
   unitPrice: optionalAmount.optional(),
   discount: z.coerce.number().min(0).max(100000000).default(0),
+  downPaymentAmount: z.coerce.number().min(0).max(100000000).default(0),
+  cashAccountId: uuid.optional(),
+  paymentMethod: z.enum(['CASH', 'PIX', 'CARD', 'TRANSFER', 'OTHER']).optional(),
   paymentType: z.enum(['SINGLE', 'INSTALLMENT']).default('SINGLE'),
   totalInstallments: z.coerce.number().int().min(2).max(360).nullable().optional(),
   installmentAmount: optionalAmount.nullable().optional(),
@@ -207,8 +215,11 @@ const saleCreateSchema = z.object({
   if (value.paymentType === 'INSTALLMENT' && !value.totalInstallments) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['totalInstallments'], message: 'Informe o total de parcelas.' });
   }
-  if (!value.items?.length && (!value.productId || !value.productName || !value.unitPrice)) {
+  if (!value.items?.length && (!value.productName || !value.unitPrice)) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['items'], message: 'Informe os itens da venda ou produto, nome e preço.' });
+  }
+  if (value.downPaymentAmount > 0 && !value.cashAccountId) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['cashAccountId'], message: 'Selecione o caixa de destino da entrada.' });
   }
   if (value.customerId && value.personId && value.customerId !== value.personId) context.addIssue({ code: z.ZodIssueCode.custom, path: ['personId'], message: 'Informe apenas uma pessoa para a venda.' });
 });

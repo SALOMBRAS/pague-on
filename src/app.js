@@ -75,6 +75,18 @@ app.use(cors({
   },
   credentials: true,
 }));
+// Observabilidade do caminho crítico sem expor identidade, credenciais, token
+// ou query string. Ajuda a separar autenticação, perfil e dashboard lentos.
+app.use('/api/v1', (req, res, next) => {
+  const area = req.path.startsWith('/auth') ? 'AUTH' : req.path.startsWith('/dashboard') ? 'DASHBOARD' : null;
+  if (!area) return next();
+  const startedAt = process.hrtime.bigint();
+  res.once('finish', () => {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+    console.info(`[${area}] request_completed`, { method: req.method, route: req.path, status: res.statusCode, durationMs: Math.round(durationMs) });
+  });
+  next();
+});
 // O limite é da API. Aplicá-lo ao app inteiro bloqueava a própria tela e seus
 // arquivos estáticos depois de muitas requisições no mesmo minuto.
 app.use('/api/v1', rateLimit({ windowMs: 60 * 1000, limit: 100, standardHeaders: 'draft-8', legacyHeaders: false }));

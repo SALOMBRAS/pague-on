@@ -9,39 +9,20 @@
     const format = (value) => window.pagueOnLock?.config?.hideValues ? '••••' : (window.pagueOnCurrency?.formatBrl(value) || new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value));
     const date = (value) => new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}).format(value);
     const relative = (value) => { const days = Math.round((new Date(value)-new Date(today.getFullYear(),today.getMonth(),today.getDate()))/86400000); return days < 0 ? `Venceu ${date(value)}` : days === 0 ? 'Vence hoje' : `Vence ${date(value)}`; };
-    const debts = [
-      {id:'joao', type:'RECEIVABLE', paymentType:'SINGLE', status:'OVERDUE', counterparty:'João Silva', description:'Venda de Tênis Casual', amount:500, total:500, due:addDays(-5), phone:'11988887777', category:'Produto'},
-      {id:'carlos', type:'RECEIVABLE', paymentType:'INSTALLMENT', status:'PENDING', counterparty:'Carlos Souza', description:'Mesa de Jantar 6 lugares', amount:250, total:1500, due:addDays(3), installments:6, paidInstallments:2, category:'Produto', product:'Mesa de Jantar', quantity:1},
-      {id:'internet', type:'PAYABLE', paymentType:'RECURRING', status:'PENDING', counterparty:'Claro Empresas', description:'Internet da Loja', amount:150, total:150, due:addDays(0), frequency:'Mensal', category:'Assinatura'},
-      {id:'aluguel', type:'PAYABLE', paymentType:'RECURRING', status:'PENDING', counterparty:'Imobiliária XYZ', description:'Aluguel da Loja', amount:1200, total:1200, due:addDays(14), frequency:'Mensal', category:'Aluguel'},
-      {id:'imovel', type:'RECEIVABLE', paymentType:'RECURRING', status:'PENDING', counterparty:'Marina Alves', description:'Aluguel do Imóvel', amount:2000, total:2000, due:addDays(10), frequency:'Mensal', category:'Aluguel'},
-      {id:'geladeira', type:'PAYABLE', paymentType:'INSTALLMENT', status:'PAID', counterparty:'Casas Bahia', description:'Geladeira Consul', amount:320, total:3840, due:addDays(-12), paidAt:addDays(-12), installments:12, paidInstallments:12, category:'Produto'}
-    ];
-    const products = [
-      {id:'camiseta',name:'Camiseta Preta',emoji:'👕',category:'Roupas',cost:25,selling:55,stock:10,alert:5},
-      {id:'tenis',name:'Tênis Casual',emoji:'👟',category:'Calçados',cost:110,selling:180,stock:4,alert:5},
-      {id:'mesa',name:'Mesa de Jantar',emoji:'🪑',category:'Móveis',cost:380,selling:650,stock:2,alert:1}
-    ];
-    const purchases = [
-      {id:'p1',productId:'camiseta',quantity:20,unitCost:22.5,supplier:'Fornecedor ABC',date:addDays(-2)},
-      {id:'p2',productId:'tenis',quantity:5,unitCost:108,supplier:'Fornecedor XYZ',date:addDays(-8)},
-      {id:'p3',productId:'mesa',quantity:3,unitCost:365,supplier:'Madeiras Sul',date:addDays(-28)}
-    ];
+    // Dados reais chegam do backend ou do cache pertencente ao usuário atual.
+    // Nunca renderize exemplos como se fossem dados financeiros da conta.
+    const debts = [];
+    const products = [];
+    const purchases = [];
     let formState = null;
-    const profile = { name:'João Silva', email:'joao@email.com', plan:'Free', theme:'Escuro', currency:'BRL', push:true, sound:true, biometric:false, pin:false, hideValues:false, lockTimeout:5, reminder:'24h antes', channels:{push:true,whatsapp:true,sms:false} };
-    const notifications = [
-      {id:'n1',group:'Hoje',kind:'danger',icon:'🔴',title:'Cobrança atrasada!',body:'A parcela 3 do Celular venceu há 2 dias. Toque para pagar.',time:'14:30',read:false},
-      {id:'n2',group:'Hoje',kind:'warning',icon:'🟡',title:'Estoque baixo',body:'Tênis Casual está com apenas 4 unidades. Considere repor.',time:'10:15',read:false},
-      {id:'n3',group:'Ontem',kind:'success',icon:'✅',title:'Pagamento recebido',body:'Você recebeu R$ 250,00 de Carlos Souza.',time:'Ontem',read:true}
-    ];
-    const smartRules = [
-      {id:'rule-transport',name:'🚗 Transporte',order:1,isActive:true,logic:'ANY',triggers:[{type:'DESCRIPTION_CONTAINS',value:'uber'},{type:'DESCRIPTION_CONTAINS',value:'99'},{type:'DESCRIPTION_CONTAINS',value:'taxi'}],actions:[{type:'SET_CATEGORY',value:'TRANSPORT'},{type:'SET_TYPE',value:'PAYABLE'}]},
-      {id:'rule-rent',name:'🏠 Aluguel recorrente',order:2,isActive:true,logic:'ANY',triggers:[{type:'COUNTERPARTY_CONTAINS',value:'imobiliária'},{type:'DESCRIPTION_CONTAINS',value:'aluguel'}],actions:[{type:'SET_CATEGORY',value:'RENT'},{type:'SET_PAYMENT_TYPE',value:'RECURRING'}]}
-    ];
+    const profile = { name:'Você', email:'', plan:'Free', theme:'Escuro', currency:'BRL', push:true, sound:true, biometric:false, pin:false, hideValues:false, lockTimeout:5, reminder:'24h antes', channels:{push:true,whatsapp:true,sms:false} };
+    const notifications = [];
+    const smartRules = [];
     let ruleEditor = null;
     let state = { tab:'all', chip:'all', query:'', detail:null, screen:'home', stockTab:'products', stockFilter:'all', stockQuery:'', stockDetail:null, panel:null, historyFilter:'month', purchaseFilter:'all' };
     let dashboardRemote = null;
     let dashboardStatus = 'idle';
+    let remoteHydration = null;
     let profitRemote = null;
     let profitStatus = 'idle';
     (()=>{const st=document.createElement('style');st.textContent=`.skel{position:relative;overflow:hidden;background:var(--surface);border-radius:12px}.skel::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);animation:skelPulse 1.3s infinite}@keyframes skelPulse{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}.error-state{padding:30px 18px;text-align:center;color:var(--muted)}.error-state strong{display:block;font-size:16px;color:var(--text)}.error-state span{display:block;margin-top:6px;font-size:13px;line-height:19px}.error-state button{margin-top:16px;min-height:44px;padding:0 18px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font-weight:750}.dash-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 16px}.dash-summary-card{padding:13px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}.dash-summary-card span{display:block;color:var(--muted);font-size:10.5px;line-height:14px}.dash-summary-card b{display:block;margin-top:4px;font-size:16px}.dash-summary-card.positive b{color:var(--green)}.dash-summary-card.danger b{color:var(--red)}.dash-summary-card.warning b{color:var(--amber)}`;document.head.append(st);})();
@@ -54,14 +35,14 @@ function retryDashboard(){ dashboardStatus='loading'; render(); hydrateRemote();
     const chipSet = [{key:'all',label:'Todos'},{key:'today',label:'Hoje'},{key:'overdue',label:'Atrasados'},{key:'installment',label:'Parcelados'},{key:'recurring',label:'Recorrentes'},{key:'single',label:'Únicos'}];
     const $ = (sel) => document.querySelector(sel);
 function showToast(message){ const toast=$('#toast'); toast.textContent=message; toast.classList.add('show'); clearTimeout(window.toastTimer); window.toastTimer=setTimeout(()=>toast.classList.remove('show'),2300); }
-function persistLocal(changes=[]){ const snapshot={debts,products,purchases,profile,smartRules,assets:JSON.parse(localStorage.getItem('pagueon.assets.v1')||'[]')}; window.pagueOnOffline?.commit(snapshot,changes).catch(()=>showToast('Alteração salva nesta tela; tente novamente mais tarde.')); window.dispatchEvent(new CustomEvent('pagueon:data-change',{detail:{snapshot}})); }
+function persistLocal(changes=[]){ const ownerId=window.pagueOnAuth?.getUser?.()?.id||null; const snapshot={ownerId,debts,products,purchases,profile,smartRules,assets:JSON.parse(localStorage.getItem('pagueon.assets.v1')||'[]')}; window.pagueOnOffline?.commit(snapshot,changes).catch(()=>showToast('Alteração salva nesta tela; tente novamente mais tarde.')); window.dispatchEvent(new CustomEvent('pagueon:data-change',{detail:{snapshot}})); }
     const apiCategory={Produto:'PRODUCT',Produtos:'PRODUCT',Serviço:'SERVICE',Serviços:'SERVICE',Empréstimo:'LOAN',Aluguel:'RENT',Assinatura:'SUBSCRIPTION',Transporte:'TRANSPORT',Utilidades:'UTILITIES',Outro:'OTHER'};
     const apiFrequency={Semanal:'WEEKLY',Quinzenal:'BIWEEKLY',Mensal:'MONTHLY',Bimestral:'BIMONTHLY',Trimestral:'QUARTERLY',Semestral:'SEMIANNUAL',Anual:'ANNUAL'};
 function remoteDebt(item){return {id:item.id,type:item.type,paymentType:item.paymentType,status:item.status,counterparty:item.counterparty,description:item.description,amount:Number(item.installmentAmount||item.totalAmount),total:Number(item.totalAmount),due:new Date(item.dueDate),phone:item.counterpartyPhone,category:item.category,installments:item.totalInstallments,paidInstallments:item.paidInstallments,frequency:item.frequency,product:item.product?.name,productId:item.productId,quantity:item.quantity,paidAt:item.paidAt?new Date(item.paidAt):null,createdAt:new Date(item.createdAt),remote:true};}
 function remoteProduct(item){return {id:item.id,name:item.name,emoji:item.image?'🖼️':'📦',category:item.category,cost:Number(item.costPrice),selling:Number(item.sellingPrice),stock:item.stockQuantity,alert:item.minStockAlert,description:item.description,remote:true};}
 function remotePurchase(item){return {id:item.id,productId:item.productId,quantity:item.quantity,unitCost:Number(item.unitCost),supplier:item.supplier,date:new Date(item.date),remote:true};}
 function debtPayload(item){const due=item.due||new Date();return {type:item.type,paymentType:item.paymentType,description:item.description,category:apiCategory[item.category]||item.category||'OTHER',counterparty:item.counterparty||'Lançamento avulso',counterpartyPhone:item.phone||null,totalAmount:Number(item.total),totalInstallments:item.paymentType==='INSTALLMENT'?Number(item.installments):null,frequency:item.paymentType==='RECURRING'?(apiFrequency[item.frequency]||item.frequency||'MONTHLY'):null,startDate:new Date(due).toISOString(),productId:item.productId||null,quantity:item.quantity?Number(item.quantity):null,currency:'BRL'};}
-async function hydrateRemote(){if(!window.pagueOnApi?.authenticated())return;dashboardStatus='loading';dashboardRemote=null;try{const [dashboard,remoteDebts,remoteProducts,remotePurchases,remoteProfile]=await Promise.all([window.pagueOnApi.get('/dashboard'),window.pagueOnApi.get('/debts'),window.pagueOnApi.get('/products'),window.pagueOnApi.get('/purchases'),window.pagueOnApi.get('/auth/me')]);debts.splice(0,debts.length,...remoteDebts.map(remoteDebt));products.splice(0,products.length,...remoteProducts.map(remoteProduct));purchases.splice(0,purchases.length,...remotePurchases.map(remotePurchase));Object.assign(profile,{...remoteProfile,plan:remoteProfile.plan||'Free',push:remoteProfile.notificationEnabled,sound:remoteProfile.notificationSound!=='SILENT'});dashboardRemote=dashboard;dashboardStatus='ready';persistLocal();render();window.dispatchEvent(new CustomEvent('pagueon:remote-hydrated',{detail:{dashboard}}));}catch(error){dashboardStatus='error';showToast('Modo offline — mostrando dados salvos.');render();}}
+async function hydrateRemote(){if(!window.pagueOnApi?.authenticated())return;if(remoteHydration)return remoteHydration;const startedAt=performance.now();dashboardStatus='loading';remoteHydration=(async()=>{try{const [remoteDebts,remoteProducts,remotePurchases]=await Promise.all([window.pagueOnApi.get('/debts'),window.pagueOnApi.get('/products'),window.pagueOnApi.get('/purchases')]);debts.splice(0,debts.length,...remoteDebts.map(remoteDebt));products.splice(0,products.length,...remoteProducts.map(remoteProduct));purchases.splice(0,purchases.length,...remotePurchases.map(remotePurchase));dashboardStatus='ready';persistLocal();console.info('[DASHBOARD] background_data_loaded',{durationMs:Math.round(performance.now()-startedAt)});render();window.dispatchEvent(new CustomEvent('pagueon:remote-hydrated'));}catch(error){dashboardStatus='error';console.info('[DASHBOARD] background_data_error',{code:error?.code||error?.name||'NETWORK_ERROR',durationMs:Math.round(performance.now()-startedAt)});showToast('Alguns dados serão sincronizados quando a conexão voltar.');render();}finally{remoteHydration=null;}})();return remoteHydration;}
 function matchesLocalTrigger(debt,trigger){ if(!trigger.type){ const actual=String(debt[trigger.field]??'').toLocaleLowerCase('pt-BR'),target=String(trigger.value).toLocaleLowerCase('pt-BR'); return trigger.operator==='contains'?actual.includes(target):actual===target; } const meta=TRIGGER_META[trigger.type]; if(!meta)return false; const actual=String(debt[meta.field]??''); if(meta.operator==='gt')return Number(actual)>Number(trigger.value); if(meta.operator==='lt')return Number(actual)<Number(trigger.value); const a=actual.toLocaleLowerCase('pt-BR'),b=String(trigger.value).toLocaleLowerCase('pt-BR'); return meta.operator==='contains'?a.includes(b):meta.operator==='starts_with'?a.startsWith(b):a===b; }
 function applySmartRulesLocal(debt){ let value={...debt,tags:[...(debt.tags||[])]}; const applied=[]; [...smartRules].filter(rule=>rule.isActive).sort((a,b)=>a.order-b.order).forEach(rule=>{const hit=rule.logic==='ANY'?rule.triggers.some(trigger=>matchesLocalTrigger(value,trigger)):rule.triggers.every(trigger=>matchesLocalTrigger(value,trigger));if(!hit)return;rule.actions.forEach(action=>{if(action.type==='SET_CATEGORY')value.category=action.value;if(action.type==='SET_TYPE')value.type=action.value;if(action.type==='SET_PAYMENT_TYPE'){value.paymentType=action.value;if(action.value==='RECURRING')value.frequency='Mensal';}if(action.type==='ADD_TAG'&&!value.tags.includes(action.value))value.tags.push(action.value);});applied.push(rule.name);});return {debt:value,applied}; }
 async function loadProfit(){ if(!window.pagueOnApi?.authenticated()||profitStatus!=='idle')return; profitStatus='loading'; try{ profitRemote=await window.pagueOnApi.get('/reports/profit'); profitStatus='ready'; }catch(_error){ profitRemote=null; profitStatus='error'; } if(state.screen==='stock'&&state.stockTab==='analysis')renderStock(); }
@@ -89,16 +70,24 @@ function closeForm(){ formState=null; $('#formView').classList.remove('show'); r
     document.getElementById('deskNewCharge')?.addEventListener('click', openPrimaryOperation);
 $('#searchBtn').onclick=()=>{ $('#searchWrap').classList.toggle('open'); if($('#searchWrap').classList.contains('open')) $('#searchInput').focus(); }; $('#searchInput').oninput=e=>{state.query=e.target.value;render();}; $('#addBtn').onclick=openPrimaryOperation; $('#centerAdd').onclick=openPrimaryOperation; $('#sheetBackdrop').onclick=closeSheet; $('#sheetCancel').onclick=closeSheet; document.querySelectorAll('[data-create]').forEach(b=>b.onclick=()=>openForm(b.dataset.create)); let dragStart=0; $('#sheetHandle').onpointerdown=e=>dragStart=e.clientY; $('#sheetHandle').onpointerup=e=>{if(e.clientY-dragStart>45)closeSheet();dragStart=0;}; document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{const nav=b.dataset.nav; if(['home','caixa','wealth','stock','profile','goals'].includes(nav)){state.screen=nav;state.detail=null;state.stockDetail=null;state.panel=null;render();}}); document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{state.screen='caixa';state.tab=b.dataset.go;state.chip='all';render();}); $('#homeSale')?.addEventListener('click',openPrimaryOperation); $('#homeDebt')?.addEventListener('click',openPrimaryOperation); $('#stockAdd').onclick=()=>openForm('product'); $('#stockSearch').onclick=()=>{const query=prompt('Buscar produto',state.stockQuery);if(query!==null){state.stockQuery=query;state.stockTab='products';render();}};
     $('#rulesQuick')?.addEventListener('click', () => openPanel('rules'));
+    // Em uma sessão já restaurada, evita renderizar dados de exemplo ou de um
+    // usuário anterior enquanto os dados reais ainda chegam.
+    if (window.pagueOnApi?.authenticated()) dashboardStatus='loading';
     render();
     window.pagueOnOffline?.boot({ hydrate(snapshot){
+      const currentUserId=window.pagueOnAuth?.getUser?.()?.id;
+      // Snapshots antigos sem ownerId não são confiáveis. Não misture contas no
+      // mesmo dispositivo enquanto a sessão atual estiver sendo iniciada.
+      if(!currentUserId||snapshot?.ownerId!==currentUserId)return;
       if(Array.isArray(snapshot.debts)) debts.splice(0,debts.length,...snapshot.debts);
       if(Array.isArray(snapshot.products)) products.splice(0,products.length,...snapshot.products);
       if(Array.isArray(snapshot.purchases)) purchases.splice(0,purchases.length,...snapshot.purchases);
       if(snapshot.profile) Object.assign(profile,snapshot.profile);
       if(Array.isArray(snapshot.smartRules)) smartRules.splice(0,smartRules.length,...snapshot.smartRules);
       render();
-    }}).finally(()=>hydrateRemote());
+    }}).catch(()=>undefined);
     window.addEventListener('pagueon:auth',()=>hydrateRemote());
+    if(window.pagueOnApi?.authenticated())hydrateRemote();
     window.addEventListener('pagueon:security', ({detail}) => {
       profile.pin = Boolean(detail.pinHash);
       profile.biometric = Boolean(detail.biometricPreferred);

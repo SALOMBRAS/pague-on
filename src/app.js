@@ -62,7 +62,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'", 'https://cdn.jsdelivr.net'],
+      connectSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://unpkg.com'],
       workerSrc: ["'self'", 'blob:', 'https://cdn.jsdelivr.net'],
     },
   },

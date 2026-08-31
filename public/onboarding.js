@@ -1,7 +1,9 @@
 (() => {
-  const STORAGE_KEY = 'pagueon_tour_completed_v2';
+  // Uma nova chave força esta edição do tour para todas as contas já existentes.
+  // O sufixo do usuário impede que uma conta conclua o guia por outra no mesmo aparelho.
+  const STORAGE_KEY = 'pagueon_tour_completed_v3';
   const MOBILE_QUERY = '(max-width: 1023px)';
-  const state = { index: 0, steps: [], overlay: null, previousFocus: null, autoStarted: false, stepTimer: null };
+  const state = { index: 0, steps: [], overlay: null, previousFocus: null, autoStartedFor: null, stepTimer: null };
 
   const mobileSteps = [
     { target: '.app', title: 'Bem-vindo ao Pague-On', text: 'Controle seus recebimentos e lembretes em um só lugar.', position: 'center' },
@@ -25,6 +27,7 @@
   const isMobile = () => window.matchMedia?.(MOBILE_QUERY).matches;
   const isReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const isAuthenticated = () => Boolean(window.pagueOnAuth?.getToken?.());
+  const storageKey = () => `${STORAGE_KEY}:${String(window.pagueOnAuth?.getUser?.()?.id || 'session')}`;
   const stepAction = (name) => {
     if (!name) return;
     const actions = window.pagueOnOnboardingActions;
@@ -34,11 +37,11 @@
   const within = (value, min, max) => Math.max(min, Math.min(value, max));
 
   function rememberCompleted() {
-    try { localStorage.setItem(STORAGE_KEY, 'true'); } catch (_) { /* storage can be blocked */ }
+    try { localStorage.setItem(storageKey(), 'true'); } catch (_) { /* storage can be blocked */ }
   }
 
   function isCompleted() {
-    try { return localStorage.getItem(STORAGE_KEY) === 'true'; } catch (_) { return false; }
+    try { return localStorage.getItem(storageKey()) === 'true'; } catch (_) { return false; }
   }
 
   function clearStepTimer() {
@@ -64,11 +67,6 @@
     stepAction('home');
   }
 
-  function attemptSkip() {
-    const accepted = window.confirm('Encerrar o tour agora? Você poderá abri-lo novamente no Perfil.');
-    if (accepted) complete();
-  }
-
   function focusable() {
     return [...state.overlay?.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') || []]
       .filter((element) => !element.hidden);
@@ -76,7 +74,8 @@
 
   function onKeydown(event) {
     if (!state.overlay) return;
-    if (event.key === 'Escape') { event.preventDefault(); attemptSkip(); return; }
+    // Esta edição é obrigatória: Esc não pode liberar a interface antes da conclusão.
+    if (event.key === 'Escape') { event.preventDefault(); return; }
     if (event.key === 'ArrowRight' || event.key === 'Enter') { event.preventDefault(); next(); return; }
     if (event.key === 'ArrowLeft') { event.preventDefault(); previous(); return; }
     if (event.key !== 'Tab') return;
@@ -118,7 +117,7 @@
       overlay.setAttribute('aria-modal', 'true');
       overlay.setAttribute('aria-labelledby', 'onboarding-title');
       overlay.setAttribute('aria-describedby', 'onboarding-copy');
-      overlay.innerHTML = `<div class="onboarding-spotlight" aria-hidden="true"></div><article class="onboarding-tooltip"><p class="onboarding-count">${state.index + 1} de ${state.steps.length}</p><h2 id="onboarding-title">${step.title}</h2><p id="onboarding-copy">${step.text}</p><div class="onboarding-progress" aria-hidden="true"><i style="width:${((state.index + 1) / state.steps.length) * 100}%"></i></div><div class="onboarding-actions">${state.index ? '<button class="onboarding-prev" type="button" data-tour-prev>Anterior</button>' : ''}<button class="onboarding-next" type="button" data-tour-next>${state.index === state.steps.length - 1 ? 'Começar' : 'Próximo'}</button></div><button class="onboarding-skip" type="button" data-tour-skip>Encerrar tour</button></article>`;
+      overlay.innerHTML = `<div class="onboarding-spotlight" aria-hidden="true"></div><article class="onboarding-tooltip"><div class="onboarding-guide"><img class="onboarding-mascot" src="/assets/pague-mascot-v1.png" alt="" aria-hidden="true" width="96" height="96" decoding="async"><p class="onboarding-count">Nota apresenta · ${state.index + 1} de ${state.steps.length}</p></div><h2 id="onboarding-title">${step.title}</h2><p id="onboarding-copy">${step.text}</p><p class="onboarding-required">Conclua este guia rápido para liberar o painel.</p><div class="onboarding-progress" aria-hidden="true"><i style="width:${((state.index + 1) / state.steps.length) * 100}%"></i></div><div class="onboarding-actions">${state.index ? '<button class="onboarding-prev" type="button" data-tour-prev>Anterior</button>' : ''}<button class="onboarding-next" type="button" data-tour-next>${state.index === state.steps.length - 1 ? 'Concluir tutorial' : 'Próximo'}</button></div></article>`;
       document.body.append(overlay);
       state.overlay = overlay;
       const tooltip = overlay.querySelector('.onboarding-tooltip');
@@ -128,7 +127,6 @@
       Object.assign(tooltip.style, { top: `${layout.top}px`, left: `${layout.left}px`, width: `${layout.width}px` });
       overlay.querySelector('[data-tour-next]').onclick = next;
       overlay.querySelector('[data-tour-prev]')?.addEventListener('click', previous);
-      overlay.querySelector('[data-tour-skip]').onclick = attemptSkip;
       overlay.querySelector('[data-tour-next]').focus({ preventScroll: true });
     }, isReducedMotion() ? 0 : 80);
   }
@@ -160,8 +158,9 @@
   }
 
   function scheduleAutoStart() {
-    if (state.autoStarted || isCompleted() || !isAuthenticated()) return;
-    state.autoStarted = true;
+    const key = storageKey();
+    if (state.autoStartedFor === key || isCompleted() || !isAuthenticated()) return;
+    state.autoStartedFor = key;
     window.setTimeout(() => start(), 520);
   }
 

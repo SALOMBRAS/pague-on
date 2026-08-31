@@ -17,6 +17,7 @@ const APP_SHELL = [
   '/mobile-shell.css',
   '/desktop-financial-dashboard.css',
   '/onboarding.css',
+  '/assets/pague-mascot-v1.png',
   '/theme.js',
   '/icons.js',
   '/ui-components.js',

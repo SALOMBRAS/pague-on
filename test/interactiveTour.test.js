@@ -13,21 +13,26 @@ test('tour keeps separate, short desktop and mobile step sets', () => {
   assert.match(tour, /const mobileSteps = \[/);
   assert.match(tour, /const desktopSteps = \[/);
   assert.match(tour, /MOBILE_QUERY = '\(max-width: 1023px\)'/);
-  assert.match(tour, /pagueon_tour_completed_v2/);
+  assert.match(tour, /pagueon_tour_completed_v3/);
+  assert.match(tour, /pagueOnAuth\?\.getUser/);
   assert.match(tour, /Como usar o Pague-On/);
 });
 
-test('tour has an accessible modal, keyboard controls and a confirmed skip', () => {
+test('tour has an accessible modal, keyboard controls and cannot be skipped before completion', () => {
   assert.match(tour, /aria-modal/);
   assert.match(tour, /ArrowRight/);
   assert.match(tour, /ArrowLeft/);
-  assert.match(tour, /window\.confirm\('Encerrar o tour agora/);
+  assert.doesNotMatch(tour, /data-tour-skip/);
+  assert.doesNotMatch(tour, /window\.confirm\(/);
   assert.match(tour, /app\.inert/);
   assert.match(css, /min-height: 44px/);
   assert.match(css, /prefers-reduced-motion/);
+  assert.match(tour, /pague-mascot-v1\.png/);
+  assert.match(css, /\.onboarding-mascot/);
 });
 
 test('tour CSS is present in the application and its offline shell', () => {
   assert.match(html, /href="\/onboarding\.css"/);
   assert.match(serviceWorker, /'\/onboarding\.css'/);
+  assert.match(serviceWorker, /'\/assets\/pague-mascot-v1\.png'/);
 });

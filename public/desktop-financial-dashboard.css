@@ -1,0 +1,25 @@
+/* Financial dashboard on desktop: real API data, dense only where it aids management. */
+@media (min-width: 1024px) {
+  #homeView #financial-dashboard { margin: 0 auto 36px; max-width: 1488px; padding: 0 36px; }
+  #homeView .financial-title { color: var(--text); font-size: 1.125rem; letter-spacing: -.02em; margin: 0 0 18px; }
+  #homeView .financial-filters {
+    align-items: end;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    padding: var(--space-3);
+  }
+  #homeView .financial-filters fieldset { gap: var(--space-2); }
+  #homeView .financial-filters button, #homeView .financial-filters select, #homeView .financial-filters input { background: var(--raised); border-color: var(--line); border-radius: var(--radius-sm); }
+  #homeView .financial-filters button[aria-pressed=true] { background: var(--green-bg); border-color: rgba(118, 255, 3, .52); box-shadow: inset 0 0 0 1px rgba(118, 255, 3, .10); color: var(--green); }
+  #homeView .financial-grid { gap: var(--space-3); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  #homeView .financial-card { background: var(--surface); border-color: var(--line); border-radius: var(--radius-md); box-shadow: none; min-height: 126px; padding: var(--space-4); }
+  #homeView .financial-card:hover { border-color: rgba(118, 255, 3, .48); box-shadow: var(--glow-primary); transform: translateY(-2px); }
+  #homeView .financial-card span { color: var(--muted); font-size: .78rem; }
+  #homeView .financial-card b { color: var(--text); font-size: 1.35rem; margin-block: 12px 8px; text-shadow: 0 0 20px rgba(118, 255, 3, .12); }
+  #homeView .financial-card small { color: var(--green); font-weight: 700; }
+  #homeView .financial-visuals { gap: var(--space-3); }
+  #homeView .financial-chart { background: var(--surface); border-color: var(--line); border-radius: var(--radius-md); }
+}

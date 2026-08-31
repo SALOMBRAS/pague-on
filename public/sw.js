@@ -15,6 +15,7 @@ const APP_SHELL = [
   '/desktop-dashboard.css',
   '/desktop-shell.css',
   '/mobile-shell.css',
+  '/desktop-financial-dashboard.css',
   '/theme.js',
   '/icons.js',
   '/ui-components.js',

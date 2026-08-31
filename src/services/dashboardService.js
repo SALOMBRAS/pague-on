@@ -137,11 +137,18 @@ async function getFinancialDashboard(userId, query = {}) {
   const where = { userId, ...(query.collectorId ? { customer: { collectorId: query.collectorId } } : {}), ...(query.status ? { status: query.status } : {}) };
   const movementWhere = { userId, occurredAt: { gte: dataStart, lte: endOfUtcDay(new Date(Math.max(end.getTime(), month.end.getTime()))) }, ...(query.cashAccountId ? { accountId: query.cashAccountId } : {}) };
   const [debts, customers, accounts, flows, movements, collectors] = await Promise.all([
-    prisma.debt.findMany({ where, include: { installments: true }, orderBy: { dueDate: 'asc' } }),
+    prisma.debt.findMany({
+      where,
+      select: {
+        type: true, paymentType: true, totalAmount: true, paidAmount: true,
+        status: true, isActive: true, category: true, dueDate: true, createdAt: true,
+        installments: { select: { status: true, dueDate: true, amount: true, totalAmount: true, paidAmount: true } },
+      },
+    }),
     prisma.customer.count({ where: { userId, isActive: true, ...(query.collectorId ? { collectorId: query.collectorId } : {}) } }),
     financialAccounts.listWithBalances(userId),
-    prisma.cashFlow.findMany({ where: { userId, date: { gte: dataStart, lte: month.end } }, orderBy: { date: 'asc' } }),
-    prisma.financialMovement.findMany({ where: movementWhere, orderBy: { occurredAt: 'asc' } }),
+    prisma.cashFlow.findMany({ where: { userId, date: { gte: dataStart, lte: month.end } }, select: { date: true, totalIn: true } }),
+    prisma.financialMovement.findMany({ where: movementWhere, select: { type: true, amount: true, occurredAt: true } }),
     prisma.user.findMany({ where: { workspaceOwnerId: userId, role: 'COLLECTOR' }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
   ]);
   const hasAccountFilter = Boolean(query.cashAccountId); const accountSet = hasAccountFilter ? new Set([query.cashAccountId]) : null;

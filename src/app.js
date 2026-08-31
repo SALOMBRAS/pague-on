@@ -98,7 +98,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.resolve(process.env.UPLOAD_PATH || './uploads')));
 app.get('/', (_req, res) => res.sendFile(path.resolve('public/landing.html')));
 app.get('/app', (_req, res) => res.sendFile(path.resolve('public/index.html')));
-app.use(express.static(path.resolve('public')));
+// Os arquivos versionados pelo deploy devem ser atendidos pelo CDN entre
+// acessos. HTML e o service worker ficam fora desta política, para que uma
+// publicação nova seja descoberta imediatamente pelo PWA.
+const cacheablePublicAsset = /\.(?:css|js|svg|png|jpg|jpeg|webp|ico|woff2?)$/i;
+app.use(express.static(path.resolve('public'), {
+  setHeaders(res, filePath) {
+    if (cacheablePublicAsset.test(filePath) && !/[/\\]sw\.js$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
+    }
+  },
+}));
 
 app.get('/health', (_req, res) => sendSuccess(res, { status: 'ok', timestamp: new Date().toISOString() }));
 app.use('/api/v1/auth', authRoutes);

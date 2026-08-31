@@ -22,6 +22,7 @@ test('tokens preserve compatible semantic aliases and accessibility foundations'
   assert.match(tokens, /font-variant-numeric:\s*tabular-nums/);
   assert.match(tokens, /prefers-reduced-motion/);
   assert.match(tokens, /:focus-visible/);
+  assert.match(tokens, /\.sr-only/);
 });
 
 test('theme bootstrap uses dark neon before the application renders', () => {

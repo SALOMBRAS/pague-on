@@ -140,6 +140,15 @@ html, body { background: var(--bg); color: var(--text); }
 body { font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
 button, input, select, textarea { font: inherit; }
 button, [role="button"], a { touch-action: manipulation; }
+.sr-only {
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
 
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
 [tabindex]:focus-visible {

@@ -14,6 +14,7 @@ const APP_SHELL = [
   '/mobile-fintech.css',
   '/desktop-dashboard.css',
   '/desktop-shell.css',
+  '/mobile-shell.css',
   '/theme.js',
   '/icons.js',
   '/ui-components.js',

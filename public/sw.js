@@ -8,6 +8,7 @@ const APP_SHELL = [
   '/app',
   '/manifest.webmanifest',
   '/tokens.css',
+  '/design-system.css',
   '/app.css',
   '/ui-enhancements.css',
   '/mobile-fintech.css',

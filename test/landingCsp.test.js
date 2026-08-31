@@ -29,4 +29,6 @@ test('painel financeiro tem carregamento acessível e respeita redução de movi
   assert.match(dashboard, /role="status" aria-live="polite"/);
   assert.match(dashboard, /@media\(prefers-reduced-motion:reduce\)/);
   assert.match(dashboard, /data-financial-loading-status/);
+  assert.match(dashboard, /margin:0 auto 13px/);
+  assert.match(dashboard, /pagueon:financial-dashboard-settled/);
 });

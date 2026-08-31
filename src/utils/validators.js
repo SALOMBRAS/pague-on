@@ -323,6 +323,23 @@ const dashboardQuerySchema = z.object({
 const financialAccountCreateSchema = z.object({ name: z.string().trim().min(2).max(120), type: z.enum(['CASH', 'BANK', 'PAYMENT_ACCOUNT', 'DIGITAL_WALLET', 'LOAN_CAPITAL', 'OTHER']).default('CASH'), institution: z.string().trim().max(160).nullable().optional(), openingBalance: z.coerce.number().min(-9999999999).max(9999999999).default(0), isActive: z.boolean().default(true), includeInAvailability: z.boolean().default(true), notes: z.string().trim().max(1000).nullable().optional() }).strict();
 const financialAccountUpdateSchema = financialAccountCreateSchema.partial().strict();
 const financialStatementQuerySchema = z.object({ startDate: z.string().date().optional(), endDate: z.string().date().optional(), direction: z.enum(['CREDIT', 'DEBIT']).optional(), accountId: uuid.optional(), category: z.string().trim().max(80).optional(), origin: z.string().trim().max(80).optional(), customerId: uuid.optional(), debtId: uuid.optional(), collectorId: uuid.optional(), responsibleUserId: uuid.optional(), paymentMethod: z.string().trim().max(40).optional() }).strict().superRefine((value, context) => { if (value.startDate && value.endDate && value.startDate > value.endDate) context.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'A data final deve ser posterior à inicial.' }); });
+const reportKey = z.enum(['loans-active', 'loans-paid', 'loans-overdue', 'loans-by-period', 'loaned-values', 'received-values', 'installments-receivable', 'installments-overdue', 'receipts-by-period', 'receipts-projection', 'result-projection', 'principal-in-circulation', 'interest-forecast-received', 'penalties-applied-received', 'discounts-granted', 'collector-commissions', 'cash-statement', 'income-expenses', 'default-rate', 'average-delay', 'customer-history']);
+const reportKeySchema = z.object({ reportKey }).strict();
+const reportQuerySchema = z.object({
+  period: z.enum(['ALL', 'TODAY', 'NEXT_7', 'NEXT_8', 'NEXT_15', 'NEXT_30', 'WEEK', 'MONTH', 'CUSTOM']).default('MONTH'),
+  startDate: z.string().date().optional(),
+  endDate: z.string().date().optional(),
+  customerId: uuid.optional(),
+  collectorId: uuid.optional(),
+  accountId: uuid.optional(),
+  modality: z.enum(['INSTALLMENT', 'SIMPLE_INTEREST', 'PRICE', 'RENEWAL']).optional(),
+  status: enums.debtStatus.optional(),
+  category: z.string().trim().max(80).optional(),
+  paymentMethod: z.string().trim().max(40).optional(),
+}).strict().superRefine((value, context) => {
+  if (value.period === 'CUSTOM' && (!value.startDate || !value.endDate)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['startDate'], message: 'Informe as datas inicial e final do período personalizado.' });
+  if (value.startDate && value.endDate && value.startDate > value.endDate) context.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'A data final deve ser posterior à inicial.' });
+});
 const reconciliationUploadSchema = z.object({ fileName: z.string().trim().min(1).max(255), content: z.string().min(1).max(1024 * 1024), accountName: z.string().trim().max(160).nullable().optional() }).strict();
 const reconciliationMatchSchema = z.object({ statementId: uuid }).strict();
 const reconciliationConfirmSchema = z.object({ statementId: uuid, decisions: z.array(z.object({ transactionId: uuid, action: z.enum(['CONFIRM', 'IGNORE', 'CREATE']), debtId: uuid.nullable().optional() }).strict()).min(1).max(500) }).strict();
@@ -450,6 +467,8 @@ module.exports = {
   financialAccountCreateSchema,
   financialAccountUpdateSchema,
   financialStatementQuerySchema,
+  reportKeySchema,
+  reportQuerySchema,
   reconciliationUploadSchema,
   reconciliationMatchSchema,
   reconciliationConfirmSchema,

@@ -4,6 +4,14 @@
   "builds": [
     { "src": "api/index.js", "use": "@vercel/node", "config": { "maxDuration": 30, "memory": 1024 } }
   ],
+  "headers": [
+    {
+      "source": "/(.*)\\.(css|js|svg|png|jpg|jpeg|webp|ico|woff|woff2)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400" }
+      ]
+    }
+  ],
   "routes": [
     { "src": "/(.*)", "dest": "api/index.js" }
   ]

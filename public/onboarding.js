@@ -1,7 +1,7 @@
 (() => {
   // Uma nova chave força esta edição do tour para todas as contas já existentes.
   // O sufixo do usuário impede que uma conta conclua o guia por outra no mesmo aparelho.
-  const STORAGE_KEY = 'pagueon_tour_completed_v3';
+  const STORAGE_KEY = 'pagueon_tour_completed_v4';
   const MOBILE_QUERY = '(max-width: 1023px)';
   const state = { index: 0, steps: [], overlay: null, previousFocus: null, autoStartedFor: null, stepTimer: null };
 
@@ -117,7 +117,7 @@
       overlay.setAttribute('aria-modal', 'true');
       overlay.setAttribute('aria-labelledby', 'onboarding-title');
       overlay.setAttribute('aria-describedby', 'onboarding-copy');
-      overlay.innerHTML = `<div class="onboarding-spotlight" aria-hidden="true"></div><article class="onboarding-tooltip"><div class="onboarding-guide"><img class="onboarding-mascot" src="/assets/pague-mascot-dollar-v2.png" alt="" aria-hidden="true" width="96" height="96" decoding="async"><p class="onboarding-count">Nota apresenta · ${state.index + 1} de ${state.steps.length}</p></div><h2 id="onboarding-title">${step.title}</h2><p id="onboarding-copy">${step.text}</p><p class="onboarding-required">Conclua este guia rápido para liberar o painel.</p><div class="onboarding-progress" aria-hidden="true"><i style="width:${((state.index + 1) / state.steps.length) * 100}%"></i></div><div class="onboarding-actions">${state.index ? '<button class="onboarding-prev" type="button" data-tour-prev>Anterior</button>' : ''}<button class="onboarding-next" type="button" data-tour-next>${state.index === state.steps.length - 1 ? 'Concluir tutorial' : 'Próximo'}</button></div></article>`;
+      overlay.innerHTML = `<div class="onboarding-spotlight" aria-hidden="true"></div><article class="onboarding-tooltip"><div class="onboarding-guide"><img class="onboarding-mascot" src="/assets/pague-mascot-user-v3.png" alt="" aria-hidden="true" width="96" height="96" decoding="async"><p class="onboarding-count">Nota apresenta · ${state.index + 1} de ${state.steps.length}</p></div><h2 id="onboarding-title">${step.title}</h2><p id="onboarding-copy">${step.text}</p><p class="onboarding-required">Conclua este guia rápido para liberar o painel.</p><div class="onboarding-progress" aria-hidden="true"><i style="width:${((state.index + 1) / state.steps.length) * 100}%"></i></div><div class="onboarding-actions">${state.index ? '<button class="onboarding-prev" type="button" data-tour-prev>Anterior</button>' : ''}<button class="onboarding-next" type="button" data-tour-next>${state.index === state.steps.length - 1 ? 'Concluir tutorial' : 'Próximo'}</button></div></article>`;
       document.body.append(overlay);
       state.overlay = overlay;
       const tooltip = overlay.querySelector('.onboarding-tooltip');

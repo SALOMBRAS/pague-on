@@ -19,6 +19,7 @@ const APP_SHELL = [
   '/onboarding.css',
   '/assets/pague-mascot-v1.png',
   '/assets/pague-mascot-dollar-v2.png',
+  '/assets/pague-mascot-user-v3.png',
   '/theme.js',
   '/icons.js',
   '/ui-components.js',

@@ -43,6 +43,11 @@ test('sessão autenticada remove parâmetros de cadastro da URL', () => {
   assert.match(source, /appUrl\.searchParams\.delete\('reset'\)/);
 });
 
+test('transição de sessão oculta a camada de acesso e saída é imediata', () => {
+  assert.match(source, /#auth-shell\[hidden\]\{display:none!important\}/);
+  assert.match(source, /const token = getToken\(\);[\s\S]*?endSession\(\);[\s\S]*?rawFetch\(`\$\{apiBase\(\)\}\/auth\/logout`/);
+});
+
 test('ausência de cookie de refresh é tratada como visitante sem sessão', () => {
   assert.match(authControllerSource, /if \(!token\) return sendSuccess\(res, null, 'Nenhuma sessão ativa para renovar\.'/);
   assert.match(source, /!result\.data\?\.token\) return false/);

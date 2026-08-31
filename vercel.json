@@ -11,8 +11,8 @@
       "headers": { "Cache-Control": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400" },
       "continue": true
     },
-    { "src": "/", "dest": "api/index.js" },
-    { "src": "/app", "dest": "api/index.js" },
+    { "src": "/$", "dest": "api/index.js" },
+    { "src": "/app$", "dest": "api/index.js" },
     { "src": "/api/(.*)", "dest": "api/index.js" },
     { "src": "/uploads/(.*)", "dest": "api/index.js" },
     { "handle": "filesystem" },

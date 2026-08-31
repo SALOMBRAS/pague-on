@@ -13,8 +13,10 @@ test('tour keeps separate, short desktop and mobile step sets', () => {
   assert.match(tour, /const mobileSteps = \[/);
   assert.match(tour, /const desktopSteps = \[/);
   assert.match(tour, /MOBILE_QUERY = '\(max-width: 1023px\)'/);
-  assert.match(tour, /pagueon_tour_completed_v3/);
+  assert.match(tour, /pagueon_tour_completed_v4/);
   assert.match(tour, /pagueOnAuth\?\.getUser/);
+  assert.match(tour, /autoStartedFor/);
+  assert.match(tour, /pagueon:auth/);
   assert.match(tour, /Como usar o Pague-On/);
 });
 
@@ -27,7 +29,7 @@ test('tour has an accessible modal, keyboard controls and cannot be skipped befo
   assert.match(tour, /app\.inert/);
   assert.match(css, /min-height: 44px/);
   assert.match(css, /prefers-reduced-motion/);
-  assert.match(tour, /pague-mascot-dollar-v2\.png/);
+  assert.match(tour, /pague-mascot-user-v3\.png/);
   assert.match(css, /\.onboarding-mascot/);
 });
 
@@ -36,4 +38,5 @@ test('tour CSS is present in the application and its offline shell', () => {
   assert.match(serviceWorker, /'\/onboarding\.css'/);
   assert.match(serviceWorker, /'\/assets\/pague-mascot-v1\.png'/);
   assert.match(serviceWorker, /'\/assets\/pague-mascot-dollar-v2\.png'/);
+  assert.match(serviceWorker, /'\/assets\/pague-mascot-user-v3\.png'/);
 });

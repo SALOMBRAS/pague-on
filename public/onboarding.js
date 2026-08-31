@@ -1,40 +1,181 @@
 (() => {
-  const STORAGE_KEY = 'pagueon_onboarding_done';
-  const steps = [
-    { target: '.dash-hero', action: 'home', title: '💰 Seu saldo projetado', description: 'Aqui você acompanha o que tem a receber, o que precisa pagar e o saldo previsto.' },
-    { target: '#centerAdd', action: 'home', title: '➕ Adicionar em segundos', description: 'Use este botão para cadastrar contas, produtos, compras, lembretes ou escanear um boleto.' },
-    { target: '.nav[data-nav="caixa"]', action: 'caixa', title: '💳 Controle de contas', description: 'No Caixa, acompanhe vencimentos, parcelas, recorrências e registre pagamentos.' },
-    { target: '.nav[data-nav="stock"]', action: 'estoque', title: '📦 Estoque e margem', description: 'Cadastre produtos, registre compras e acompanhe a margem de lucro automaticamente.' },
-    { target: '#formView.show', action: 'lembrete', title: '🔔 Lembretes que ajudam', description: 'Crie alertas para não esquecer vencimentos e manter suas cobranças organizadas.' },
-  ];
-  let current = 0; let overlay; let keyHandler;
-  const action = (name) => window.pagueOnOnboardingActions?.[name]?.();
-  const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
+  const STORAGE_KEY = 'pagueon_tour_completed_v2';
+  const MOBILE_QUERY = '(max-width: 1023px)';
+  const state = { index: 0, steps: [], overlay: null, previousFocus: null, autoStarted: false, stepTimer: null };
 
-  function remove() { overlay?.remove(); overlay = null; document.removeEventListener('keydown', keyHandler); }
-  function position(target, tooltip) {
-    const rect = target.getBoundingClientRect(); const padding = 12; const tooltipWidth = Math.min(286, window.innerWidth - 32); const height = tooltip.offsetHeight || 175;
-    let top = rect.bottom + padding; if (top + height > window.innerHeight - 16) top = Math.max(16, rect.top - height - padding);
-    const left = clamp(rect.left + rect.width / 2 - tooltipWidth / 2, 16, window.innerWidth - tooltipWidth - 16);
-    return { rect, top, left, tooltipWidth };
+  const mobileSteps = [
+    { target: '.app', title: 'Bem-vindo ao Pague-On', text: 'Controle seus recebimentos e lembretes em um só lugar.', position: 'center' },
+    { action: 'home', target: '#homeView', title: 'Seu resumo', text: 'Veja o que tem para receber e o que precisa de atenção.' },
+    { action: 'home', target: '#centerAdd', title: 'Adicionar uma conta', text: 'Toque aqui para registrar uma cobrança, produto ou lembrete.' },
+    { action: 'caixa', target: '.bottom-nav .nav[data-nav="caixa"]', title: 'Acompanhar pagamentos', text: 'No Resumo você acompanha o que está aberto, pago ou atrasado.' },
+    { action: 'profile', target: '.bottom-nav .nav[data-nav="profile"]', title: 'Lembretes e preferências', text: 'No Perfil você ativa alertas e pode rever este tour.' },
+    { action: 'home', target: '.bottom-nav', title: 'Tudo pronto', text: 'Comece quando quiser. Seus dados continuam protegidos.', position: 'top' }
+  ];
+
+  const desktopSteps = [
+    { target: '.app', title: 'Bem-vindo ao Pague-On', text: 'Seu painel para acompanhar cobranças e recebimentos.', position: 'center' },
+    { action: 'home', target: '#financial-dashboard, #homeView', title: 'Visão geral', text: 'Aqui estão seus valores a receber, atrasados e recebidos no período.' },
+    { action: 'caixa', target: '.side-nav .nav[data-nav="caixa"]', title: 'Cobranças', text: 'Abra o Caixa para consultar parcelas, pagamentos e pendências.' },
+    { action: 'home', target: '#deskNewCharge', title: 'Nova operação', text: 'Registre uma nova cobrança em poucos passos ou pressione N.' },
+    { action: 'profile', target: '.side-nav .nav[data-nav="profile"]', title: 'Configurações', text: 'Ajuste sua conta, segurança, notificações e veja este tour depois.' },
+    { action: 'home', target: '.side-foot', title: 'Atalhos rápidos', text: 'N cria, / busca, ? abre esta ajuda e Esc fecha painéis.' },
+    { action: 'home', target: '.desk-top', title: 'Tudo pronto', text: 'Use o painel para manter seus recebimentos sob controle.', position: 'bottom' }
+  ];
+
+  const isMobile = () => window.matchMedia?.(MOBILE_QUERY).matches;
+  const isReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const isAuthenticated = () => Boolean(window.pagueOnAuth?.getToken?.());
+  const stepAction = (name) => {
+    if (!name) return;
+    const actions = window.pagueOnOnboardingActions;
+    if (actions?.[name]) { actions[name](); return; }
+    document.querySelector(`[data-nav="${name}"]`)?.click();
+  };
+  const within = (value, min, max) => Math.max(min, Math.min(value, max));
+
+  function rememberCompleted() {
+    try { localStorage.setItem(STORAGE_KEY, 'true'); } catch (_) { /* storage can be blocked */ }
   }
-  function render() {
-    const step = steps[current]; action(step.action);
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const target = document.querySelector(step.target); if (!target) return next();
-      remove(); overlay = document.createElement('section'); overlay.className = 'onboarding-overlay'; overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true'); overlay.setAttribute('aria-label', `Tour do Pague-On, etapa ${current + 1}`);
-      overlay.innerHTML = `<div class="onboarding-spotlight"></div><article class="onboarding-tooltip"><div class="onboarding-count">${current + 1} DE ${steps.length}</div><h2>${step.title}</h2><p>${step.description}</p><div class="onboarding-actions">${current ? '<button class="onboarding-prev" data-onboarding-prev>Anterior</button>' : ''}<button class="onboarding-next" data-onboarding-next>${current === steps.length - 1 ? 'Concluir' : 'Próximo'}</button><button class="onboarding-skip" data-onboarding-skip>Pular tour</button></div></article>`;
-      document.body.append(overlay); const tooltip = overlay.querySelector('.onboarding-tooltip'); const layout = position(target, tooltip); const spotlight = overlay.querySelector('.onboarding-spotlight'); Object.assign(spotlight.style, { top: `${Math.max(4, layout.rect.top - 7)}px`, left: `${Math.max(4, layout.rect.left - 7)}px`, width: `${layout.rect.width + 14}px`, height: `${layout.rect.height + 14}px` }); Object.assign(tooltip.style, { top: `${layout.top}px`, left: `${layout.left}px`, width: `${layout.tooltipWidth}px` });
-      overlay.querySelector('[data-onboarding-next]').onclick = next; overlay.querySelector('[data-onboarding-prev]')?.addEventListener('click', previous); overlay.querySelector('[data-onboarding-skip]').onclick = complete; keyHandler = (event) => { if (event.key === 'Escape') complete(); if (event.key === 'ArrowRight') next(); if (event.key === 'ArrowLeft' && current) previous(); }; document.addEventListener('keydown', keyHandler); overlay.querySelector('[data-onboarding-next]').focus();
-    }));
+
+  function isCompleted() {
+    try { return localStorage.getItem(STORAGE_KEY) === 'true'; } catch (_) { return false; }
   }
-  function next() { if (current < steps.length - 1) { current += 1; render(); } else complete(); }
-  function previous() { if (current > 0) { current -= 1; render(); } }
-  function complete() { remove(); localStorage.setItem(STORAGE_KEY, 'true'); action('finish'); }
-  function start(force = false) { if (!force && localStorage.getItem(STORAGE_KEY) === 'true') return; current = 0; render(); }
-  function reset() { localStorage.removeItem(STORAGE_KEY); start(true); }
-  function addProfileControl() { const profile = document.querySelector('#profileView.show'); if (!profile || profile.querySelector('[data-onboarding-reset]')) return; const section = document.createElement('section'); section.className = 'profile-section'; section.dataset.onboardingReset = 'true'; section.innerHTML = `<h2>✨ AJUDA</h2><div class="settings-card"><button class="setting" data-onboarding-reset><label>Ver tour novamente</label><span>Como usar o Pague-On <i class="chev">›</i></span></button></div>`; profile.querySelector('.signout')?.before(section); section.querySelector('[data-onboarding-reset]').onclick = reset; }
-  function boot() { const app = document.querySelector('.app'); new MutationObserver(addProfileControl).observe(app, { childList: true, subtree: true }); addProfileControl(); setTimeout(() => start(), 450); }
-  window.pagueOnOnboarding = { start, reset, complete, get currentStep() { return current; } };
+
+  function clearStepTimer() {
+    if (state.stepTimer) window.clearTimeout(state.stepTimer);
+    state.stepTimer = null;
+  }
+
+  function stop({ completed = false } = {}) {
+    clearStepTimer();
+    document.removeEventListener('keydown', onKeydown, true);
+    const app = document.querySelector('.app');
+    if (app) app.inert = false;
+    document.body.classList.remove('tour-active');
+    state.overlay?.remove();
+    state.overlay = null;
+    if (completed) rememberCompleted();
+    state.previousFocus?.focus?.({ preventScroll: true });
+    state.previousFocus = null;
+  }
+
+  function complete() {
+    stop({ completed: true });
+    stepAction('home');
+  }
+
+  function attemptSkip() {
+    const accepted = window.confirm('Encerrar o tour agora? Você poderá abri-lo novamente no Perfil.');
+    if (accepted) complete();
+  }
+
+  function focusable() {
+    return [...state.overlay?.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') || []]
+      .filter((element) => !element.hidden);
+  }
+
+  function onKeydown(event) {
+    if (!state.overlay) return;
+    if (event.key === 'Escape') { event.preventDefault(); attemptSkip(); return; }
+    if (event.key === 'ArrowRight' || event.key === 'Enter') { event.preventDefault(); next(); return; }
+    if (event.key === 'ArrowLeft') { event.preventDefault(); previous(); return; }
+    if (event.key !== 'Tab') return;
+    const items = focusable();
+    if (!items.length) return;
+    const first = items[0]; const last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  }
+
+  function findTarget(selector) {
+    return selector.split(',').map((item) => document.querySelector(item.trim())).find(Boolean);
+  }
+
+  function place(target, tooltip, requestedPosition) {
+    const viewportPadding = 16;
+    const rect = target.getBoundingClientRect();
+    const width = Math.min(340, window.innerWidth - viewportPadding * 2);
+    const height = tooltip.offsetHeight || 190;
+    let top = requestedPosition === 'top' ? rect.top - height - 16 : rect.bottom + 16;
+    if (requestedPosition === 'center') top = Math.max(viewportPadding, (window.innerHeight - height) / 2);
+    if (top + height > window.innerHeight - viewportPadding) top = Math.max(viewportPadding, rect.top - height - 16);
+    const left = within(rect.left + rect.width / 2 - width / 2, viewportPadding, window.innerWidth - width - viewportPadding);
+    return { rect, top, left, width };
+  }
+
+  function draw() {
+    clearStepTimer();
+    const step = state.steps[state.index];
+    if (!step) { complete(); return; }
+    stepAction(step.action);
+    state.stepTimer = window.setTimeout(() => {
+      const target = findTarget(step.target);
+      if (!target) { next(); return; }
+      state.overlay?.remove();
+      const overlay = document.createElement('section');
+      overlay.className = 'onboarding-overlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.setAttribute('aria-labelledby', 'onboarding-title');
+      overlay.setAttribute('aria-describedby', 'onboarding-copy');
+      overlay.innerHTML = `<div class="onboarding-spotlight" aria-hidden="true"></div><article class="onboarding-tooltip"><p class="onboarding-count">${state.index + 1} de ${state.steps.length}</p><h2 id="onboarding-title">${step.title}</h2><p id="onboarding-copy">${step.text}</p><div class="onboarding-progress" aria-hidden="true"><i style="width:${((state.index + 1) / state.steps.length) * 100}%"></i></div><div class="onboarding-actions">${state.index ? '<button class="onboarding-prev" type="button" data-tour-prev>Anterior</button>' : ''}<button class="onboarding-next" type="button" data-tour-next>${state.index === state.steps.length - 1 ? 'Começar' : 'Próximo'}</button></div><button class="onboarding-skip" type="button" data-tour-skip>Encerrar tour</button></article>`;
+      document.body.append(overlay);
+      state.overlay = overlay;
+      const tooltip = overlay.querySelector('.onboarding-tooltip');
+      const layout = place(target, tooltip, step.position);
+      const spotlight = overlay.querySelector('.onboarding-spotlight');
+      Object.assign(spotlight.style, { top: `${Math.max(4, layout.rect.top - 7)}px`, left: `${Math.max(4, layout.rect.left - 7)}px`, width: `${layout.rect.width + 14}px`, height: `${layout.rect.height + 14}px` });
+      Object.assign(tooltip.style, { top: `${layout.top}px`, left: `${layout.left}px`, width: `${layout.width}px` });
+      overlay.querySelector('[data-tour-next]').onclick = next;
+      overlay.querySelector('[data-tour-prev]')?.addEventListener('click', previous);
+      overlay.querySelector('[data-tour-skip]').onclick = attemptSkip;
+      overlay.querySelector('[data-tour-next]').focus({ preventScroll: true });
+    }, isReducedMotion() ? 0 : 80);
+  }
+
+  function next() { if (state.index < state.steps.length - 1) { state.index += 1; draw(); } else complete(); }
+  function previous() { if (state.index > 0) { state.index -= 1; draw(); } }
+
+  function start({ force = false } = {}) {
+    if (state.overlay || (!force && isCompleted()) || (!force && !isAuthenticated())) return false;
+    state.steps = isMobile() ? mobileSteps : desktopSteps;
+    state.index = 0;
+    state.previousFocus = document.activeElement;
+    document.querySelector('.app')?.setAttribute('inert', '');
+    document.body.classList.add('tour-active');
+    document.addEventListener('keydown', onKeydown, true);
+    draw();
+    return true;
+  }
+
+  function addProfileControl() {
+    const profile = document.querySelector('#profileView.show');
+    if (!profile || profile.querySelector('[data-onboarding-reset]')) return;
+    const section = document.createElement('section');
+    section.className = 'profile-section';
+    section.dataset.onboardingReset = 'true';
+    section.innerHTML = '<h2>AJUDA</h2><div class="settings-card"><button class="setting" type="button" data-onboarding-reset><span>Como usar o Pague-On</span><span class="setting-hint">Ver tour novamente</span></button></div>';
+    profile.querySelector('.signout')?.before(section);
+    section.querySelector('[data-onboarding-reset]').onclick = () => start({ force: true });
+  }
+
+  function scheduleAutoStart() {
+    if (state.autoStarted || isCompleted() || !isAuthenticated()) return;
+    state.autoStarted = true;
+    window.setTimeout(() => start(), 520);
+  }
+
+  function boot() {
+    const app = document.querySelector('.app');
+    if (app) new MutationObserver(addProfileControl).observe(app, { childList: true, subtree: true });
+    window.addEventListener('pagueon:auth', scheduleAutoStart);
+    window.addEventListener('load', scheduleAutoStart, { once: true });
+    window.addEventListener('resize', () => { if (state.overlay) { state.steps = isMobile() ? mobileSteps : desktopSteps; state.index = Math.min(state.index, state.steps.length - 1); draw(); } });
+    document.addEventListener('keydown', (event) => { if (event.key === '?' && !event.ctrlKey && !event.metaKey && !event.altKey && !state.overlay) { const tag = document.activeElement?.tagName; if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) { event.preventDefault(); start({ force: true }); } } });
+    addProfileControl();
+    scheduleAutoStart();
+  }
+
+  window.pagueOnOnboarding = { start, complete, get currentStep() { return state.index; }, get isOpen() { return Boolean(state.overlay); } };
   boot();
 })();

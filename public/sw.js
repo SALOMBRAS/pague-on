@@ -13,6 +13,7 @@ const APP_SHELL = [
   '/ui-enhancements.css',
   '/mobile-fintech.css',
   '/desktop-dashboard.css',
+  '/desktop-shell.css',
   '/theme.js',
   '/icons.js',
   '/ui-components.js',

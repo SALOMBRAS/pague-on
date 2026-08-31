@@ -1,70 +1,75 @@
-/* ============================================================
-   Pague-On — Design tokens (FONTE ÚNICA DE VERDADE)
-   ------------------------------------------------------------
-   Papéis semânticos definidos UMA vez, remapeados por tema.
-   Temas:
-     - claro  (desktop default)
-     - escuro (mobile default + preferência do sistema + toggle)
-   Prioridade de resolução (a última regra vence em empatia de
-   especificidade — ordem no arquivo importa):
-     1. :root                                          = claro
-     2. @media (prefers-color-scheme: dark)            = escuro (sistema)
-     3. @media (max-width:1023px) [sem escolha explícita] = escuro (mobile default)
-     4. html[data-theme="dark"]                        = escuro (escolha do usuário)
-     5. html[data-theme="light"]                       = claro  (escolha do usuário)
-   O <html> recebe data-theme="light|dark|system" via theme.js.
-   ============================================================ */
+/* Pague On — Dark Neon design tokens.
+ * Primitive values live here; screens consume semantic aliases only.
+ * Dark is the product default on every viewport. The optional light preference
+ * remains only for users who explicitly opt in through their profile.
+ */
 
 :root {
-  /* ---------- papéis semânticos — CLARO ---------- */
-  --bg: #f6f8f7;
-  --panel: #ffffff;
-  --surface: #ffffff;
-  --hover: #edf6f0;
-  --raised: #e4f1e9;
-  --line: #dce8e1;
-  --text: #14221a;
-  --muted: #5f7267;
-  --dim: #56685d;            /* ≥4.5:1 sobre branco (antes #829287 ≈3.3:1) */
-  --green: #008a4a;
-  --green-strong: #006f3c;
-  --green-bg: #e0f6e8;
-  --red: #bc2d2d;
-  --red-bg: #fce9e9;
-  --amber: #9a5d00;
-  --amber-bg: #fff4d9;
-  --blue: #1769aa;
-  --on-green: #ffffff;
-  --shadow: 0 14px 34px rgba(27, 60, 40, .08);
-  --focus-ring: #008a4a;
+  color-scheme: dark;
 
-  /* aliases/brand usados pelo app */
-  --color-brand: #008a4a;
-  --color-brand-strong: #006f3c;
-  --ink: #14221a;
+  /* foundation */
+  --neon-canvas: #0a0a0a;
+  --neon-surface: #141414;
+  --neon-elevated: #1e1e1e;
+  --neon-primary: #76ff03;
+  --neon-secondary: #00e5ff;
+  --neon-danger: #ff1744;
+  --neon-warning: #ffd600;
+  --neon-text: #ffffff;
+  --neon-text-secondary: #b8b8b8;
+  --neon-text-muted: #8b8b8b;
+  --neon-text-dim: #5c5c5c;
+  --neon-border: #2a2a2a;
+
+  /* semantic application roles */
+  --bg: var(--neon-canvas);
+  --panel: var(--neon-surface);
+  --surface: var(--neon-surface);
+  --hover: #222222;
+  --raised: var(--neon-elevated);
+  --line: var(--neon-border);
+  --text: var(--neon-text);
+  --muted: var(--neon-text-secondary);
+  --dim: var(--neon-text-muted);
+  --green: var(--neon-primary);
+  --green-strong: #5fdb00;
+  --green-bg: rgba(118, 255, 3, .10);
+  --red: var(--neon-danger);
+  --red-bg: rgba(255, 23, 68, .13);
+  --amber: var(--neon-warning);
+  --amber-bg: rgba(255, 214, 0, .13);
+  --blue: var(--neon-secondary);
+  --on-green: #0a0a0a;
+  --shadow: 0 18px 44px rgba(0, 0, 0, .38);
+  --focus-ring: var(--neon-secondary);
+  --glow-primary: 0 0 12px rgba(118, 255, 3, .30);
+  --glow-danger: 0 0 8px rgba(255, 23, 68, .30);
+
+  /* compatibility aliases consumed by existing modules */
+  --color-brand: var(--green);
+  --color-brand-strong: var(--green-strong);
+  --ink: var(--bg);
   --primary: var(--green);
-  --on-primary: #ffffff;
+  --on-primary: var(--on-green);
   --success: var(--green);
   --warning: var(--amber);
   --danger: var(--red);
-
-  /* aliases de surface/texto (ui-enhancements) */
   --surface-primary: var(--bg);
   --surface-card: var(--surface);
-  --surface-raised: var(--hover);
+  --surface-raised: var(--raised);
   --text-primary: var(--text);
   --text-secondary: var(--muted);
   --border-subtle: var(--line);
-  --slate-950: #0f172a;
-  --slate-900: #192134;
-  --slate-800: #233047;
-  --slate-700: #3d4b60;
-  --slate-400: #94a3b8;
-  --slate-300: #cbd5e1;
   --green-soft: var(--green-bg);
   --line-soft: var(--line);
+  --slate-950: var(--bg);
+  --slate-900: var(--panel);
+  --slate-800: var(--raised);
+  --slate-700: #303030;
+  --slate-400: var(--muted);
+  --slate-300: #d2d2d2;
 
-  /* aliases mobile-fintech (--pague-*) */
+  /* mobile aliases: the mobile app is not a scaled desktop dashboard */
   --pague-bg: var(--bg);
   --pague-surface: var(--surface);
   --pague-surface-raised: var(--raised);
@@ -80,10 +85,14 @@
   --pague-warning: var(--amber);
   --pague-warning-soft: var(--amber-bg);
 
-  /* ---------- raio / espaço / motion ---------- */
+  /* type, spacing, elevation, motion and layers */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-sans);
+  --radius-xs: 10px;
   --radius-sm: 12px;
   --radius-md: 16px;
   --radius-lg: 24px;
+  --radius-pill: 999px;
   --radius: var(--radius-md);
   --space-1: 4px;
   --space-2: 8px;
@@ -91,165 +100,58 @@
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
-  --ease: cubic-bezier(.4, 0, .2, 1);
+  --space-7: 48px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 280ms;
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-overlay: 100;
+  --z-modal: 200;
+  --z-toast: 300;
 }
 
-/* ---------- ESCURO — segue preferência do sistema (desktop) ---------- */
-@media (prefers-color-scheme: dark) {
-  html[data-theme="system"] {
-    --bg: #07150e;
-    --panel: #0b1a11;
-    --surface: #0f2117;
-    --hover: #152b1f;
-    --raised: #1a3525;
-    --line: rgba(194, 238, 211, .13);
-    --text: #f3fbf6;
-    --muted: #a9bdb0;
-    --dim: #789083;
-    --green: #00c853;
-    --green-strong: #00a948;
-    --green-bg: rgba(0, 200, 83, .14);
-    --red: #ff7d7d;
-    --red-bg: rgba(255, 91, 91, .13);
-    --amber: #ffd166;
-    --amber-bg: rgba(255, 209, 102, .13);
-    --blue: #8ab4ff;
-    --on-green: #032b13;
-    --shadow: 0 22px 54px rgba(0, 0, 0, .3);
-    --focus-ring: #93c5fd;
-    --color-brand: #00c853;
-    --color-brand-strong: #00a948;
-    --ink: #07150e;
-    --primary: var(--green);
-    --on-primary: #032b13;
-    --success: var(--green);
-    --warning: var(--amber);
-    --danger: var(--red);
-    --pague-primary: var(--green);
-    --pague-primary-strong: var(--green-strong);
-    --pague-primary-soft: var(--green-bg);
-    --pague-danger: var(--red);
-    --pague-danger-soft: var(--red-bg);
-    --pague-warning: var(--amber);
-    --pague-warning-soft: var(--amber-bg);
-  }
-}
-
-/* ---------- ESCURO — mobile default (PWA app-like) ---------- */
-@media (max-width: 1023px) {
-  html:not([data-theme="light"]):not([data-theme="dark"]) {
-    --bg: #07150e;
-    --panel: #0b1a11;
-    --surface: #0f2117;
-    --hover: #152b1f;
-    --raised: #1a3525;
-    --line: rgba(194, 238, 211, .13);
-    --text: #f3fbf6;
-    --muted: #a9bdb0;
-    --dim: #789083;
-    --green: #00c853;
-    --green-strong: #00a948;
-    --green-bg: rgba(0, 200, 83, .14);
-    --red: #ff7d7d;
-    --red-bg: rgba(255, 91, 91, .13);
-    --amber: #ffd166;
-    --amber-bg: rgba(255, 209, 102, .13);
-    --blue: #8ab4ff;
-    --on-green: #032b13;
-    --shadow: 0 22px 54px rgba(0, 0, 0, .3);
-    --focus-ring: #93c5fd;
-    --color-brand: #00c853;
-    --color-brand-strong: #00a948;
-    --ink: #07150e;
-    --primary: var(--green);
-    --on-primary: #032b13;
-    --success: var(--green);
-    --warning: var(--amber);
-    --danger: var(--red);
-    --pague-primary: var(--green);
-    --pague-primary-strong: var(--green-strong);
-    --pague-primary-soft: var(--green-bg);
-    --pague-danger: var(--red);
-    --pague-danger-soft: var(--red-bg);
-    --pague-warning: var(--amber);
-    --pague-warning-soft: var(--amber-bg);
-  }
-}
-
-/* ---------- ESCURO — escolha explícita do usuário ---------- */
-html[data-theme="dark"] {
-  --bg: #07150e;
-  --panel: #0b1a11;
-  --surface: #0f2117;
-  --hover: #152b1f;
-  --raised: #1a3525;
-  --line: rgba(194, 238, 211, .13);
-  --text: #f3fbf6;
-  --muted: #a9bdb0;
-  --dim: #789083;
-  --green: #00c853;
-  --green-strong: #00a948;
-  --green-bg: rgba(0, 200, 83, .14);
-  --red: #ff7d7d;
-  --red-bg: rgba(255, 91, 91, .13);
-  --amber: #ffd166;
-  --amber-bg: rgba(255, 209, 102, .13);
-  --blue: #8ab4ff;
-  --on-green: #032b13;
-  --shadow: 0 22px 54px rgba(0, 0, 0, .3);
-  --focus-ring: #93c5fd;
-  --color-brand: #00c853;
-  --color-brand-strong: #00a948;
-  --ink: #07150e;
-  --primary: var(--green);
-  --on-primary: #032b13;
-  --success: var(--green);
-  --warning: var(--amber);
-  --danger: var(--red);
-  --pague-primary: var(--green);
-  --pague-primary-strong: var(--green-strong);
-  --pague-primary-soft: var(--green-bg);
-  --pague-danger: var(--red);
-  --pague-danger-soft: var(--red-bg);
-  --pague-warning: var(--amber);
-  --pague-warning-soft: var(--amber-bg);
-}
-
-/* ---------- CLARO — escolha explícita do usuário ---------- */
 html[data-theme="light"] {
-  --bg: #f6f8f7;
+  color-scheme: light;
+  --bg: #f4f5f3;
   --panel: #ffffff;
   --surface: #ffffff;
-  --hover: #edf6f0;
-  --raised: #e4f1e9;
-  --line: #dce8e1;
-  --text: #14221a;
-  --muted: #5f7267;
-  --dim: #56685d;
-  --green: #008a4a;
-  --green-strong: #006f3c;
-  --green-bg: #e0f6e8;
-  --red: #bc2d2d;
-  --red-bg: #fce9e9;
-  --amber: #9a5d00;
-  --amber-bg: #fff4d9;
-  --blue: #1769aa;
+  --hover: #eff2ee;
+  --raised: #e5e9e4;
+  --line: #cbd1ca;
+  --text: #151815;
+  --muted: #404740;
+  --dim: #596158;
+  --green: #287d00;
+  --green-strong: #1f6500;
+  --green-bg: #e3f7d8;
+  --red: #b00024;
+  --red-bg: #ffe8ed;
+  --amber: #735e00;
+  --amber-bg: #fff6cc;
+  --blue: #006b7a;
   --on-green: #ffffff;
-  --shadow: 0 14px 34px rgba(27, 60, 40, .08);
-  --focus-ring: #008a4a;
-  --color-brand: #008a4a;
-  --color-brand-strong: #006f3c;
-  --ink: #14221a;
-  --primary: var(--green);
-  --on-primary: #ffffff;
-  --success: var(--green);
-  --warning: var(--amber);
-  --danger: var(--red);
-  --pague-primary: var(--green);
-  --pague-primary-strong: var(--green-strong);
-  --pague-primary-soft: var(--green-bg);
-  --pague-danger: var(--red);
-  --pague-danger-soft: var(--red-bg);
-  --pague-warning: var(--amber);
-  --pague-warning-soft: var(--amber-bg);
+  --focus-ring: #006b7a;
+  --shadow: 0 14px 34px rgba(17, 24, 17, .12);
+}
+
+html, body { background: var(--bg); color: var(--text); }
+body { font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+button, input, select, textarea { font: inherit; }
+button, [role="button"], a { touch-action: manipulation; }
+
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
 }

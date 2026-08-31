@@ -13,7 +13,10 @@
   function current() {
     var saved = null;
     try { saved = localStorage.getItem(KEY); } catch (e) { /* privado */ }
-    return (saved === 'light' || saved === 'dark' || saved === 'system') ? saved : 'system';
+    // O produto é Dark Neon por padrão. O modo claro continua disponível apenas
+    // por escolha explícita, sem depender da preferência do sistema para não
+    // causar um flash claro antes dos tokens carregarem.
+    return (saved === 'light' || saved === 'dark') ? saved : 'dark';
   }
 
   function apply(theme) {
@@ -25,11 +28,9 @@
   // Mantém <meta name="theme-color"> coerente com o tema (chrome/navbar do PWA).
   function fluidMeta() {
     if (!meta) meta = document.querySelector('meta[name="theme-color"]');
-    var dark = root.getAttribute('data-theme') === 'dark'
-      || (root.getAttribute('data-theme') !== 'light'
-          && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    var base = dark ? '#07150e' : '#f6f8f7';
-    var brand = dark ? '#00c853' : '#008a4a';
+    var dark = root.getAttribute('data-theme') !== 'light';
+    var base = dark ? '#0a0a0a' : '#f4f5f3';
+    var brand = dark ? '#76ff03' : '#287d00';
     if (meta) meta.setAttribute('content', base);
     // fundo do app nas bordas do mobile
     if (root && root.style) root.style.backgroundColor = base;
@@ -54,7 +55,7 @@
     },
     toggle: function () {
       var t = current();
-      var next = t === 'dark' ? 'light' : (t === 'light' ? 'dark' : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark'));
+      var next = t === 'dark' ? 'light' : 'dark';
       pagueOnTheme.set(next);
       return next;
     }

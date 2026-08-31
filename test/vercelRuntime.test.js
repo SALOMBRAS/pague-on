@@ -10,6 +10,6 @@ test('as functions da Vercel executam na mesma região do Supabase', () => {
 
 test('assets públicos recebem cache de CDN pela configuração da Vercel', () => {
   const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'vercel.json'), 'utf8'));
-  assert.equal(config.headers[0].headers[0].key, 'Cache-Control');
-  assert.match(config.headers[0].headers[0].value, /s-maxage=3600/);
+  assert.match(config.routes[0].src, /css\|js/);
+  assert.equal(config.routes[0].headers['Cache-Control'].includes('s-maxage=3600'), true);
 });

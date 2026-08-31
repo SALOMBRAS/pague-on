@@ -22,3 +22,11 @@ test('landing mantém conteúdo e menu utilizáveis sem scripts inline', () => {
 test('CSP permite a conexão auxiliar do CDN de ícones já autorizado', () => {
   assert.match(app, /connectSrc:\s*\[[^\]]*https:\/\/unpkg\.com[^\]]*\]/s);
 });
+
+test('painel financeiro tem carregamento acessível e respeita redução de movimento', () => {
+  const dashboard = fs.readFileSync(path.join(root, 'public', 'dashboard-financial.js'), 'utf8');
+  assert.match(dashboard, /Preparando seu resumo/);
+  assert.match(dashboard, /role="status" aria-live="polite"/);
+  assert.match(dashboard, /@media\(prefers-reduced-motion:reduce\)/);
+  assert.match(dashboard, /data-financial-loading-status/);
+});

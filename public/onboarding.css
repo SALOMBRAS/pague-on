@@ -1,7 +1,7 @@
 /* Interactive tour — every visual value comes from the Dark Neon token layer. */
 .onboarding-overlay { inset: 0; isolation: isolate; position: fixed; z-index: var(--z-toast); }
-.onboarding-spotlight { border: 1px solid color-mix(in srgb, var(--green) 78%, var(--line)); border-radius: var(--radius-md); box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 11%, transparent), 0 0 18px color-mix(in srgb, var(--green) 34%, transparent), 0 0 0 9999px color-mix(in srgb, var(--bg) 84%, transparent); pointer-events: none; position: fixed; transition: top 560ms var(--ease), left 560ms var(--ease), width 560ms var(--ease), height 560ms var(--ease), box-shadow 700ms var(--ease); }
-.onboarding-tooltip { background: var(--raised); border: 1px solid color-mix(in srgb, var(--green) 34%, var(--line)); border-radius: var(--radius-md); box-shadow: var(--shadow), 0 10px 26px color-mix(in srgb, var(--green) 10%, transparent); color: var(--text); padding: var(--space-4); position: fixed; transition: top 560ms var(--ease), left 560ms var(--ease); }
+.onboarding-spotlight { border: 1px solid color-mix(in srgb, var(--green) 56%, var(--line)); border-radius: var(--radius-md); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 7%, transparent), 0 0 12px color-mix(in srgb, var(--green) 18%, transparent), 0 0 0 9999px color-mix(in srgb, var(--bg) 82%, transparent); pointer-events: none; position: fixed; transition: top 480ms cubic-bezier(.2, .8, .2, 1), left 480ms cubic-bezier(.2, .8, .2, 1), width 480ms cubic-bezier(.2, .8, .2, 1), height 480ms cubic-bezier(.2, .8, .2, 1), box-shadow 560ms cubic-bezier(.2, .8, .2, 1); }
+.onboarding-tooltip { background: var(--raised); border: 1px solid color-mix(in srgb, var(--green) 25%, var(--line)); border-radius: var(--radius-md); box-shadow: var(--shadow), 0 8px 20px color-mix(in srgb, var(--green) 5%, transparent); color: var(--text); padding: var(--space-4); position: fixed; transition: top 480ms cubic-bezier(.2, .8, .2, 1), left 480ms cubic-bezier(.2, .8, .2, 1); }
 .onboarding-guide { align-items: center; display: flex; gap: var(--space-3); min-height: 64px; }
 .onboarding-mascot { display: block; flex: 0 0 auto; height: 76px; object-fit: contain; width: 76px; }
 .onboarding-count { color: var(--green); font-size: .75rem; font-weight: 750; letter-spacing: .08em; margin: 0; text-transform: uppercase; }
@@ -9,7 +9,7 @@
 .onboarding-tooltip > p:not(.onboarding-count) { color: var(--muted); line-height: 1.5; margin: 0; }
 .onboarding-required { color: var(--dim) !important; font-size: .8125rem; margin-top: var(--space-3) !important; }
 .onboarding-progress { background: var(--line); border-radius: var(--radius-pill); height: 4px; margin: var(--space-4) 0; overflow: hidden; }
-.onboarding-progress i { background: var(--green); border-radius: inherit; display: block; height: 100%; transition: width 560ms var(--ease); }
+.onboarding-progress i { background: var(--green); border-radius: inherit; display: block; height: 100%; transition: width 480ms cubic-bezier(.2, .8, .2, 1); }
 .onboarding-actions { display: flex; gap: var(--space-2); justify-content: space-between; }
 .onboarding-actions button { border-radius: var(--radius-sm); cursor: pointer; font-weight: 700; min-height: 44px; padding: 8px 14px; }
 .onboarding-prev { background: transparent; border: 1px solid var(--line); color: var(--text); }

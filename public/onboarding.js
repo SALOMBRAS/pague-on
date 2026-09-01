@@ -110,6 +110,45 @@
     return { rect, top, left, width };
   }
 
+  function ensureOverlay() {
+    if (state.overlay?.isConnected) return state.overlay;
+    const overlay = document.createElement('section');
+    overlay.className = 'onboarding-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'onboarding-title');
+    overlay.setAttribute('aria-describedby', 'onboarding-copy');
+    overlay.innerHTML = '<div class="onboarding-spotlight" aria-hidden="true"></div><article class="onboarding-tooltip"></article>';
+    document.body.append(overlay);
+    state.overlay = overlay;
+    return overlay;
+  }
+
+  function renderStep(overlay, step) {
+    const tooltip = overlay.querySelector('.onboarding-tooltip');
+    tooltip.innerHTML = `<div class="onboarding-guide"><img class="onboarding-mascot" src="/assets/pague-mascot-user-v3.png" alt="" aria-hidden="true" width="96" height="96" decoding="async"><p class="onboarding-count">Nota apresenta · ${state.index + 1} de ${state.steps.length}</p></div><h2 id="onboarding-title">${step.title}</h2><p id="onboarding-copy">${step.text}</p><p class="onboarding-required">Conclua este guia rápido para liberar o painel.</p><div class="onboarding-progress" aria-hidden="true"><i style="width:${((state.index + 1) / state.steps.length) * 100}%"></i></div><div class="onboarding-actions">${state.index ? '<button class="onboarding-prev" type="button" data-tour-prev>Anterior</button>' : ''}<button class="onboarding-next" type="button" data-tour-next>${state.index === state.steps.length - 1 ? 'Concluir tutorial' : 'Próximo'}</button></div>`;
+    tooltip.querySelector('[data-tour-next]').onclick = next;
+    tooltip.querySelector('[data-tour-prev]')?.addEventListener('click', previous);
+    return tooltip;
+  }
+
+  function moveOverlay(overlay, layout) {
+    const spotlight = overlay.querySelector('.onboarding-spotlight');
+    const spotlightStyles = { top: `${Math.max(4, layout.rect.top - 7)}px`, left: `${Math.max(4, layout.rect.left - 7)}px`, width: `${layout.rect.width + 14}px`, height: `${layout.rect.height + 14}px` };
+    const tooltip = overlay.querySelector('.onboarding-tooltip');
+    const tooltipStyles = { top: `${layout.top}px`, left: `${layout.left}px`, width: `${layout.width}px` };
+    const applyPosition = () => {
+      Object.assign(spotlight.style, spotlightStyles);
+      Object.assign(tooltip.style, tooltipStyles);
+    };
+    if (!overlay.dataset.positioned) {
+      overlay.dataset.positioned = 'true';
+      applyPosition();
+      return;
+    }
+    window.requestAnimationFrame(applyPosition);
+  }
+
   function draw() {
     clearStepTimer();
     const step = state.steps[state.index];
@@ -118,25 +157,12 @@
     state.stepTimer = window.setTimeout(() => {
       const target = findTarget(step.target);
       if (!target) { next(); return; }
-      state.overlay?.remove();
-      const overlay = document.createElement('section');
-      overlay.className = 'onboarding-overlay';
-      overlay.setAttribute('role', 'dialog');
-      overlay.setAttribute('aria-modal', 'true');
-      overlay.setAttribute('aria-labelledby', 'onboarding-title');
-      overlay.setAttribute('aria-describedby', 'onboarding-copy');
-      overlay.innerHTML = `<div class="onboarding-spotlight" aria-hidden="true"></div><article class="onboarding-tooltip"><div class="onboarding-guide"><img class="onboarding-mascot" src="/assets/pague-mascot-user-v3.png" alt="" aria-hidden="true" width="96" height="96" decoding="async"><p class="onboarding-count">Nota apresenta · ${state.index + 1} de ${state.steps.length}</p></div><h2 id="onboarding-title">${step.title}</h2><p id="onboarding-copy">${step.text}</p><p class="onboarding-required">Conclua este guia rápido para liberar o painel.</p><div class="onboarding-progress" aria-hidden="true"><i style="width:${((state.index + 1) / state.steps.length) * 100}%"></i></div><div class="onboarding-actions">${state.index ? '<button class="onboarding-prev" type="button" data-tour-prev>Anterior</button>' : ''}<button class="onboarding-next" type="button" data-tour-next>${state.index === state.steps.length - 1 ? 'Concluir tutorial' : 'Próximo'}</button></div></article>`;
-      document.body.append(overlay);
-      state.overlay = overlay;
-      const tooltip = overlay.querySelector('.onboarding-tooltip');
+      const overlay = ensureOverlay();
+      const tooltip = renderStep(overlay, step);
       const layout = place(target, tooltip, step.position);
-      const spotlight = overlay.querySelector('.onboarding-spotlight');
-      Object.assign(spotlight.style, { top: `${Math.max(4, layout.rect.top - 7)}px`, left: `${Math.max(4, layout.rect.left - 7)}px`, width: `${layout.rect.width + 14}px`, height: `${layout.rect.height + 14}px` });
-      Object.assign(tooltip.style, { top: `${layout.top}px`, left: `${layout.left}px`, width: `${layout.width}px` });
-      overlay.querySelector('[data-tour-next]').onclick = next;
-      overlay.querySelector('[data-tour-prev]')?.addEventListener('click', previous);
-      overlay.querySelector('[data-tour-next]').focus({ preventScroll: true });
-    }, isReducedMotion() ? 0 : 80);
+      moveOverlay(overlay, layout);
+      tooltip.querySelector('[data-tour-next]').focus({ preventScroll: true });
+    }, isReducedMotion() ? 0 : 260);
   }
 
   function next() { if (state.index < state.steps.length - 1) { state.index += 1; draw(); } else complete(); }

@@ -32,8 +32,10 @@ test('tour has an accessible modal, keyboard controls and cannot be skipped befo
   assert.doesNotMatch(tour, /window\.confirm\(/);
   assert.match(tour, /app\.inert/);
   assert.match(css, /min-height: 44px/);
-  assert.match(css, /var\(--bg\) 84%/);
-  assert.match(css, /width 560ms/);
+  assert.match(css, /var\(--bg\) 82%/);
+  assert.match(css, /width 480ms/);
+  assert.match(tour, /function ensureOverlay\(\)/);
+  assert.match(tour, /window\.requestAnimationFrame\(applyPosition\)/);
   assert.match(css, /onboarding-actions button:focus-visible/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(tour, /pague-mascot-user-v3\.png/);

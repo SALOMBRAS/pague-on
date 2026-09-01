@@ -1,6 +1,8 @@
-/* Interactive tour — every visual value comes from the Dark Neon token layer. */
+/* Interactive tour — the ambient light stays behind the guide and never competes with it. */
 .onboarding-overlay { inset: 0; isolation: isolate; position: fixed; z-index: var(--z-toast); }
-.onboarding-spotlight { border: 1px solid color-mix(in srgb, var(--green) 56%, var(--line)); border-radius: var(--radius-md); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 7%, transparent), 0 0 12px color-mix(in srgb, var(--green) 18%, transparent), 0 0 0 9999px color-mix(in srgb, var(--bg) 82%, transparent); pointer-events: none; position: fixed; transition: top 480ms cubic-bezier(.2, .8, .2, 1), left 480ms cubic-bezier(.2, .8, .2, 1), width 480ms cubic-bezier(.2, .8, .2, 1), height 480ms cubic-bezier(.2, .8, .2, 1), box-shadow 560ms cubic-bezier(.2, .8, .2, 1); }
+.onboarding-ambient { background: radial-gradient(ellipse at 50% 46%, color-mix(in srgb, var(--green) 7%, transparent) 0%, color-mix(in srgb, #6da68a 3%, transparent) 34%, transparent 70%); inset: -18%; opacity: .32; pointer-events: none; position: fixed; transform: translate3d(0, 0, 0) scale(1); z-index: 0; animation: onboarding-ambient-drift 16s ease-in-out infinite alternate; }
+.onboarding-spotlight { animation: none; border: 1px solid color-mix(in srgb, var(--green) 46%, var(--line)); border-radius: var(--radius-md); box-shadow: 0 0 0 2px color-mix(in srgb, var(--green) 5%, transparent), 0 0 10px color-mix(in srgb, var(--green) 12%, transparent), 0 0 0 9999px color-mix(in srgb, var(--bg) 82%, transparent); pointer-events: none; position: fixed; transition: top 480ms cubic-bezier(.2, .8, .2, 1), left 480ms cubic-bezier(.2, .8, .2, 1), width 480ms cubic-bezier(.2, .8, .2, 1), height 480ms cubic-bezier(.2, .8, .2, 1), box-shadow 560ms cubic-bezier(.2, .8, .2, 1); }
+@keyframes onboarding-ambient-drift { from { opacity: .22; transform: translate3d(-.8%, -.5%, 0) scale(.99); } to { opacity: .36; transform: translate3d(.8%, .5%, 0) scale(1.01); } }
 .onboarding-tooltip { background: var(--raised); border: 1px solid color-mix(in srgb, var(--green) 25%, var(--line)); border-radius: var(--radius-md); box-shadow: var(--shadow), 0 8px 20px color-mix(in srgb, var(--green) 5%, transparent); color: var(--text); padding: var(--space-4); position: fixed; transition: top 480ms cubic-bezier(.2, .8, .2, 1), left 480ms cubic-bezier(.2, .8, .2, 1); }
 .onboarding-guide { align-items: center; display: flex; gap: var(--space-3); min-height: 64px; }
 .onboarding-mascot { display: block; flex: 0 0 auto; height: 76px; object-fit: contain; width: 76px; }
@@ -19,4 +21,4 @@
 .tour-active { overflow: hidden; }
 .setting-hint { color: var(--muted); font-size: .8125rem; }
 @media (max-width: 1023px) { .onboarding-tooltip { padding: var(--space-4); } .onboarding-spotlight { border-radius: var(--radius-sm); } }
-@media (prefers-reduced-motion: reduce) { .onboarding-spotlight, .onboarding-progress i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .onboarding-ambient { animation: none; opacity: .2; transform: none; } .onboarding-spotlight, .onboarding-progress i { transition: none; } }

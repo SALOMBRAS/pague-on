@@ -4,6 +4,7 @@ const HttpError = require('../utils/httpError');
 const DEFAULT_SETTINGS = Object.freeze({
   simpleInterestEnabled: true,
   compoundInterestAllowed: false,
+  modalityRates: { INSTALLMENT: 0, SIMPLE_INTEREST: 0, PRICE: 0, RENEWAL: 0 },
   latePenaltyType: 'PERCENTAGE',
   latePenaltyValue: 0,
   lateInterestRate: 0,
@@ -19,7 +20,7 @@ const DEFAULT_SETTINGS = Object.freeze({
 });
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
-const mergeSettings = (settings) => ({ ...clone(DEFAULT_SETTINGS), ...(settings || {}), approvalLimits: { ...DEFAULT_SETTINGS.approvalLimits, ...(settings?.approvalLimits || {}) }, defaultCommission: { ...DEFAULT_SETTINGS.defaultCommission, ...(settings?.defaultCommission || {}) }, contractTemplates: settings?.contractTemplates || {}, messageTemplates: settings?.messageTemplates || {} });
+const mergeSettings = (settings) => ({ ...clone(DEFAULT_SETTINGS), ...(settings || {}), modalityRates: { ...DEFAULT_SETTINGS.modalityRates, ...(settings?.modalityRates || {}) }, approvalLimits: { ...DEFAULT_SETTINGS.approvalLimits, ...(settings?.approvalLimits || {}) }, defaultCommission: { ...DEFAULT_SETTINGS.defaultCommission, ...(settings?.defaultCommission || {}) }, contractTemplates: settings?.contractTemplates || {}, messageTemplates: settings?.messageTemplates || {} });
 
 async function current(userId, db = prisma) {
   const version = await db.financialSettingsVersion.findFirst({ where: { userId }, orderBy: { version: 'desc' } });

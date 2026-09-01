@@ -352,6 +352,7 @@ const loanFrequency = z.enum(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'BIMONTH
 const financialSettingsSchema = z.object({
   simpleInterestEnabled: z.boolean().default(true),
   compoundInterestAllowed: z.boolean().default(false),
+  modalityRates: z.object({ INSTALLMENT: z.coerce.number().min(0).max(1000).default(0), SIMPLE_INTEREST: z.coerce.number().min(0).max(1000).default(0), PRICE: z.coerce.number().min(0).max(1000).default(0), RENEWAL: z.coerce.number().min(0).max(1000).default(0) }).strict().default({ INSTALLMENT: 0, SIMPLE_INTEREST: 0, PRICE: 0, RENEWAL: 0 }),
   latePenaltyType: z.enum(['PERCENTAGE', 'FIXED']).default('PERCENTAGE'),
   latePenaltyValue: z.coerce.number().min(0).max(1000000).default(0),
   lateInterestRate: z.coerce.number().min(0).max(1000).default(0),
@@ -377,6 +378,7 @@ const loanConfigurationSchema = z.object({
   holidayDates: z.array(z.string().date()).max(500).default([]),
   legalReviewReference: z.string().trim().min(3).max(250),
   isActive: z.boolean().default(true),
+  reason: z.string().trim().min(5).max(500),
 }).strict();
 const loanSimulationSchema = z.object({
   customerId: uuid,

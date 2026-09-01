@@ -134,6 +134,7 @@ $('#searchBtn').onclick=()=>{ $('#searchWrap').classList.toggle('open'); if($('#
       estoque(){ state.screen='stock';state.detail=null;state.stockDetail=null;state.panel=null;render(); },
       clientes(){ window.pagueOnQuickOperation?.open?.(); },
       relatorios(){ state.screen='reports';state.detail=null;state.stockDetail=null;state.panel=null;render(); },
+      configuracoes(){ state.screen='profile';state.detail=null;state.stockDetail=null;state.panel=null;render(); window.setTimeout(() => window.pagueOnFinancialSettings?.open?.(), 0); },
       lembrete(){ openForm('reminder'); },
       finish(){ formState=null;$('#formView').classList.remove('show');state.screen='home';state.detail=null;state.stockDetail=null;state.panel=null;render(); }
     };

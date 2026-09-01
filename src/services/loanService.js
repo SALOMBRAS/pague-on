@@ -71,10 +71,11 @@ async function listConfigurations(userId) {
 }
 
 async function saveConfiguration(userId, input) {
+  const { reason: _reason, ...configurationInput } = input;
   return prisma.loanModalityConfiguration.upsert({
-    where: { userId_modality: { userId, modality: input.modality } },
-    create: { ...input, userId, formulaPolicy: input.formulaPolicy || defaultFormulaPolicy(input.modality) },
-    update: { ...input, formulaPolicy: input.formulaPolicy || defaultFormulaPolicy(input.modality) },
+    where: { userId_modality: { userId, modality: configurationInput.modality } },
+    create: { ...configurationInput, userId, formulaPolicy: configurationInput.formulaPolicy || defaultFormulaPolicy(configurationInput.modality) },
+    update: { ...configurationInput, formulaPolicy: configurationInput.formulaPolicy || defaultFormulaPolicy(configurationInput.modality) },
   });
 }
 
@@ -111,7 +112,8 @@ async function simulation(userId, input, options = {}) {
   if (input.modality === 'PRICE' && settingVersion.version > 0 && !settingVersion.settings.compoundInterestAllowed) throw new HttpError(409, 'COMPOUND_INTEREST_NOT_ALLOWED', 'A modalidade Price exige autorização explícita para juros compostos nas configurações.');
   if (approvedRate !== null && input.interestRate !== undefined && Number(input.interestRate) !== approvedRate && !options.canOverrideRate) throw new HttpError(403, 'INTEREST_RATE_OVERRIDE_FORBIDDEN', 'Sua permissão não permite alterar a taxa aprovada.');
   if (approvedRate !== null && input.interestRate !== undefined && Number(input.interestRate) !== approvedRate && !input.rateOverrideReason) throw new HttpError(400, 'RATE_OVERRIDE_REASON_REQUIRED', 'Informe a justificativa para alterar a taxa aprovada.');
-  const effectiveInput = { ...input, interestRate: input.interestRate === undefined ? (approvedRate || 0) : input.interestRate };
+  const configuredRate = Number(settingVersion.settings.modalityRates?.[input.modality] || 0);
+  const effectiveInput = { ...input, interestRate: input.interestRate === undefined ? (approvedRate ?? configuredRate) : input.interestRate };
   const calculation = calculateSchedule(effectiveInput, configuration);
   return { customer: { id: limit.customer.id, name: limit.customer.name, approvedInterestRate: approvedRate, creditLimit: Number(limit.customer.creditLimit || 0), availableLimit: limit.available }, configuration: { id: configuration.id, displayName: configuration.displayName, formulaVersion: configuration.formulaVersion, formulaPolicy: configuration.formulaPolicy, legalReviewReference: configuration.legalReviewReference, settingsVersion: settingVersion.version, settingsSnapshot: settingVersion.settings, holidayDates: configuration.holidayDates }, input: effectiveInput, ...calculation, contractPreview: buildContractPreview(limit.customer, configuration, effectiveInput, calculation) };
 }

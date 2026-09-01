@@ -34,5 +34,5 @@
       clearTimeout(timeout);
     }
   }
-  window.pagueOnApi = { base, authenticated: () => Boolean(window.pagueOnAuth?.getToken?.()), get: (endpoint) => request('GET', endpoint), post: (endpoint, body) => request('POST', endpoint, body), put: (endpoint, body) => request('PUT', endpoint, body), delete: (endpoint) => request('DELETE', endpoint) };
+  window.pagueOnApi = { base, authenticated: () => Boolean(window.pagueOnAuth?.getToken?.()), get: (endpoint) => request('GET', endpoint), post: (endpoint, body) => request('POST', endpoint, body), put: (endpoint, body) => request('PUT', endpoint, body), delete: (endpoint, body) => request('DELETE', endpoint, body) };
 })();

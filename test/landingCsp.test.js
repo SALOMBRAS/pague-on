@@ -19,8 +19,11 @@ test('landing mantém conteúdo e menu utilizáveis sem scripts inline', () => {
   assert.match(landingScript, /toggleDrawer\(true\)/);
 });
 
-test('CSP permite a conexão auxiliar do CDN de ícones já autorizado', () => {
-  assert.match(app, /connectSrc:\s*\[[^\]]*https:\/\/unpkg\.com[^\]]*\]/s);
+test('CSP não depende mais de CDN de terceiros (ícones e OCR self-hosted)', () => {
+  assert.doesNotMatch(app, /https:\/\/unpkg\.com/);
+  assert.doesNotMatch(app, /https:\/\/cdn\.jsdelivr\.net/);
+  assert.match(app, /scriptSrc:\s*\["'self'"\]/);
+  assert.match(app, /connectSrc:\s*\["'self'"\]/);
 });
 
 test('painel financeiro tem carregamento acessível e respeita redução de movimento', () => {

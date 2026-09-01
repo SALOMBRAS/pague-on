@@ -9,29 +9,33 @@ const css = fs.readFileSync(path.join(publicDir, 'onboarding.css'), 'utf8');
 const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
 const serviceWorker = fs.readFileSync(path.join(publicDir, 'sw.js'), 'utf8');
 
-test('tour keeps separate, short desktop and mobile step sets', () => {
+test('tour keeps separate, short desktop and mobile step sets (5 steps)', () => {
   assert.match(tour, /const mobileSteps = \[/);
   assert.match(tour, /const desktopSteps = \[/);
   assert.match(tour, /MOBILE_QUERY = '\(max-width: 1023px\)'/);
-  assert.match(tour, /financial-filters/);
   assert.match(tour, /data-nav="stock"/);
   assert.match(tour, /pagueon_tour_completed_v6/);
-  assert.match(tour, /Cliente vem primeiro/);
-  assert.match(tour, /Relatórios/);
-  assert.match(tour, /Regras financeiras/);
+  assert.match(tour, /Bem-vindo ao Pague-On/);
+  assert.match(tour, /Adicione uma conta/);
+  assert.match(tour, /Acompanhe o caixa/);
+  assert.match(tour, /Controle o estoque/);
+  assert.match(tour, /Tudo no Perfil/);
   assert.match(tour, /pagueOnAuth\?\.getUser/);
   assert.match(tour, /autoStartedFor/);
   assert.match(tour, /pagueon:auth/);
   assert.match(tour, /Como usar o Pague-On/);
 });
 
-test('tour has an accessible modal, keyboard controls and cannot be skipped before completion', () => {
+test('tour is non-blocking: skippable, no inert, keyboard accessible', () => {
   assert.match(tour, /aria-modal/);
   assert.match(tour, /ArrowRight/);
   assert.match(tour, /ArrowLeft/);
-  assert.doesNotMatch(tour, /data-tour-skip/);
+  assert.match(tour, /data-tour-skip/);
+  assert.match(tour, /Escape.*stop/);
   assert.doesNotMatch(tour, /window\.confirm\(/);
-  assert.match(tour, /app\.inert/);
+  assert.doesNotMatch(tour, /app\.inert/);
+  assert.doesNotMatch(tour, /Conclua este guia rápido para liberar o painel/);
+  assert.match(css, /\.onboarding-skip/);
   assert.match(css, /min-height: 44px/);
   assert.match(css, /var\(--bg\) 82%/);
   assert.match(css, /width 480ms/);

@@ -1,7 +1,7 @@
 (() => {
   // Uma nova chave força esta edição do tour para todas as contas já existentes.
   // O sufixo do usuário impede que uma conta conclua o guia por outra no mesmo aparelho.
-  const STORAGE_KEY = 'pagueon_tour_completed_v5';
+  const STORAGE_KEY = 'pagueon_tour_completed_v6';
   const MOBILE_QUERY = '(max-width: 1023px)';
   const state = { index: 0, steps: [], overlay: null, previousFocus: null, autoStartedFor: null, stepTimer: null };
 
@@ -15,6 +15,7 @@
     { action: 'caixa', target: '.bottom-nav .nav[data-nav="caixa"]', title: 'Caixa', text: 'Aqui você acompanha cobranças, parcelas, pagamentos e pendências.' },
     { action: 'estoque', target: '.bottom-nav .nav[data-nav="stock"]', title: 'Estoque', text: 'Cadastre produtos, acompanhe quantidades e veja a margem das vendas.' },
     { action: 'relatorios', target: '#reportsView .reports-head, #reportsView', title: 'Relatórios sem complicação', text: 'Escolha o resumo, aplique filtros e exporte. Projeção é previsão: ainda não é dinheiro no caixa.' },
+    { action: 'configuracoes', target: '#financial-settings-screen .financial-settings__notice', title: 'Regras financeiras', text: 'Aqui você define juros, multa, feriados e vencimentos. Cada alteração fica registrada e nunca muda contratos antigos.' },
     { action: 'profile', target: '.bottom-nav .nav[data-nav="profile"]', title: 'Perfil', text: 'Ajuste preferências, segurança, notificações e reveja este guia quando quiser.' }
   ];
 
@@ -28,6 +29,7 @@
     { action: 'caixa', target: '.side-nav .nav[data-nav="caixa"]', title: 'Caixa', text: 'Consulte cobranças, parcelas e pagamentos sem sair do controle financeiro.' },
     { action: 'estoque', target: '.side-nav .nav[data-nav="stock"]', title: 'Estoque', text: 'Cadastre produtos, acompanhe as quantidades e analise suas margens.' },
     { action: 'relatorios', target: '#reportsView .reports-head, #reportsView', title: 'Relatórios', text: 'Cards mostram o resumo; a tabela traz o detalhe. A exportação respeita exatamente seus filtros.' },
+    { action: 'configuracoes', target: '#financial-settings-screen .financial-settings__notice', title: 'Regras financeiras', text: 'Aqui você define juros, multa, feriados e vencimentos. Cada alteração fica registrada e nunca muda contratos antigos.' },
     { action: 'profile', target: '.side-nav .nav[data-nav="profile"]', title: 'Perfil', text: 'Gerencie segurança, notificações e as preferências da sua conta.' }
   ];
 
@@ -38,6 +40,7 @@
   const stepAction = (name) => {
     if (!name) return;
     if (name !== 'clientes') window.pagueOnQuickOperation?.close?.();
+    if (name !== 'configuracoes') window.pagueOnFinancialSettings?.close?.();
     const actions = window.pagueOnOnboardingActions;
     if (actions?.[name]) { actions[name](); return; }
     document.querySelector(`[data-nav="${name}"]`)?.click();

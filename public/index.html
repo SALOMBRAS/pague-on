@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="/desktop-financial-dashboard.css">
 <link rel="stylesheet" href="/onboarding.css">
   <link rel="stylesheet" href="/quick-operation.css">
+  <link rel="stylesheet" href="/reports.css">
   <title>Pague-On — Caixa</title>
 
 </head>
@@ -34,6 +35,7 @@
       <button class="nav" data-nav="wealth" aria-label="Patrimônio"><i><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></svg></i>Patrimônio</button>
       <button class="nav" data-nav="stock" aria-label="Estoque"><i><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8V16L12 21 3 16V8l9-5 9 5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg></i>Estoque</button>
       <button class="nav" data-nav="goals" aria-label="Metas"><i><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></i>Metas</button>
+      <button class="nav" data-nav="reports" aria-label="Relatórios"><i><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v18h14"/><path d="M8 16v-5M12 16V7M16 16v-8"/></svg></i>Relatórios</button>
       <button class="nav" type="button" data-open-collectors aria-label="Cobradores"><i><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 2.9-5.5 6.5-5.5s6.5 2 6.5 5.5"/><path d="M17 5.5a3 3 0 0 1 0 5"/><path d="M21.5 20c0-2.4-1.4-4.2-3.5-5"/></svg></i>Cobradores</button>
       <button class="nav" data-nav="profile" aria-label="Perfil"><i><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></i>Perfil</button>
       <div class="side-foot"><b>Pague-On</b>Painel administrativo<br>Atalhos: <kbd>N</kbd> nova, <kbd>/</kbd> busca</div>
@@ -57,6 +59,7 @@
     <section class="wealth-view" id="wealthView"></section>
     <section class="stock-view" id="stockView"><header class="stock-head"><div><p class="eyebrow">Produtos e compras</p><h1>📦 Estoque</h1></div><div class="top-actions"><button class="icon" id="stockSearch" aria-label="Buscar produto"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button><button class="icon" id="stockAdd" aria-label="Adicionar produto"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div></header><nav class="stock-tabs"><button class="stock-tab active" data-stock-tab="products">Meus Produtos</button><button class="stock-tab" data-stock-tab="purchases">Compras</button><button class="stock-tab" data-stock-tab="analysis">Análise</button></nav><div id="stockContent"></div></section>
     <section class="profile-view" id="profileView"></section>
+    <section class="reports-view" id="reportsView" aria-live="polite"></section>
     <section class="wealth-view" id="goalsView"></section>
     <section id="goalsForm" aria-live="polite"></section>
     <section class="detail" id="detail" role="dialog" aria-modal="true"></section>
@@ -102,6 +105,7 @@
 
   <script src="/pwa-install.js" defer></script>
   <script src="/api.js" defer></script>
+  <script src="/reports.js" defer></script>
   <script src="/auth.js" defer></script>
   <script src="/quick-operation.js" defer></script>
   <script src="/security.js" defer></script>

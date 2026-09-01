@@ -15,6 +15,7 @@
 .onboarding-actions { display: flex; gap: var(--space-2); justify-content: space-between; }
 .onboarding-actions button { border-radius: var(--radius-sm); cursor: pointer; font-weight: 700; min-height: 44px; padding: 8px 14px; }
 .onboarding-prev { background: transparent; border: 1px solid var(--line); color: var(--text); }
+.onboarding-skip { background: transparent; border: 1px solid transparent; color: var(--muted); padding-inline: 6px; }
 .onboarding-next { background: var(--green); border: 1px solid var(--green); color: var(--on-green); margin-left: auto; }
 .onboarding-actions button:active { transform: scale(.98); }
 .onboarding-actions button:focus-visible { outline: 3px solid color-mix(in srgb, var(--text) 80%, transparent); outline-offset: 3px; }

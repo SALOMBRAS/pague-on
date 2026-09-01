@@ -3,6 +3,7 @@
   const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const escapeHtml = (value) => String(value || '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
   let lastKey = '';
+  let inFlight = null;
 
   function card(label, value, report) {
     return `<button class="financial-card" type="button" data-financial-report="${report}" aria-label="${label}: ${money(value)}. Abrir relatório detalhado"><span>${label}</span><b>${money(value)}</b><small>Ver relatório</small></button>`;
@@ -29,7 +30,18 @@
     const panels = [...host.querySelectorAll('#financial-dashboard')];
     panels.slice(1).forEach((panel) => panel.remove());
     if (panels[0]) return;
-    host.innerHTML = '<section id="financial-dashboard" data-query="period=MONTH" aria-busy="true"><h2 class="financial-title">Resumo financeiro</h2><p class="eyebrow">Carregando dados financeiros…</p></section>';
+    host.innerHTML = `<section id="financial-dashboard" data-query="period=MONTH" aria-busy="true"><style>
+      .financial-retry{min-height:44px;margin-top:12px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font-weight:700}
+      .financial-loading{display:grid;place-items:center;min-height:220px;padding:24px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,var(--surface),transparent);text-align:center}
+      .financial-loading-art{position:relative;width:116px;height:86px;margin:0 auto 13px;color:var(--green)}
+      .financial-wallet{position:absolute;inset:28px 8px 4px;border:2px solid currentColor;border-radius:14px;background:color-mix(in srgb,var(--green) 10%,var(--surface));overflow:hidden}
+      .financial-wallet::after{content:'';position:absolute;right:10px;top:15px;width:8px;height:8px;border-radius:50%;background:currentColor}
+      .financial-note{position:absolute;left:46px;top:0;width:28px;height:21px;border:2px solid currentColor;border-radius:5px;background:var(--surface);animation:financial-note-drop 1.25s ease-in-out infinite}
+      .financial-note::after{content:'R$';position:absolute;inset:0;display:grid;place-items:center;font-size:8px;font-weight:800}
+      .financial-loading p{margin:0;color:var(--muted);font-size:13px}.financial-loading strong{display:block;margin-bottom:4px;color:var(--text);font-size:15px}
+      @keyframes financial-note-drop{0%,100%{transform:translateY(0);opacity:.7}48%{transform:translateY(34px);opacity:1}60%{transform:translateY(29px)}}
+      @media(prefers-reduced-motion:reduce){.financial-note{animation:none}}
+    </style><h2 class="financial-title">Resumo financeiro</h2><div class="financial-loading" role="status" aria-live="polite"><div><div class="financial-loading-art" aria-hidden="true"><i class="financial-note"></i><i class="financial-wallet"></i></div><strong>Preparando seu resumo</strong><p data-financial-loading-status>Buscando os valores mais recentes com segurança.</p></div></div></section>`;
   }
 
   async function render() {
@@ -41,27 +53,32 @@
     const params = new URLSearchParams(existing?.dataset.query || 'period=MONTH');
     const key = params.toString();
     if (key === lastKey && existing) return;
+    if (inFlight?.key === key) return inFlight.promise;
     lastKey = key;
-    let response;
-    try {
-      response = await window.fetch(`${api()}/dashboard/financial?${params}`);
-    } catch (_error) {
-      // Falha de rede: sai do estado de carregamento, mostra falha e permite retry.
-      lastKey = '';
-      existing.setAttribute('aria-busy', 'false');
-      const status = existing.querySelector('.eyebrow');
-      if (status) status.textContent = 'Não foi possível atualizar agora. Seus dados aparecerão quando a conexão for restabelecida.';
-      return;
-    }
-    const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.success) {
-      existing.setAttribute('aria-busy', 'false');
-      const status = existing.querySelector('.eyebrow');
-      if (status) status.textContent = 'Não foi possível atualizar agora. Seus dados aparecerão quando a conexão for restabelecida.';
-      return;
-    }
-
-    const data = result.data;
+    const startedAt = performance.now();
+    const load = (async () => {
+      let data;
+      try {
+        // Usa o cliente central: token, renovação e timeout seguem a mesma regra
+        // de todas as chamadas autenticadas.
+        data = await window.pagueOnApi.get(`/dashboard/financial?${params}`);
+        console.info('[DASHBOARD] loaded', { durationMs: Math.round(performance.now() - startedAt) });
+      } catch (error) {
+        // Falha de rede ou timeout sempre sai do estado de carregamento.
+        if (lastKey !== key) return;
+        lastKey = '';
+        existing.setAttribute('aria-busy', 'false');
+        const status = existing.querySelector('[data-financial-loading-status]');
+        if (status) status.textContent = error?.code === 'API_TIMEOUT' ? 'O carregamento demorou mais que o esperado. Tente novamente.' : 'Não foi possível atualizar agora. Seus dados aparecerão quando a conexão for restabelecida.';
+        const retry = document.createElement('button');
+        retry.type = 'button'; retry.className = 'financial-retry'; retry.textContent = 'Tentar novamente';
+        retry.onclick = () => render();
+        existing.querySelector('.financial-retry')?.remove();
+        (existing.querySelector('.financial-loading > div') || existing).append(retry);
+        console.info('[DASHBOARD] load_error', { code: error?.code || error?.name || 'NETWORK_ERROR', durationMs: Math.round(performance.now() - startedAt) });
+        return;
+      }
+    if (lastKey !== key) return;
     const period = data.filters.period || 'MONTH';
     const collectors = data.filters.collectors || [];
     const section = document.createElement('section');
@@ -95,6 +112,9 @@
     form.querySelectorAll('select,input[type=date]').forEach((control) => { control.onchange = () => { if (form.elements.period.value !== 'CUSTOM' || (form.elements.startDate.value && form.elements.endDate.value)) apply(); }; });
     section.querySelectorAll('[data-financial-report]').forEach((button) => { button.onclick = () => openReport(button.dataset.financialReport); });
     document.dispatchEvent(new CustomEvent('pagueon:financial-dashboard', { detail: { section, data } }));
+    })();
+    inFlight = { key, promise: load };
+    try { return await load; } finally { if (inFlight?.promise === load) inFlight = null; document.dispatchEvent(new CustomEvent('pagueon:financial-dashboard-settled', { detail: { key } })); }
   }
 
   window.addEventListener('pagueon:auth', () => setTimeout(render, 0));

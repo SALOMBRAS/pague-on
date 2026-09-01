@@ -50,6 +50,6 @@
       const result = await response.json(); const processed = new Set(result?.data?.processedIds || []); const db = await open(); const tx = db.transaction('syncQueue', 'readwrite'); changes.filter((change) => processed.has(change.id)).forEach((change) => tx.objectStore('syncQueue').delete(change.id)); await completed(tx); setStatus('online');
     } catch (_error) { setStatus('offline'); }
   }
-  async function boot({ hydrate } = {}) { await open(); const snapshot = await readState(); if (snapshot) hydrate?.(snapshot); renderConnectionStatus(); window.addEventListener('online', () => sync().catch(() => undefined)); window.addEventListener('offline', () => setStatus('offline')); if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined); if (navigator.onLine) sync().catch(() => undefined); }
+  async function boot({ hydrate } = {}) { await open(); const snapshot = await readState(); if (snapshot) hydrate?.(snapshot); renderConnectionStatus(); window.addEventListener('online', () => sync().catch(() => undefined)); window.addEventListener('offline', () => setStatus('offline')); if (navigator.onLine) sync().catch(() => undefined); }
   window.pagueOnOffline = { boot, commit, sync, renderConnectionStatus, get status() { return status; } };
 })();

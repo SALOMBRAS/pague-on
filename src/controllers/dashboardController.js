@@ -8,6 +8,13 @@ async function getDashboard(req, res) {
   return sendSuccess(res, serialize(dashboard));
 }
 
-async function financial(req, res) { return sendSuccess(res, serialize(await dashboardService.getFinancialDashboard(req.user.id, dashboardQuerySchema.parse(req.query)))); }
+async function financial(req, res) {
+  const { dashboard, timings } = await dashboardService.getFinancialDashboardWithTiming(req.user.id, dashboardQuerySchema.parse(req.query));
+  const serverTiming = Object.entries(timings)
+    .map(([name, duration]) => `${name};dur=${duration.toFixed(1)}`)
+    .join(', ');
+  if (serverTiming) res.set('Server-Timing', serverTiming);
+  return sendSuccess(res, serialize(dashboard));
+}
 
 module.exports = { getDashboard, financial };

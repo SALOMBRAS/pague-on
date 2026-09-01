@@ -21,7 +21,7 @@ async function getById(req, res) {
 }
 
 async function create(req, res) {
-  const sale = await saleService.createSale(req.user.id, saleCreateSchema.parse(req.body));
+  const sale = await saleService.createSale(req.user.id, saleCreateSchema.parse(req.body), { actor: req.actor, req });
   return sendSuccess(res, serialize(sale), 'Venda registrada, estoque atualizado e cobrança criada.', 201);
 }
 

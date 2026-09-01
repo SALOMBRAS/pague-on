@@ -1,0 +1,85 @@
+/* Pague On component primitives.
+ * These classes are intentionally framework-free so legacy templates and new
+ * screens can share the same visual language while the migration is gradual.
+ */
+
+.po-button {
+  align-items: center;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 700;
+  gap: var(--space-2);
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  text-decoration: none;
+  transition: background var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease);
+}
+
+.po-button:hover { border-color: color-mix(in srgb, var(--green) 52%, var(--line)); background: var(--hover); }
+.po-button:active { transform: scale(.98); }
+.po-button:disabled, .po-button[aria-disabled="true"] { cursor: not-allowed; opacity: .48; pointer-events: none; }
+.po-button--primary { background: var(--green); border-color: var(--green); box-shadow: var(--glow-primary); color: var(--on-green); }
+.po-button--primary:hover { background: var(--green-strong); border-color: var(--green-strong); box-shadow: 0 0 18px rgba(118, 255, 3, .38); }
+.po-button--danger { border-color: rgba(255, 23, 68, .55); color: var(--red); }
+.po-button--danger:hover { background: var(--red-bg); box-shadow: var(--glow-danger); }
+.po-button--quiet { background: transparent; border-color: transparent; color: var(--muted); }
+.po-button--quiet:hover { background: var(--hover); color: var(--text); }
+.po-button--icon { min-width: 44px; padding-inline: 10px; }
+
+.po-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+.po-card--interactive { cursor: pointer; transition: border-color var(--motion-base) var(--ease), transform var(--motion-base) var(--ease), box-shadow var(--motion-base) var(--ease); }
+.po-card--interactive:hover { border-color: color-mix(in srgb, var(--green) 46%, var(--line)); box-shadow: var(--glow-primary), var(--shadow); transform: translateY(-2px); }
+.po-card__body { padding: var(--space-4); }
+.po-card__title { color: var(--text); font-size: 1rem; font-weight: 750; margin: 0; }
+.po-card__meta { color: var(--muted); font-size: .875rem; margin: var(--space-1) 0 0; }
+
+.po-field { display: grid; gap: var(--space-2); }
+.po-field__label { color: var(--text); font-size: .875rem; font-weight: 650; }
+.po-field__hint { color: var(--muted); font-size: .8125rem; line-height: 1.45; }
+.po-field__error { color: var(--red); font-size: .8125rem; font-weight: 600; }
+.po-input, .po-select, .po-textarea {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  min-height: 44px;
+  outline: none;
+  padding: 10px 12px;
+  width: 100%;
+}
+.po-textarea { min-height: 96px; resize: vertical; }
+.po-input::placeholder, .po-textarea::placeholder { color: var(--dim); }
+.po-input:hover, .po-select:hover, .po-textarea:hover { border-color: color-mix(in srgb, var(--muted) 60%, var(--line)); }
+.po-input:focus, .po-select:focus, .po-textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(118, 255, 3, .14); }
+[aria-invalid="true"].po-input, [aria-invalid="true"].po-select, [aria-invalid="true"].po-textarea { border-color: var(--red); box-shadow: 0 0 0 3px rgba(255, 23, 68, .14); }
+
+.po-badge { align-items: center; border: 1px solid var(--line); border-radius: var(--radius-pill); color: var(--muted); display: inline-flex; font-size: .75rem; font-weight: 700; gap: 6px; line-height: 1; padding: 6px 9px; white-space: nowrap; }
+.po-badge--success { background: var(--green-bg); border-color: rgba(118, 255, 3, .36); color: var(--green); }
+.po-badge--warning { background: var(--amber-bg); border-color: rgba(255, 214, 0, .36); color: var(--amber); }
+.po-badge--danger { background: var(--red-bg); border-color: rgba(255, 23, 68, .36); color: var(--red); }
+.po-badge--info { background: rgba(0, 229, 255, .10); border-color: rgba(0, 229, 255, .34); color: var(--blue); }
+
+.po-skeleton { background: linear-gradient(100deg, var(--raised) 30%, #2a2a2a 45%, var(--raised) 60%); background-size: 220% 100%; border-radius: var(--radius-sm); min-height: 1em; }
+@media (prefers-reduced-motion: no-preference) { .po-skeleton { animation: po-skeleton 1.15s linear infinite; } }
+@keyframes po-skeleton { to { background-position: -220% 0; } }
+
+.po-empty { align-items: center; color: var(--muted); display: grid; gap: var(--space-3); justify-items: center; padding: var(--space-6) var(--space-4); text-align: center; }
+.po-empty__icon { color: var(--green); display: grid; height: 44px; place-items: center; width: 44px; }
+.po-empty__title { color: var(--text); font-weight: 750; margin: 0; }
+.po-empty__body { margin: 0; max-width: 42ch; }
+
+@media (max-width: 1023px) {
+  .po-button { min-height: 48px; }
+  .po-card__body { padding: var(--space-4); }
+}

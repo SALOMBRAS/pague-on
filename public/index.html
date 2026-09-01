@@ -11,18 +11,24 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap">
-  <link rel="stylesheet" href="/tokens.css">
-  <link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/design-system.css">
+<link rel="stylesheet" href="/app.css">
   <link rel="stylesheet" href="/ui-enhancements.css">
   <link rel="stylesheet" href="/mobile-fintech.css">
-  <link rel="stylesheet" href="/desktop-dashboard.css">
+<link rel="stylesheet" href="/desktop-dashboard.css">
+<link rel="stylesheet" href="/desktop-shell.css">
+<link rel="stylesheet" href="/mobile-shell.css">
+<link rel="stylesheet" href="/desktop-financial-dashboard.css">
+<link rel="stylesheet" href="/onboarding.css">
+  <link rel="stylesheet" href="/quick-operation.css">
   <title>Pague-On — Caixa</title>
 
 </head>
 <body>
   <div class="app">
     <aside class="side-nav">
-      <div class="brand"><i>🪙</i><b>Pague-On</b></div>
+      <div class="brand"><i aria-hidden="true"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1H3Z"/><path d="M3 6v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9H5a2 2 0 0 1-2-2Z"/></svg></i><b>Pague-On</b></div>
       <button class="nav" data-nav="home" aria-label="Início"><i><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></i>Início</button>
       <button class="nav" data-nav="caixa" aria-label="Caixa"><i><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></i>Caixa</button>
       <button class="nav" data-nav="wealth" aria-label="Patrimônio"><i><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></svg></i>Patrimônio</button>
@@ -33,12 +39,12 @@
       <div class="side-foot"><b>Pague-On</b>Painel administrativo<br>Atalhos: <kbd>N</kbd> nova, <kbd>/</kbd> busca</div>
     </aside>
     <header class="desk-top">
-      <div><p class="eyebrow">Painel administrativo</p><h1>Olá 👋</h1></div>
-      <div class="desk-actions"><button class="icon" id="themeToggle" aria-label="Alternar tema claro/escuro"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button class="new-charge" id="deskNewCharge" type="button" aria-label="Nova cobrança"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nova cobrança</button></div>
+      <div><p class="eyebrow">Painel administrativo</p><h1>Olá</h1></div>
+      <div class="desk-actions"><button class="icon" id="themeToggle" aria-label="Alternar tema claro/escuro"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button class="new-charge" id="deskNewCharge" type="button" aria-label="Nova operação"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nova operação</button></div>
     </header>
     <section id="mainView">
       <header class="top">
-        <div class="topline"><div><p class="eyebrow">Controle financeiro</p><h1>💰 Caixa</h1></div><div class="top-actions"><button class="icon" id="searchBtn" aria-label="Buscar"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button><button class="icon" id="addBtn" aria-label="Adicionar dívida"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div></div>
+        <div class="topline"><div><p class="eyebrow">Controle financeiro</p><h1>Caixa</h1></div><div class="top-actions"><button class="icon" id="searchBtn" aria-label="Buscar"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button><button class="icon" id="addBtn" aria-label="Adicionar dívida"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div></div>
         <div class="search" id="searchWrap"><label class="search-box"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="searchInput" placeholder="Buscar pessoa, descrição ou valor" autocomplete="off"></label></div>
         <nav class="tabs" id="tabs" aria-label="Seções de caixa">
           <button class="tab active" data-tab="all">Tudo</button><button class="tab" data-tab="receive">Quem te deve</button><button class="tab" data-tab="pay">Quem você deve</button><button class="tab" data-tab="recurring">Recorrentes</button><button class="tab" data-tab="history">Histórico</button>
@@ -55,7 +61,7 @@
     <section id="goalsForm" aria-live="polite"></section>
     <section class="detail" id="detail" role="dialog" aria-modal="true"></section>
     <section class="stock-detail" id="stockDetail" role="dialog" aria-modal="true"></section>
-    <nav class="bottom-nav" role="tablist" aria-label="Navegação principal"><button class="nav" data-nav="home" aria-label="Início"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></i><span>Início</span></button><button class="nav active" data-nav="caixa" aria-label="Caixa" aria-current="page"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></i><span>Caixa</span></button><button class="add" id="centerAdd" aria-label="Adicionar"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><button class="nav" data-nav="goals" aria-label="Metas"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></i><span>Metas</span></button><button class="nav" data-nav="profile" aria-label="Perfil"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></i><span>Perfil</span></button></nav>
+    <nav class="bottom-nav" role="tablist" aria-label="Navegação principal"><button class="nav" data-nav="home" aria-label="Início"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></i><span>Início</span></button><button class="nav active" data-nav="caixa" aria-label="Resumo" aria-current="page"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></i><span>Resumo</span></button><button class="add" id="centerAdd" aria-label="Adicionar cobrança, produto ou conta"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="sr-only">Adicionar</span></button><button class="nav" data-nav="stock" aria-label="Estoque"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8V16L12 21 3 16V8l9-5 9 5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg></i><span>Estoque</span></button><button class="nav" data-nav="profile" aria-label="Perfil"><i><svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></i><span>Perfil</span></button></nav>
     <div class="sheet-backdrop" id="sheetBackdrop"></div>
     <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Adicionar registro"><div class="handle" id="sheetHandle"></div><h3>O que você quer registrar?</h3><div class="choice-list">
       <button class="choice" data-create="debt"><i class="choice-icon">💰</i><span><strong>Nova Dívida ou Conta</strong><small>Única, parcelada ou fixa</small></span></button>
@@ -81,41 +87,42 @@
     <section class="reconcile-screen" id="reconcileScreen" aria-live="polite"></section>
     <section class="budget-screen" id="budgetScreen" aria-live="polite"></section>
     <section class="statement-import-screen" id="statementImportScreen" aria-live="polite"></section>
-  <script src="/offline.js"></script>
-  <script src="/icons.js"></script>
-  <script src="/ui-components.js"></script>
-  <script src="/app.js"></script>
-  <script src="/views/caixa.js"></script>
-  <script src="/views/estoque.js"></script>
-  <script src="/views/perfil.js"></script>
-  <script src="/views/regras.js"></script>
-  <script src="/views/notificacoes.js"></script>
-  <script src="/views/busca.js"></script>
-  <script src="/views/forms.js"></script>
-  <script src="/views/metas.js"></script>
+  <script src="/offline.js" defer></script>
+  <script src="/icons.js" defer></script>
+  <script src="/ui-components.js" defer></script>
+  <script src="/app.js" defer></script>
+  <script src="/views/caixa.js" defer></script>
+  <script src="/views/estoque.js" defer></script>
+  <script src="/views/perfil.js" defer></script>
+  <script src="/views/regras.js" defer></script>
+  <script src="/views/notificacoes.js" defer></script>
+  <script src="/views/busca.js" defer></script>
+  <script src="/views/forms.js" defer></script>
+  <script src="/views/metas.js" defer></script>
 
-  <script src="/pwa-install.js"></script>
-  <script src="/api.js"></script>
-  <script src="/auth.js"></script>
-  <script src="/security.js"></script>
-  <script src="/export.js"></script>
-  <script src="/scanner.js"></script>
-  <script src="/widget.js"></script>
-  <script src="/onboarding.js"></script>
-  <script src="/networth.js"></script>
-  <script src="/reconciliation.js"></script>
-  <script src="/budget.js"></script>
-  <script src="/duplicate.js"></script>
-  <script src="/currency.js"></script>
-  <script src="/statement-import.js"></script>
-  <script src="/push.js"></script>
-  <script src="/people.js"></script>
-  <script src="/dashboard-financial.js"></script>
-  <script src="/dashboard-financial-charts.js"></script>
-  <script src="/financial-accounts.js"></script>
-  <script src="/collectors.js"></script>
-  <script src="/loan-origination.js"></script>
-  <script src="/loan-receipts.js"></script>
-  <script src="/goals.js"></script>
+  <script src="/pwa-install.js" defer></script>
+  <script src="/api.js" defer></script>
+  <script src="/auth.js" defer></script>
+  <script src="/quick-operation.js" defer></script>
+  <script src="/security.js" defer></script>
+  <script src="/export.js" defer></script>
+  <script src="/scanner.js" defer></script>
+  <script src="/widget.js" defer></script>
+  <script src="/onboarding.js" defer></script>
+  <script src="/networth.js" defer></script>
+  <script src="/reconciliation.js" defer></script>
+  <script src="/budget.js" defer></script>
+  <script src="/duplicate.js" defer></script>
+  <script src="/currency.js" defer></script>
+  <script src="/statement-import.js" defer></script>
+  <script src="/push.js" defer></script>
+  <script src="/people.js" defer></script>
+  <script src="/dashboard-financial.js" defer></script>
+  <script src="/dashboard-financial-charts.js" defer></script>
+  <script src="/financial-accounts.js" defer></script>
+  <script src="/collectors.js" defer></script>
+  <script src="/loan-origination.js" defer></script>
+  <script src="/loan-receipts.js" defer></script>
+  <script src="/goals.js" defer></script>
 </body>
 </html>

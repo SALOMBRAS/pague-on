@@ -4,6 +4,7 @@ const { parseRange } = require('./reportService');
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
 const formatMoney = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
 const formatDate = (value) => new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(value));
+const formatDateTime = (value) => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(value));
 
 function reportHtml({ debts, products, startDate, endDate, totals }) {
   const maximum = Math.max(totals.receivable, totals.payable, 1);
@@ -27,4 +28,30 @@ async function generateReport(userId, query) {
   } finally { await browser.close(); }
 }
 
-module.exports = { generateReport, reportHtml };
+function genericValue(value, type) {
+  if (value === null || value === undefined || value === '') return '—';
+  if (type === 'currency') return formatMoney(value);
+  if (type === 'date') return formatDate(value);
+  if (type === 'percentage') return `${Number(value).toFixed(2)}%`;
+  return escapeHtml(value);
+}
+
+function genericReportHtml(report) {
+  const cards = report.kpis.map((kpi) => `<div class="card"><small>${escapeHtml(kpi.label)}</small><strong>${genericValue(kpi.value, kpi.type)}</strong></div>`).join('');
+  const headings = report.columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join('');
+  const rows = report.rows.map((row) => `<tr>${report.columns.map((column) => `<td>${genericValue(row[column.key], column.type)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${report.columns.length}" class="empty">Nenhum dado encontrado para estes filtros.</td></tr>`;
+  const kpiTypes = new Map(report.kpis.map((kpi) => [kpi.key, kpi.type]));
+  const totals = Object.entries(report.totals).map(([key, value]) => `<span><b>${escapeHtml(key)}:</b> ${typeof value === 'number' ? genericValue(value, kpiTypes.get(key) || (key.includes('count') || key.includes('days') || key === 'customers' ? 'number' : 'currency')) : escapeHtml(value)}</span>`).join(' · ');
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111827;background:#fff;padding:24px;font-size:10px}.header{border-bottom:2px solid #00a95c;padding-bottom:14px;margin-bottom:16px}.brand{color:#087443;font-size:24px;font-weight:800}.title{font-size:17px;font-weight:800;margin-top:10px}.meta{color:#4b5563;margin-top:5px}.summary{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.card{min-width:135px;flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:11px}.card small{color:#166534}.card strong{display:block;font-size:15px;margin-top:5px}.note{background:#eff6ff;border-left:3px solid #2563eb;padding:9px;margin:12px 0;color:#1e3a8a}.totals{background:#f8fafc;padding:9px;margin:12px 0}.totals span{display:inline-block;margin-right:12px}table{width:100%;border-collapse:collapse;margin-top:12px}th{background:#075e31;color:#fff;text-align:left;font-size:8px;text-transform:uppercase;padding:8px}td{padding:7px;border-bottom:1px solid #e5e7eb;vertical-align:top}.empty{text-align:center;color:#6b7280;padding:18px}@page{size:A4 landscape;margin:12mm}</style></head><body><div class="header"><div class="brand">Pague-On</div><div class="title">${escapeHtml(report.report.title)}</div><div class="meta">${escapeHtml(report.report.description)} · Emitido em ${formatDateTime(report.generatedAt)}</div><div class="meta">Período: ${escapeHtml(report.filters.periodLabel || 'Não informado')}</div></div><section class="summary">${cards}</section>${report.note ? `<div class="note">${escapeHtml(report.note)}</div>` : ''}<div class="totals">${totals}</div><table><thead><tr>${headings}</tr></thead><tbody>${rows}</tbody></table></body></html>`;
+}
+
+async function generateGenericReport(report) {
+  const browser = await (await import('puppeteer')).default.launch({ headless: true });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(genericReportHtml(report), { waitUntil: 'networkidle0' });
+    return await page.pdf({ format: 'A4', landscape: true, printBackground: true, margin: { top: '12mm', right: '10mm', bottom: '14mm', left: '10mm' }, displayHeaderFooter: true, headerTemplate: '<div></div>', footerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#777">Pague-On · Página <span class="pageNumber"></span> de <span class="totalPages"></span></div>' });
+  } finally { await browser.close(); }
+}
+
+module.exports = { generateReport, generateGenericReport, reportHtml, genericReportHtml };

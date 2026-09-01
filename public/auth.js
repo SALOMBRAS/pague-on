@@ -2,6 +2,8 @@
   const apiBase = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
   const keys = { token: 'pagueon.token', user: 'pagueon.user' };
   const rawFetch = window.fetch.bind(window);
+  const AUTH_TIMEOUT_MS = 12_000;
+  const REFRESH_LOCK_KEY = 'pagueon.auth.refresh.lock';
   const messages = {
     EMAIL_IN_USE: 'Este e-mail já está em uso. Entre na sua conta ou use outro e-mail.',
     PHONE_IN_USE: 'Este telefone já está em uso. Use outro telefone ou entre na sua conta.',
@@ -11,6 +13,34 @@
     INVALID_RESET_TOKEN: 'O link de recuperação é inválido ou expirou. Solicite um novo link.',
   };
   let refreshing = null;
+  let endingSession = false;
+
+  const trace = (event, details = {}) => {
+    // Diagnóstico seguro: nunca inclui senha, token, e-mail ou dados do cliente.
+    console.info(`[AUTH] ${event}`, { ...details, at: new Date().toISOString() });
+  };
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const timeoutError = (stage) => {
+    const error = new Error(`A ${stage} demorou mais que o esperado. Verifique a conexão e tente novamente.`);
+    error.code = 'AUTH_TIMEOUT';
+    return error;
+  };
+  async function requestWithTimeout(request, stage) {
+    const controller = new AbortController();
+    const startedAt = performance.now();
+    const timeout = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
+    try {
+      const response = await request(controller.signal);
+      trace(`${stage}_completed`, { durationMs: Math.round(performance.now() - startedAt), status: response.status });
+      return response;
+    } catch (error) {
+      if (controller.signal.aborted) throw timeoutError(stage);
+      trace(`${stage}_error`, { durationMs: Math.round(performance.now() - startedAt), code: error?.name || 'NETWORK_ERROR' });
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   const readUser = () => { try { return JSON.parse(sessionStorage.getItem(keys.user) || 'null'); } catch (_error) { return null; } };
   const getToken = () => sessionStorage.getItem(keys.token);
@@ -36,16 +66,50 @@
     return error;
   }
 
+  async function withRefreshLock(task) {
+    if (navigator.locks?.request) return navigator.locks.request('pagueon-auth-refresh', { mode: 'exclusive' }, task);
+
+    // Fallback para navegadores sem Web Locks (incluindo versões antigas de Safari).
+    // A chave não contém segredo e só coordena abas do mesmo origin.
+    const owner = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const leaseMs = AUTH_TIMEOUT_MS + 2_000;
+    const deadline = Date.now() + leaseMs * 2;
+    while (Date.now() < deadline) {
+      try {
+        const current = JSON.parse(localStorage.getItem(REFRESH_LOCK_KEY) || 'null');
+        if (!current || current.expiresAt <= Date.now()) {
+          localStorage.setItem(REFRESH_LOCK_KEY, JSON.stringify({ owner, expiresAt: Date.now() + leaseMs }));
+          const confirmed = JSON.parse(localStorage.getItem(REFRESH_LOCK_KEY) || 'null');
+          if (confirmed?.owner === owner) {
+            try { return await task(); }
+            finally {
+              const active = JSON.parse(localStorage.getItem(REFRESH_LOCK_KEY) || 'null');
+              if (active?.owner === owner) localStorage.removeItem(REFRESH_LOCK_KEY);
+            }
+          }
+        }
+      } catch (_error) {
+        // Se o storage estiver indisponível em modo privado, segue sem o fallback.
+        return task();
+      }
+      await delay(80);
+    }
+    return task();
+  }
+
   async function renew() {
     if (!refreshing) {
-      refreshing = rawFetch(`${apiBase()}/auth/refresh`, {
-        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}'
-      }).then(async (response) => {
+      refreshing = withRefreshLock(async () => {
+        trace('refresh_started');
+        const response = await requestWithTimeout((signal) => rawFetch(`${apiBase()}/auth/refresh`, {
+          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}', signal,
+        }), 'refresh');
         const result = await response.json().catch(() => null);
         if (!response.ok || !result?.success || !result.data?.token) return false;
         setSession(result.data);
+        trace('refresh_session_restored');
         return true;
-      }).catch(() => false).finally(() => { refreshing = null; });
+      }).finally(() => { refreshing = null; });
     }
     return refreshing;
   }
@@ -64,7 +128,7 @@
     let element = document.getElementById('auth-shell');
     if (element) return element;
     const style = document.createElement('style');
-    style.textContent = '#auth-shell{position:fixed;z-index:500;inset:0;display:grid;place-items:center;padding:24px;background:var(--bg,#07150e);color:var(--text,#f3fbf6);font-family:Inter,system-ui,sans-serif}.auth-card{width:min(100%,430px);padding:30px;border:1px solid var(--line,rgba(194,238,211,.13));border-radius:24px;background:var(--surface,#0f2117);box-shadow:var(--shadow,0 24px 80px #0009)}.auth-card h1{margin:0;font-size:26px}.auth-card p{color:var(--muted,#a9bdb0);line-height:1.5}.auth-field{display:grid;gap:7px;margin-top:15px}.auth-field input{min-height:48px;border:1px solid var(--line,rgba(194,238,211,.13));border-radius:12px;padding:0 13px;background:var(--raised,#152b1f);color:var(--text,#f3fbf6);font-size:16px}.auth-field input[aria-invalid="true"]{border-color:var(--red,#ff5b5b);box-shadow:0 0 0 3px rgba(255,91,91,.14)}.auth-primary,.auth-secondary{width:100%;min-height:48px;margin-top:14px;border-radius:12px;padding:0 14px;font-weight:800;cursor:pointer}.auth-primary{border:0;background:var(--green,#00c853);color:var(--on-green,#07150e)}.auth-primary:disabled{opacity:.7;cursor:wait}.auth-secondary,.auth-link{border:1px solid var(--line,rgba(194,238,211,.13));background:transparent;color:var(--text,#f3fbf6)}.auth-link{border:0;padding:2px;color:var(--green,#00c853);text-decoration:underline}.auth-error{margin:14px 0;padding:12px;border:1px solid var(--red,rgba(255,91,91,.4));border-radius:12px;background:var(--red-bg,rgba(69,29,40,.9));color:#fee2e2}.auth-error[hidden]{display:none}.auth-check{display:flex;gap:9px;align-items:center;margin-top:16px;color:var(--muted,#a9bdb0);font-size:13px}.auth-help{text-align:center;font-size:13px}.side-session{display:none}';
+    style.textContent = '#auth-shell{position:fixed;z-index:500;inset:0;display:grid;place-items:center;padding:24px;background:var(--bg,#07150e);color:var(--text,#f3fbf6);font-family:Inter,system-ui,sans-serif}#auth-shell[hidden]{display:none!important}.auth-card{width:min(100%,430px);padding:30px;border:1px solid var(--line,rgba(194,238,211,.13));border-radius:24px;background:var(--surface,#0f2117);box-shadow:var(--shadow,0 24px 80px #0009)}.auth-card h1{margin:0;font-size:26px}.auth-card p{color:var(--muted,#a9bdb0);line-height:1.5}.auth-field{display:grid;gap:7px;margin-top:15px}.auth-field input{min-height:48px;border:1px solid var(--line,rgba(194,238,211,.13));border-radius:12px;padding:0 13px;background:var(--raised,#152b1f);color:var(--text,#f3fbf6);font-size:16px}.auth-field input[aria-invalid="true"]{border-color:var(--red,#ff5b5b);box-shadow:0 0 0 3px rgba(255,91,91,.14)}.auth-primary,.auth-secondary{width:100%;min-height:48px;margin-top:14px;border-radius:12px;padding:0 14px;font-weight:800;cursor:pointer}.auth-primary{border:0;background:var(--green,#00c853);color:var(--on-green,#07150e)}.auth-primary:disabled{opacity:.7;cursor:wait}.auth-secondary,.auth-link{border:1px solid var(--line,rgba(194,238,211,.13));background:transparent;color:var(--text,#f3fbf6)}.auth-link{border:0;padding:2px;color:var(--green,#00c853);text-decoration:underline}.auth-error{margin:14px 0;padding:12px;border:1px solid var(--red,rgba(255,91,91,.4));border-radius:12px;background:var(--red-bg,rgba(69,29,40,.9));color:#fee2e2}.auth-error[hidden]{display:none}.auth-check{display:flex;gap:9px;align-items:center;margin-top:16px;color:var(--muted,#a9bdb0);font-size:13px}.auth-help{text-align:center;font-size:13px}.side-session{display:none}';
     document.head.append(style);
     element = document.createElement('section');
     element.id = 'auth-shell';
@@ -111,9 +175,9 @@
   }
 
   async function submitAuth(path, body) {
-    const response = await rawFetch(`${apiBase()}${path}`, {
-      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-    });
+    const response = await requestWithTimeout((signal) => rawFetch(`${apiBase()}${path}`, {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal,
+    }), path.includes('login') ? 'login' : path.includes('register') ? 'cadastro' : 'solicitação');
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.success) throw apiError(result, 'Não foi possível concluir a solicitação. Tente novamente.');
     return result;
@@ -143,7 +207,10 @@
         if (mode === 'forgot') result = await submitAuth('/auth/password-reset/request', { identity: values.identity.trim() });
         else if (mode === 'reset') result = await submitAuth('/auth/password-reset/confirm', { token: resetToken, newPassword: values.password });
         else if (mode === 'register') result = await submitAuth('/auth/register', { name: values.name.trim(), email: values.email.trim().toLowerCase(), phone: values.phone?.trim() || undefined, password: values.password, remember: values.remember === 'on' });
-        else result = await submitAuth('/auth/login', { identity: values.identity.trim(), password: values.password, remember: values.remember === 'on' });
+        else {
+          trace('login_started');
+          result = await submitAuth('/auth/login', { identity: values.identity.trim(), password: values.password, remember: values.remember === 'on' });
+        }
         if (mode === 'forgot') show('login', result.message || 'Se houver uma conta compatível, você receberá as instruções.');
         else if (mode === 'reset') { history.replaceState({}, '', location.pathname); show('login', result.message || 'Senha atualizada. Entre novamente.'); }
         else if (mode === 'register') {
@@ -152,7 +219,7 @@
           history.replaceState({}, '', `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`);
           show('login', result.message || 'Conta criada com sucesso. Entre com seu e-mail e senha para continuar.');
         }
-        else { setSession(result.data); startSession(); }
+        else { setSession(result.data); trace('login_authenticated'); startSession(); }
       } catch (error) {
         actionError(submittedForm, error.message || 'Verifique os dados e tente novamente.', error.code);
       } finally {
@@ -175,6 +242,7 @@
     control.append(label, button); sidebarFooter.append(control);
   }
   function startSession() {
+    endingSession = false;
     document.getElementById('auth-shell')?.setAttribute('hidden', '');
     const appUrl = new URL(location.href);
     if (appUrl.searchParams.has('auth') || appUrl.searchParams.has('reset')) {
@@ -183,16 +251,38 @@
       history.replaceState({}, '', `${appUrl.pathname}${appUrl.search}${appUrl.hash}`);
     }
     showSessionControl();
+    trace('session_started');
     window.dispatchEvent(new CustomEvent('pagueon:auth', { detail: { user: getUser() } }));
   }
-  function endSession() { clearSession(); document.getElementById('auth-session-control')?.remove(); show('login', 'Sua sessão terminou. Entre novamente para continuar.'); }
-  async function logout() { try { if (getToken()) await rawFetch(`${apiBase()}/auth/logout`, { method: 'POST', credentials: 'include', headers: { Authorization: `Bearer ${getToken()}` } }); } finally { endSession(); } }
+  function endSession() {
+    if (endingSession) return;
+    endingSession = true;
+    trace('session_ended');
+    clearSession(); document.getElementById('auth-session-control')?.remove(); show('login', 'Sua sessão terminou. Entre novamente para continuar.');
+    setTimeout(() => { endingSession = false; }, 0);
+  }
+  async function logout() {
+    const token = getToken();
+    // A saída local precisa ser imediata. A revogação no servidor continua em
+    // seguida, mas uma rede lenta nunca deixa a conta aberta neste dispositivo.
+    endSession();
+    if (!token) return;
+    try {
+      await requestWithTimeout((signal) => rawFetch(`${apiBase()}/auth/logout`, {
+        method: 'POST', credentials: 'include', headers: { Authorization: `Bearer ${token}` }, signal,
+      }), 'logout');
+    } catch (error) {
+      trace('logout_background_error', { code: error?.code || error?.name || 'NETWORK_ERROR' });
+    }
+  }
   async function loadUser() {
     if (!getToken() && !(await renew())) return null;
-    const response = await rawFetch(`${apiBase()}/auth/me`, { credentials: 'include', headers: { Authorization: `Bearer ${getToken()}` } });
+    trace('profile_started');
+    const response = await requestWithTimeout((signal) => fetchWithAuth(`${apiBase()}/auth/me`, { credentials: 'include', headers: { Authorization: `Bearer ${getToken()}` }, signal }), 'profile');
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.success) return null;
     setSession({ token: getToken(), user: result.data });
+    trace('profile_found');
     return result.data;
   }
   window.pagueOnAuth = { getToken, getUser, isAuthenticated: () => Boolean(getToken()), fetchWithAuth, logout, loadUser };
@@ -214,10 +304,20 @@
       // rede, e revalida /auth/me em segundo plano — atualiza dados e detecta
       // sessão expirada/revogada sem travar a entrada.
       startSession();
-      loadUser().then((user) => { if (user) { setSession({ token: getToken(), user }); startSession(); } else { endSession(); } }).catch(() => {});
+      loadUser().then((user) => { if (user) { setSession({ token: getToken(), user }); startSession(); } else { endSession(); } }).catch((error) => {
+        // Falha transitória não encerra uma sessão em cache. A aplicação continua
+        // utilizável e as requisições posteriores poderão renovar o token.
+        trace('profile_background_error', { code: error?.code || error?.name || 'NETWORK_ERROR' });
+      });
       return;
     }
-    const user = reset ? null : await loadUser();
-    if (user) startSession(); else { clearSession(); show(reset ? 'reset' : requestedMode === 'register' ? 'register' : 'login'); }
+    try {
+      const user = reset ? null : await loadUser();
+      if (user) startSession(); else { clearSession(); show(reset ? 'reset' : requestedMode === 'register' ? 'register' : 'login'); }
+    } catch (error) {
+      trace('bootstrap_error', { code: error?.code || error?.name || 'NETWORK_ERROR' });
+      clearSession();
+      show(reset ? 'reset' : requestedMode === 'register' ? 'register' : 'login', 'Não foi possível verificar sua sessão agora. Você pode entrar novamente.');
+    }
   })();
 })();

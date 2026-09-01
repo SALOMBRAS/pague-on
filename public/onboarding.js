@@ -118,7 +118,7 @@
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-labelledby', 'onboarding-title');
     overlay.setAttribute('aria-describedby', 'onboarding-copy');
-    overlay.innerHTML = '<div class="onboarding-spotlight" aria-hidden="true"></div><article class="onboarding-tooltip"></article>';
+    overlay.innerHTML = '<div class="onboarding-ambient" aria-hidden="true"></div><div class="onboarding-spotlight" aria-hidden="true"></div><article class="onboarding-tooltip"></article>';
     document.body.append(overlay);
     state.overlay = overlay;
     return overlay;

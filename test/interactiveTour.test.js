@@ -36,8 +36,11 @@ test('tour has an accessible modal, keyboard controls and cannot be skipped befo
   assert.match(css, /width 480ms/);
   assert.match(tour, /function ensureOverlay\(\)/);
   assert.match(tour, /window\.requestAnimationFrame\(applyPosition\)/);
+  assert.match(tour, /onboarding-ambient/);
   assert.match(css, /onboarding-actions button:focus-visible/);
   assert.match(css, /prefers-reduced-motion/);
+  assert.match(css, /onboarding-ambient-drift 16s ease-in-out/);
+  assert.match(css, /animation: none/);
   assert.match(tour, /pague-mascot-user-v3\.png/);
   assert.match(css, /\.onboarding-mascot/);
 });

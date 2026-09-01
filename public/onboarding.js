@@ -6,30 +6,18 @@
   const state = { index: 0, steps: [], overlay: null, previousFocus: null, autoStartedFor: null, stepTimer: null };
 
   const mobileSteps = [
-    { action: 'home', target: '#financial-dashboard .financial-title, .top', title: 'Bem-vindo ao Pague-On', text: 'Este é o seu ponto de partida: aqui você acompanha sua vida financeira de forma simples.' },
-    { action: 'home', target: '#financial-dashboard .financial-filters, #financial-dashboard', title: 'Resumo financeiro', text: 'Escolha o período e, se precisar, filtre por caixa, cobrador ou situação.' },
-    { action: 'home', target: '#financial-dashboard .financial-grid, #financial-dashboard', title: 'Valores importantes', text: 'Estes cartões mostram o que está disponível, a receber, recebido e vencido.' },
-    { action: 'clientes', target: '#quick-operation-screen [name="customerSearch"]', title: 'Cliente vem primeiro', text: 'Em toda nova operação, pesquise o cliente por nome, apelido, CPF ou telefone.' },
-    { action: 'clientes', target: '#quick-operation-screen [data-new-customer]', title: 'Cadastre o cliente sem sair', text: 'Se ele ainda não existir, toque em “Novo cliente”. Nome e telefone bastam para começar; os detalhes ficam para depois.' },
-    { action: 'home', target: '#centerAdd', title: 'Nova operação', text: 'Toque no + para criar uma cobrança, produto, empréstimo ou outro registro.' },
-    { action: 'caixa', target: '.bottom-nav .nav[data-nav="caixa"]', title: 'Caixa', text: 'Aqui você acompanha cobranças, parcelas, pagamentos e pendências.' },
-    { action: 'estoque', target: '.bottom-nav .nav[data-nav="stock"]', title: 'Estoque', text: 'Cadastre produtos, acompanhe quantidades e veja a margem das vendas.' },
-    { action: 'relatorios', target: '#reportsView .reports-head, #reportsView', title: 'Relatórios sem complicação', text: 'Escolha o resumo, aplique filtros e exporte. Projeção é previsão: ainda não é dinheiro no caixa.' },
-    { action: 'configuracoes', target: '#financial-settings-screen .financial-settings__notice', title: 'Regras financeiras', text: 'Aqui você define juros, multa, feriados e vencimentos. Cada alteração fica registrada e nunca muda contratos antigos.' },
-    { action: 'profile', target: '.bottom-nav .nav[data-nav="profile"]', title: 'Perfil', text: 'Ajuste preferências, segurança, notificações e reveja este guia quando quiser.' }
+    { action: 'home', target: '#financial-dashboard .financial-title, .top', title: 'Bem-vindo ao Pague-On', text: 'Veja quanto você tem para receber e o que está vencido, tudo em um só lugar.' },
+    { action: 'home', target: '#centerAdd', title: 'Adicione uma conta', text: 'Toque no + para criar uma cobrança, produto, empréstimo ou outro registro.' },
+    { action: 'caixa', target: '.bottom-nav .nav[data-nav="caixa"]', title: 'Acompanhe o caixa', text: 'Cobranças, parcelas, pagamentos e pendências ficam aqui.' },
+    { action: 'estoque', target: '.bottom-nav .nav[data-nav="stock"]', title: 'Controle o estoque', text: 'Cadastre produtos, acompanhe quantidades e veja a margem das vendas.' },
+    { action: 'profile', target: '.bottom-nav .nav[data-nav="profile"]', title: 'Tudo no Perfil', text: 'Preferências, segurança, notificações, metas, relatórios e cobradores.' }
   ];
 
   const desktopSteps = [
     { action: 'home', target: '.desk-top', title: 'Bem-vindo ao Pague-On', text: 'Este painel concentra tudo que você precisa para acompanhar o dinheiro.' },
-    { action: 'home', target: '#financial-dashboard .financial-filters, #financial-dashboard', title: 'Resumo financeiro', text: 'Use estes filtros para ver seus números no período, caixa, cobrador ou situação desejada.' },
-    { action: 'home', target: '#financial-dashboard .financial-grid, #financial-dashboard', title: 'Valores importantes', text: 'Veja rapidamente o disponível, o que falta receber, o recebido e o vencido.' },
-    { action: 'clientes', target: '#quick-operation-screen [name="customerSearch"]', title: 'Cliente vem primeiro', text: 'Pesquise por nome, apelido, CPF ou telefone antes de criar a operação.' },
-    { action: 'clientes', target: '#quick-operation-screen [data-new-customer]', title: 'Cadastre o cliente na hora', text: 'Se não encontrar, use “Novo cliente”. Nome e telefone são suficientes no cadastro rápido.' },
     { action: 'home', target: '#deskNewCharge', title: 'Nova operação', text: 'Crie uma cobrança, venda ou empréstimo em poucos passos. O atalho é N.' },
     { action: 'caixa', target: '.side-nav .nav[data-nav="caixa"]', title: 'Caixa', text: 'Consulte cobranças, parcelas e pagamentos sem sair do controle financeiro.' },
     { action: 'estoque', target: '.side-nav .nav[data-nav="stock"]', title: 'Estoque', text: 'Cadastre produtos, acompanhe as quantidades e analise suas margens.' },
-    { action: 'relatorios', target: '#reportsView .reports-head, #reportsView', title: 'Relatórios', text: 'Cards mostram o resumo; a tabela traz o detalhe. A exportação respeita exatamente seus filtros.' },
-    { action: 'configuracoes', target: '#financial-settings-screen .financial-settings__notice', title: 'Regras financeiras', text: 'Aqui você define juros, multa, feriados e vencimentos. Cada alteração fica registrada e nunca muda contratos antigos.' },
     { action: 'profile', target: '.side-nav .nav[data-nav="profile"]', title: 'Perfil', text: 'Gerencie segurança, notificações e as preferências da sua conta.' }
   ];
 
@@ -63,8 +51,6 @@
   function stop({ completed = false } = {}) {
     clearStepTimer();
     document.removeEventListener('keydown', onKeydown, true);
-    const app = document.querySelector('.app');
-    if (app) app.inert = false;
     document.body.classList.remove('tour-active');
     state.overlay?.remove();
     state.overlay = null;
@@ -85,8 +71,7 @@
 
   function onKeydown(event) {
     if (!state.overlay) return;
-    // Esta edição é obrigatória: Esc não pode liberar a interface antes da conclusão.
-    if (event.key === 'Escape') { event.preventDefault(); return; }
+    if (event.key === 'Escape') { event.preventDefault(); stop({ completed: true }); return; }
     if (event.key === 'ArrowRight' || event.key === 'Enter') { event.preventDefault(); next(); return; }
     if (event.key === 'ArrowLeft') { event.preventDefault(); previous(); return; }
     if (event.key !== 'Tab') return;
@@ -129,9 +114,10 @@
 
   function renderStep(overlay, step) {
     const tooltip = overlay.querySelector('.onboarding-tooltip');
-    tooltip.innerHTML = `<div class="onboarding-guide"><img class="onboarding-mascot" src="/assets/pague-mascot-user-v3.png" alt="" aria-hidden="true" width="96" height="96" decoding="async"><p class="onboarding-count">Nota apresenta · ${state.index + 1} de ${state.steps.length}</p></div><h2 id="onboarding-title">${step.title}</h2><p id="onboarding-copy">${step.text}</p><p class="onboarding-required">Conclua este guia rápido para liberar o painel.</p><div class="onboarding-progress" aria-hidden="true"><i style="width:${((state.index + 1) / state.steps.length) * 100}%"></i></div><div class="onboarding-actions">${state.index ? '<button class="onboarding-prev" type="button" data-tour-prev>Anterior</button>' : ''}<button class="onboarding-next" type="button" data-tour-next>${state.index === state.steps.length - 1 ? 'Concluir tutorial' : 'Próximo'}</button></div>`;
+    tooltip.innerHTML = `<div class="onboarding-guide"><img class="onboarding-mascot" src="/assets/pague-mascot-user-v3.png" alt="" aria-hidden="true" width="96" height="96" decoding="async"><p class="onboarding-count">Nota apresenta · ${state.index + 1} de ${state.steps.length}</p></div><h2 id="onboarding-title">${step.title}</h2><p id="onboarding-copy">${step.text}</p><div class="onboarding-progress" aria-hidden="true"><i style="width:${((state.index + 1) / state.steps.length) * 100}%"></i></div><div class="onboarding-actions">${state.index ? '<button class="onboarding-prev" type="button" data-tour-prev>Anterior</button>' : ''}<button class="onboarding-skip" type="button" data-tour-skip>Pular tour</button><button class="onboarding-next" type="button" data-tour-next>${state.index === state.steps.length - 1 ? 'Começar' : 'Próximo'}</button></div>`;
     tooltip.querySelector('[data-tour-next]').onclick = next;
     tooltip.querySelector('[data-tour-prev]')?.addEventListener('click', previous);
+    tooltip.querySelector('[data-tour-skip]').onclick = () => stop({ completed: true });
     return tooltip;
   }
 
@@ -176,7 +162,6 @@
     state.steps = isMobile() ? mobileSteps : desktopSteps;
     state.index = 0;
     state.previousFocus = document.activeElement;
-    document.querySelector('.app')?.setAttribute('inert', '');
     document.body.classList.add('tour-active');
     document.addEventListener('keydown', onKeydown, true);
     draw();

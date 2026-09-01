@@ -4,7 +4,7 @@ const prisma = require('../config/database');
 const sensitive = /password|token|secret|authorization|cookie|credential|cipher/i;
 // Eventos financeiros/legais que NÃO podem ser perdidos em silêncio: se a escrita falhar,
 // relançamos para o caller (tipicamente dentro de uma $transaction) decidir o rollback.
-const criticalEvents = new Set(['loan_originated', 'loan_installment_received', 'loan_installment_receipt_reversed']);
+const criticalEvents = new Set(['loan_originated', 'loan_installment_received', 'loan_installment_receipt_reversed', 'loan_configuration_updated', 'financial_settings_updated', 'financial_holiday_created', 'financial_holiday_updated', 'financial_holiday_deleted']);
 const hash = (value) => value ? crypto.createHash('sha256').update(String(value).trim().toLowerCase()).digest('hex') : null;
 function sanitize(value) {
   if (Array.isArray(value)) return value.map(sanitize);

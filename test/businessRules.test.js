@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { addMonths, nextDueDate, recurringPeriod } = require('../src/utils/dateHelpers');
 const { calculateProfitMargin } = require('../src/utils/calculateProfit');
-const { debtCreateSchema, saleCreateSchema, statementImportSchema, pushSubscriptionSchema, dashboardQuerySchema, financialTransferSchema } = require('../src/utils/validators');
+const { debtCreateSchema, saleCreateSchema, statementImportSchema, pushSubscriptionSchema, dashboardQuerySchema, financialTransferSchema, financialSettingsUpdateSchema, financialHolidaySchema } = require('../src/utils/validators');
 const { applyToDebtInput } = require('../src/services/ruleService');
 const { parseStatement, score } = require('../src/services/reconciliationService');
 const { effectiveLimit } = require('../src/services/budgetService');
@@ -14,6 +14,7 @@ const { convertAmount } = require('../src/services/currencyService');
 const { rangeFor } = require('../src/services/dashboardService');
 const { calculateSchedule } = require('../src/services/loanService');
 const { allocationPreview } = require('../src/services/loanReceiptService');
+const { lateCharges } = require('../src/services/financialSettingsService');
 
 test('preserva o último dia válido ao avançar meses', () => {
   const januaryThirtyFirst = new Date('2026-01-31T00:00:00.000Z');
@@ -117,6 +118,33 @@ test('simula Price, juros simples e desloca domingos conforme configuração', (
   const price = calculateSchedule({ ...base, modality: 'PRICE', firstDueDate: new Date('2026-02-02T00:00:00.000Z') }, { skipSundays: false, holidayDates: [] });
   assert.equal(price.totalPrincipal, 1000);
   assert.equal(price.schedule[0].total, price.schedule[1].total);
+});
+
+test('aplica calendário próprio sem alterar contratos já calculados', () => {
+  const input = { principalAmount: 1000, interestRate: 2, totalInstallments: 3, frequency: 'MONTHLY', firstDueDate: new Date('2026-09-07T00:00:00.000Z'), modality: 'SIMPLE_INTEREST' };
+  const keep = calculateSchedule(input, { skipSundays: true, dueDateRule: 'KEEP', holidayDates: ['2026-09-07'] });
+  const next = calculateSchedule(input, { skipSundays: true, dueDateRule: 'NEXT_BUSINESS_DAY', holidayDates: ['2026-09-07'] });
+  const previous = calculateSchedule(input, { skipSundays: true, dueDateRule: 'PREVIOUS_BUSINESS_DAY', holidayDates: ['2026-09-07'] });
+  assert.equal(keep.schedule[0].dueDate.toISOString().slice(0, 10), '2026-09-07');
+  assert.equal(next.schedule[0].dueDate.toISOString().slice(0, 10), '2026-09-08');
+  assert.equal(previous.schedule[0].dueDate.toISOString().slice(0, 10), '2026-09-05');
+  assert.equal(keep.totalInterest, 60);
+});
+
+test('calcula multa, carência e juros de atraso com limites seguros', () => {
+  assert.deepEqual(lateCharges(500, { latePenaltyType: 'PERCENTAGE', latePenaltyValue: 2, lateInterestRate: 0.033, gracePeriodDays: 0 }, 10), { penalty: 10, interest: 1.65, total: 511.65 });
+  assert.deepEqual(lateCharges(500, { latePenaltyType: 'FIXED', latePenaltyValue: 15, lateInterestRate: 1, gracePeriodDays: 3 }, 3), { penalty: 0, interest: 0, total: 500 });
+  assert.deepEqual(lateCharges(0, {}, 10), { penalty: 0, interest: 0, total: 0 });
+  assert.throws(() => lateCharges(-1, {}, 1), /valor deve ser zero ou positivo/);
+  assert.throws(() => lateCharges(1, {}, -1), /Dias de atraso inválidos/);
+});
+
+test('valida regras financeiras, calendário e justificativa obrigatória', () => {
+  const settings = { settings: { simpleInterestEnabled: true, compoundInterestAllowed: false, latePenaltyType: 'PERCENTAGE', latePenaltyValue: 2, lateInterestRate: 0.033, gracePeriodDays: 3, paymentAllocationOrder: ['PENALTY', 'INTEREST', 'PRINCIPAL'], skipSundays: true, dueDateRule: 'NEXT_BUSINESS_DAY', discountLimitPercent: 10, approvalLimits: { ADMIN: null, MANAGER: 5000 }, defaultCommission: { type: 'PERCENTAGE', rate: 5, base: 'PRINCIPAL' }, contractTemplates: { standard: 'Contrato' }, messageTemplates: { reminder: 'Olá' } }, reason: 'Adequação à política de crédito' };
+  assert.equal(financialSettingsUpdateSchema.safeParse(settings).success, true);
+  assert.equal(financialSettingsUpdateSchema.safeParse({ ...settings, reason: 'sim' }).success, false);
+  assert.equal(financialHolidaySchema.safeParse({ date: '2026-12-25', type: 'NATIONAL', name: 'Natal', reason: 'Calendário nacional' }).success, true);
+  assert.equal(financialHolidaySchema.safeParse({ date: '2026-12-25', type: 'CUSTOM', name: 'X', reason: 'ok' }).success, false);
 });
 
 test('apropria recebimento de parcela entre juros, principal e desconto', () => {

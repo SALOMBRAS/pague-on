@@ -122,5 +122,21 @@
 
   window.addEventListener('pagueon:data-change', () => render());
   window.pagueOnGoalsActions = { open, close: closeForm, refresh, render, move, deposit, withdraw };
+
+  // Atalho no Perfil: no mobile o bottom-nav não tem Metas, então a tela fica
+  // acessível aqui (mesmo padrão de budget.js / collectors.js / reports.js).
+  function profileEntry() {
+    const profile = document.querySelector('#profileView');
+    if (!profile || profile.querySelector('[data-goals-open]')) return;
+    const section = document.createElement('section');
+    section.className = 'profile-section';
+    section.innerHTML = '<h2>🎯 METAS</h2><div class="settings-card"><button class="setting" type="button" data-goals-open><label>Minhas Metas</label><span>Cofrinhos e objetivos&nbsp; ›</span></button></div>';
+    const anchor = [...profile.querySelectorAll('.profile-section')].find((item) => item.textContent.includes('SEUS NÚMEROS'));
+    if (anchor) anchor.after(section); else profile.append(section);
+    section.querySelector('[data-goals-open]').addEventListener('click', () => window.pagueOnAppActions?.navigate('goals'));
+  }
+  new MutationObserver(profileEntry).observe(document.body, { childList: true, subtree: true });
+  profileEntry();
+
   if (document.querySelector('#goalsView.show')) render();
 })();

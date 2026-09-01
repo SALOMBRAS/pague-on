@@ -107,5 +107,5 @@
     document.addEventListener('keydown', onKeydown);
   }
 
-  window.pagueOnQuickOperation = { open };
+  window.pagueOnQuickOperation = { open, close };
 })();

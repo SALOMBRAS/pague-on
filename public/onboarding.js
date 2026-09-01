@@ -1,7 +1,7 @@
 (() => {
   // Uma nova chave força esta edição do tour para todas as contas já existentes.
   // O sufixo do usuário impede que uma conta conclua o guia por outra no mesmo aparelho.
-  const STORAGE_KEY = 'pagueon_tour_completed_v4';
+  const STORAGE_KEY = 'pagueon_tour_completed_v5';
   const MOBILE_QUERY = '(max-width: 1023px)';
   const state = { index: 0, steps: [], overlay: null, previousFocus: null, autoStartedFor: null, stepTimer: null };
 
@@ -9,9 +9,12 @@
     { action: 'home', target: '#financial-dashboard .financial-title, .top', title: 'Bem-vindo ao Pague-On', text: 'Este é o seu ponto de partida: aqui você acompanha sua vida financeira de forma simples.' },
     { action: 'home', target: '#financial-dashboard .financial-filters, #financial-dashboard', title: 'Resumo financeiro', text: 'Escolha o período e, se precisar, filtre por caixa, cobrador ou situação.' },
     { action: 'home', target: '#financial-dashboard .financial-grid, #financial-dashboard', title: 'Valores importantes', text: 'Estes cartões mostram o que está disponível, a receber, recebido e vencido.' },
+    { action: 'clientes', target: '#quick-operation-screen [name="customerSearch"]', title: 'Cliente vem primeiro', text: 'Em toda nova operação, pesquise o cliente por nome, apelido, CPF ou telefone.' },
+    { action: 'clientes', target: '#quick-operation-screen [data-new-customer]', title: 'Cadastre o cliente sem sair', text: 'Se ele ainda não existir, toque em “Novo cliente”. Nome e telefone bastam para começar; os detalhes ficam para depois.' },
     { action: 'home', target: '#centerAdd', title: 'Nova operação', text: 'Toque no + para criar uma cobrança, produto, empréstimo ou outro registro.' },
     { action: 'caixa', target: '.bottom-nav .nav[data-nav="caixa"]', title: 'Caixa', text: 'Aqui você acompanha cobranças, parcelas, pagamentos e pendências.' },
     { action: 'estoque', target: '.bottom-nav .nav[data-nav="stock"]', title: 'Estoque', text: 'Cadastre produtos, acompanhe quantidades e veja a margem das vendas.' },
+    { action: 'relatorios', target: '#reportsView .reports-head, #reportsView', title: 'Relatórios sem complicação', text: 'Escolha o resumo, aplique filtros e exporte. Projeção é previsão: ainda não é dinheiro no caixa.' },
     { action: 'profile', target: '.bottom-nav .nav[data-nav="profile"]', title: 'Perfil', text: 'Ajuste preferências, segurança, notificações e reveja este guia quando quiser.' }
   ];
 
@@ -19,9 +22,12 @@
     { action: 'home', target: '.desk-top', title: 'Bem-vindo ao Pague-On', text: 'Este painel concentra tudo que você precisa para acompanhar o dinheiro.' },
     { action: 'home', target: '#financial-dashboard .financial-filters, #financial-dashboard', title: 'Resumo financeiro', text: 'Use estes filtros para ver seus números no período, caixa, cobrador ou situação desejada.' },
     { action: 'home', target: '#financial-dashboard .financial-grid, #financial-dashboard', title: 'Valores importantes', text: 'Veja rapidamente o disponível, o que falta receber, o recebido e o vencido.' },
+    { action: 'clientes', target: '#quick-operation-screen [name="customerSearch"]', title: 'Cliente vem primeiro', text: 'Pesquise por nome, apelido, CPF ou telefone antes de criar a operação.' },
+    { action: 'clientes', target: '#quick-operation-screen [data-new-customer]', title: 'Cadastre o cliente na hora', text: 'Se não encontrar, use “Novo cliente”. Nome e telefone são suficientes no cadastro rápido.' },
     { action: 'home', target: '#deskNewCharge', title: 'Nova operação', text: 'Crie uma cobrança, venda ou empréstimo em poucos passos. O atalho é N.' },
     { action: 'caixa', target: '.side-nav .nav[data-nav="caixa"]', title: 'Caixa', text: 'Consulte cobranças, parcelas e pagamentos sem sair do controle financeiro.' },
     { action: 'estoque', target: '.side-nav .nav[data-nav="stock"]', title: 'Estoque', text: 'Cadastre produtos, acompanhe as quantidades e analise suas margens.' },
+    { action: 'relatorios', target: '#reportsView .reports-head, #reportsView', title: 'Relatórios', text: 'Cards mostram o resumo; a tabela traz o detalhe. A exportação respeita exatamente seus filtros.' },
     { action: 'profile', target: '.side-nav .nav[data-nav="profile"]', title: 'Perfil', text: 'Gerencie segurança, notificações e as preferências da sua conta.' }
   ];
 
@@ -31,6 +37,7 @@
   const storageKey = () => `${STORAGE_KEY}:${String(window.pagueOnAuth?.getUser?.()?.id || 'session')}`;
   const stepAction = (name) => {
     if (!name) return;
+    if (name !== 'clientes') window.pagueOnQuickOperation?.close?.();
     const actions = window.pagueOnOnboardingActions;
     if (actions?.[name]) { actions[name](); return; }
     document.querySelector(`[data-nav="${name}"]`)?.click();

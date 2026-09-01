@@ -349,24 +349,6 @@ const pushSubscriptionSchema = z.object({ endpoint: z.string().url().max(2048), 
 const pushUnsubscribeSchema = z.object({ endpoint: z.string().url().max(2048) }).strict();
 const loanModality = z.enum(['INSTALLMENT', 'SIMPLE_INTEREST', 'PRICE', 'RENEWAL']);
 const loanFrequency = z.enum(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'BIMONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL']);
-const financialSettingsSchema = z.object({
-  simpleInterestEnabled: z.boolean().default(true),
-  compoundInterestAllowed: z.boolean().default(false),
-  latePenaltyType: z.enum(['PERCENTAGE', 'FIXED']).default('PERCENTAGE'),
-  latePenaltyValue: z.coerce.number().min(0).max(1000000).default(0),
-  lateInterestRate: z.coerce.number().min(0).max(1000).default(0),
-  gracePeriodDays: z.coerce.number().int().min(0).max(365).default(0),
-  paymentAllocationOrder: z.array(z.enum(['PENALTY', 'INTEREST', 'PRINCIPAL'])).length(3).refine((values) => new Set(values).size === 3, 'Não repita componentes na ordem de apropriação.'),
-  skipSundays: z.boolean().default(false),
-  dueDateRule: z.enum(['KEEP', 'PREVIOUS_BUSINESS_DAY', 'NEXT_BUSINESS_DAY']).default('KEEP'),
-  discountLimitPercent: z.coerce.number().min(0).max(100).default(0),
-  approvalLimits: z.object({ ADMIN: z.coerce.number().nonnegative().max(9999999999).nullable().default(null), MANAGER: z.coerce.number().nonnegative().max(9999999999).default(0) }).strict().default({ ADMIN: null, MANAGER: 0 }),
-  defaultCommission: z.object({ type: z.enum(['PERCENTAGE', 'FIXED']).default('PERCENTAGE'), rate: z.coerce.number().min(0).max(1000000).default(0), base: z.enum(['PRINCIPAL', 'INTEREST', 'PENALTY', 'TOTAL']).default('TOTAL') }).strict().default({ type: 'PERCENTAGE', rate: 0, base: 'TOTAL' }),
-  contractTemplates: z.record(z.string().max(12000)).default({}),
-  messageTemplates: z.record(z.string().max(2000)).default({}),
-}).strict();
-const financialSettingsUpdateSchema = z.object({ settings: financialSettingsSchema, reason: z.string().trim().min(5).max(500) }).strict();
-const financialHolidaySchema = z.object({ date: z.coerce.date(), type: z.enum(['NATIONAL', 'STATE', 'MUNICIPAL', 'CUSTOM']), name: z.string().trim().min(2).max(160), region: z.string().trim().max(120).nullable().optional(), isActive: z.boolean().default(true), reason: z.string().trim().min(5).max(500) }).strict();
 const loanConfigurationSchema = z.object({
   modality: loanModality,
   displayName: z.string().trim().min(2).max(120),
@@ -494,9 +476,6 @@ module.exports = {
   statementImportSchema,
   pushSubscriptionSchema,
   pushUnsubscribeSchema,
-  financialSettingsSchema,
-  financialSettingsUpdateSchema,
-  financialHolidaySchema,
   loanConfigurationSchema,
   loanSimulationSchema,
   loanConfirmationSchema,

@@ -68,13 +68,6 @@ enum LoanModality {
   RENEWAL
 }
 
-enum FinancialHolidayType {
-  NATIONAL
-  STATE
-  MUNICIPAL
-  CUSTOM
-}
-
 enum PaymentStatus {
   PENDING
   PARTIAL
@@ -306,9 +299,6 @@ model User {
   financialMovements  FinancialMovement[]
   financialCashClosings FinancialCashClosing[]
   loanModalityConfigurations LoanModalityConfiguration[]
-  financialSettingsVersions FinancialSettingsVersion[] @relation("FinancialSettingsOwner")
-  financialSettingsChanges FinancialSettingsVersion[] @relation("FinancialSettingsActor")
-  financialHolidays FinancialHoliday[]
   loanContracts LoanContract[]
   installmentPaymentsCreated InstallmentPayment[] @relation("InstallmentPaymentCreatedBy")
   installmentPayments InstallmentPayment[]
@@ -519,37 +509,6 @@ model LoanModalityConfiguration {
 
   @@unique([userId, modality])
   @@index([userId, isActive])
-}
-
-model FinancialSettingsVersion {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  version     Int
-  settings    Json
-  reason      String   @db.VarChar(500)
-  createdById String   @db.Uuid
-  createdAt   DateTime @default(now())
-  user        User     @relation("FinancialSettingsOwner", fields: [userId], references: [id], onDelete: Cascade)
-  createdBy   User     @relation("FinancialSettingsActor", fields: [createdById], references: [id], onDelete: Restrict)
-
-  @@unique([userId, version])
-  @@index([userId, createdAt])
-}
-
-model FinancialHoliday {
-  id        String               @id @default(uuid()) @db.Uuid
-  userId    String               @db.Uuid
-  date      DateTime
-  type      FinancialHolidayType
-  name      String               @db.VarChar(160)
-  region    String?              @db.VarChar(120)
-  isActive  Boolean              @default(true)
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, date, type, name])
-  @@index([userId, date, isActive])
 }
 
 model LoanContract {

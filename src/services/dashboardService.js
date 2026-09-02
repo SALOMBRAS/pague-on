@@ -108,6 +108,11 @@ function rangeFor(query = {}) {
   const now = new Date(); const today = startOfUtcDay(now); const period = query.period || 'MONTH';
   if (period === 'TODAY') return { start: today, end: endOfUtcDay(today) };
   if (period === 'WEEK') return { start: addDays(today, -6), end: endOfUtcDay(today) };
+  if (period === 'QUARTER') {
+    const quarterStartMonth = Math.floor(today.getUTCMonth() / 3) * 3;
+    return { start: new Date(Date.UTC(today.getUTCFullYear(), quarterStartMonth, 1)), end: endOfUtcDay(today) };
+  }
+  if (period === 'YEAR') return { start: new Date(Date.UTC(today.getUTCFullYear(), 0, 1)), end: endOfUtcDay(today) };
   if (period === 'CUSTOM') return { start: startOfUtcDay(`${query.startDate}T00:00:00.000Z`), end: endOfUtcDay(`${query.endDate}T00:00:00.000Z`) };
   return { start: new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)), end: endOfUtcDay(today) };
 }

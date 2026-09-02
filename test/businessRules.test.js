@@ -167,6 +167,8 @@ test('valida o período personalizado do dashboard no backend', () => {
   assert.equal(dashboardQuerySchema.safeParse({ period: 'CUSTOM', startDate: '2026-08-01', endDate: '2026-08-31' }).success, true);
   assert.equal(dashboardQuerySchema.safeParse({ period: 'CUSTOM', startDate: '2026-08-31', endDate: '2026-08-01' }).success, false);
   assert.equal(dashboardQuerySchema.safeParse({ period: 'CUSTOM', startDate: '2026-08-01' }).success, false);
+  assert.equal(dashboardQuerySchema.safeParse({ period: 'QUARTER' }).success, true);
+  assert.equal(dashboardQuerySchema.safeParse({ period: 'YEAR' }).success, true);
   const range = rangeFor({ period: 'CUSTOM', startDate: '2026-08-01', endDate: '2026-08-31' });
   assert.equal(range.start.toISOString(), '2026-08-01T00:00:00.000Z');
   assert.equal(range.end.toISOString(), '2026-08-31T23:59:59.999Z');

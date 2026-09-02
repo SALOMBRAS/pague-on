@@ -8,16 +8,38 @@
   const mobileSteps = [
     { action: 'home', target: '#financial-dashboard .financial-title, .top', title: 'Bem-vindo ao Pague-On', text: 'Veja quanto você tem para receber e o que está vencido, tudo em um só lugar.' },
     { action: 'home', target: '#centerAdd', title: 'Adicione uma conta', text: 'Toque no + para criar uma cobrança, produto, empréstimo ou outro registro.' },
-    { action: 'caixa', target: '.bottom-nav .nav[data-nav="caixa"]', title: 'Acompanhe o caixa', text: 'Cobranças, parcelas, pagamentos e pendências ficam aqui.' },
-    { action: 'estoque', target: '.bottom-nav .nav[data-nav="stock"]', title: 'Controle o estoque', text: 'Cadastre produtos, acompanhe quantidades e veja a margem das vendas.' },
+    { action: 'caixa', target: '.cash-attention', title: 'O que precisa de atenção', text: 'A fila no topo sempre mostra primeiro o que vence hoje e o que está atrasado.' },
+    { action: 'caixa', target: '.attention-card.overdue', title: 'Resolva atrasadas primeiro', text: 'Toque em Atrasadas para filtrar a lista e agir nas pendências.' },
+    { action: 'caixa', target: '#cashFilterBtn', title: 'Use filtros quando precisar', text: 'Abra os filtros para escolher período ou categoria, sem ocupar espaço na tela.' },
+    { action: 'caixa', target: '.cash-mobile-fab', title: 'Nova movimentação', text: 'Use o botão + para registrar uma entrada, saída ou nova cobrança.' },
+    { action: 'wealth', target: '.wealth-net-worth', title: 'Patrimônio líquido', text: 'Aqui você vê a soma de tudo que possui, descontando suas pendências.' },
+    { action: 'wealth', target: '.wealth-distribution', title: 'Veja a distribuição', text: 'O gráfico mostra onde seu patrimônio está concentrado. Toque em um tipo para filtrar os bens.' },
+    { action: 'wealth', target: '.wealth-add', title: 'Adicione um bem', text: 'Cadastre um bem com o valor de hoje, o valor pago e a data de aquisição.' },
+    { action: 'goals', target: '.goals-status-summary', title: 'Metas organizadas por status', text: 'As metas em risco aparecem primeiro para você saber onde agir agora.' },
+    { action: 'goals', target: '.goals-filter-chips', title: 'Filtre pelo que precisa de atenção', text: 'Use No ritmo, Atenção e Em risco para acompanhar cada objetivo.' },
+    { action: 'goals', target: '.goals-add', title: 'Deposite e acompanhe', text: 'Abra uma meta para depositar. A previsão usa o ritmo médio dos seus depósitos.' },
+    { action: 'estoque', target: '.stock-attention', title: 'O que precisa de reposição', text: 'Os alertas aparecem antes do catálogo para você agir no que está parado ou em falta.' },
+    { action: 'estoque', target: '.stock-alert.restock', title: 'Filtre por reposição', text: 'Toque em Reposição necessária para mostrar apenas produtos sem unidades.' },
+    { action: 'estoque', target: '.stock-quick-actions', title: 'Registre movimentações', text: 'Registre uma entrada ou uma saída sem precisar procurar o produto no catálogo.' },
     { action: 'profile', target: '.bottom-nav .nav[data-nav="profile"]', title: 'Tudo no Perfil', text: 'Preferências, segurança, notificações, metas, relatórios e cobradores.' }
   ];
 
   const desktopSteps = [
     { action: 'home', target: '.desk-top', title: 'Bem-vindo ao Pague-On', text: 'Este painel concentra tudo que você precisa para acompanhar o dinheiro.' },
     { action: 'home', target: '#deskNewCharge', title: 'Nova operação', text: 'Crie uma cobrança, venda ou empréstimo em poucos passos. O atalho é N.' },
-    { action: 'caixa', target: '.side-nav .nav[data-nav="caixa"]', title: 'Caixa', text: 'Consulte cobranças, parcelas e pagamentos sem sair do controle financeiro.' },
-    { action: 'estoque', target: '.side-nav .nav[data-nav="stock"]', title: 'Estoque', text: 'Cadastre produtos, acompanhe as quantidades e analise suas margens.' },
+    { action: 'caixa', target: '.cash-attention', title: 'O que precisa de atenção', text: 'A fila no topo sempre mostra primeiro o que vence hoje e o que está atrasado.' },
+    { action: 'caixa', target: '.attention-card.overdue', title: 'Resolva atrasadas primeiro', text: 'Clique em Atrasadas para filtrar a lista e agir nas pendências.' },
+    { action: 'caixa', target: '.cash-filter-sidebar', title: 'Filtros organizados', text: 'Os filtros ficam recolhidos à esquerda para não competir com suas movimentações.' },
+    { action: 'caixa', target: '#deskNewCharge', title: 'Nova movimentação', text: 'Crie uma nova movimentação a qualquer momento. O atalho é N.' },
+    { action: 'wealth', target: '.wealth-net-worth', title: 'Patrimônio líquido', text: 'Aqui você vê a soma de tudo que possui, descontando suas pendências.' },
+    { action: 'wealth', target: '.wealth-distribution', title: 'Veja a distribuição', text: 'O gráfico mostra onde seu patrimônio está concentrado. Clique em um tipo para filtrar os bens.' },
+    { action: 'wealth', target: '.wealth-add', title: 'Adicione um bem', text: 'Cadastre um bem com o valor de hoje, o valor pago e a data de aquisição.' },
+    { action: 'goals', target: '.goals-status-summary', title: 'Metas organizadas por status', text: 'As metas em risco aparecem primeiro para você saber onde agir agora.' },
+    { action: 'goals', target: '.goals-filter-chips', title: 'Filtre pelo que precisa de atenção', text: 'Use No ritmo, Atenção e Em risco para acompanhar cada objetivo.' },
+    { action: 'goals', target: '.goals-add', title: 'Deposite e acompanhe', text: 'Abra uma meta para depositar. A previsão usa o ritmo médio dos seus depósitos.' },
+    { action: 'estoque', target: '.stock-attention', title: 'O que precisa de reposição', text: 'Os alertas aparecem antes do catálogo para você agir no que está parado ou em falta.' },
+    { action: 'estoque', target: '.stock-alert.restock', title: 'Filtre por reposição', text: 'Clique em Reposição necessária para mostrar apenas produtos sem unidades.' },
+    { action: 'estoque', target: '.stock-quick-actions', title: 'Registre movimentações', text: 'Registre uma entrada ou uma saída sem precisar procurar o produto no catálogo.' },
     { action: 'profile', target: '.side-nav .nav[data-nav="profile"]', title: 'Perfil', text: 'Gerencie segurança, notificações e as preferências da sua conta.' }
   ];
 

@@ -9,16 +9,22 @@ const css = fs.readFileSync(path.join(publicDir, 'onboarding.css'), 'utf8');
 const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
 const serviceWorker = fs.readFileSync(path.join(publicDir, 'sw.js'), 'utf8');
 
-test('tour keeps separate, short desktop and mobile step sets (5 steps)', () => {
+test('tour keeps desktop and mobile steps focused on the priority queue', () => {
   assert.match(tour, /const mobileSteps = \[/);
   assert.match(tour, /const desktopSteps = \[/);
   assert.match(tour, /MOBILE_QUERY = '\(max-width: 1023px\)'/);
-  assert.match(tour, /data-nav="stock"/);
   assert.match(tour, /pagueon_tour_completed_v6/);
   assert.match(tour, /Bem-vindo ao Pague-On/);
   assert.match(tour, /Adicione uma conta/);
-  assert.match(tour, /Acompanhe o caixa/);
-  assert.match(tour, /Controle o estoque/);
+  assert.match(tour, /O que precisa de atenção/);
+  assert.match(tour, /Resolva atrasadas primeiro/);
+  assert.match(tour, /Use filtros quando precisar/);
+  assert.match(tour, /\.cash-attention/);
+  assert.match(tour, /\.attention-card\.overdue/);
+  assert.match(tour, /#cashFilterBtn/);
+  assert.match(tour, /O que precisa de reposição/);
+  assert.match(tour, /Filtre por reposição/);
+  assert.match(tour, /\.stock-attention/);
   assert.match(tour, /Tudo no Perfil/);
   assert.match(tour, /pagueOnAuth\?\.getUser/);
   assert.match(tour, /autoStartedFor/);
@@ -52,8 +58,14 @@ test('tour is non-blocking: skippable, no inert, keyboard accessible', () => {
 
 test('tour CSS is present in the application and its offline shell', () => {
   assert.match(html, /href="\/onboarding\.css"/);
+  assert.match(html, /href="\/caixa-attention\.css"/);
+  assert.match(html, /href="\/stock-attention\.css"/);
+  assert.match(html, /href="\/goals-status\.css"/);
   assert.match(html, /href="\/financial-settings\.css"/);
   assert.match(serviceWorker, /'\/onboarding\.css'/);
+  assert.match(serviceWorker, /'\/caixa-attention\.css'/);
+  assert.match(serviceWorker, /'\/stock-attention\.css'/);
+  assert.match(serviceWorker, /'\/goals-status\.css'/);
   assert.match(serviceWorker, /'\/financial-settings\.css'/);
   assert.match(serviceWorker, /'\/financial-settings\.js'/);
   assert.match(serviceWorker, /'\/assets\/pague-mascot-v1\.png'/);

@@ -11,7 +11,7 @@ test('a nova operação mantém CTA único e diálogo acessível', () => {
   const app = read('public/app.js');
   const quickOperation = read('public/quick-operation.js');
 
-  assert.match(html, /Nova operação/);
+  assert.match(html, /Nova movimentação/);
   assert.match(html, /quick-operation\.css/);
   assert.match(html, /quick-operation\.js/);
   assert.match(app, /openPrimaryOperation/);

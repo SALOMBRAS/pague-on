@@ -1,6 +1,6 @@
 // Versão deliberada do shell: obriga a troca atômica do cache depois da
 // correção do bootstrap de autenticação, evitando que mobile execute JS antigo.
-const CACHE_NAME = 'pagueon-shell-v28';
+const CACHE_NAME = 'pagueon-shell-v30';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -16,6 +16,10 @@ const APP_SHELL = [
   '/desktop-shell.css',
   '/mobile-shell.css',
   '/desktop-financial-dashboard.css',
+  '/caixa-attention.css',
+  '/stock-attention.css',
+  '/wealth-overview.css',
+  '/goals-status.css',
   '/onboarding.css',
   '/financial-settings.css',
   '/assets/pague-mascot-v1.png',

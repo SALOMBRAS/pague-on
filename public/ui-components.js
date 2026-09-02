@@ -100,7 +100,7 @@
       '<div class="description">“' + esc(debt.description) + '”</div>' +
       '<div class="amountline"><span class="value">' + format(debt.amount) + '</span></div>' +
       '<div class="due-chip ' + tone + '" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + progress + '" aria-label="' + label + '"><span>' + dueTxt + ' · ' + label + '</span></div>' +
-      '<div class="actions">' + (debt.paymentType === 'INSTALLMENT' ? '<button class="small-btn" data-detail="' + debt.id + '">▤ Ver parcelas</button>' : '') + (receive ? '<button class="small-btn collect" data-action="collect" data-id="' + debt.id + '">💬 Cobrar</button>' : '') + '<button class="small-btn pay ' + (receive ? '' : 'out') + '" data-action="done" data-id="' + debt.id + '">✓ ' + (receive ? 'Receber' : 'Pagar') + '</button></div>' +
+      '<div class="actions">' + (debt.paymentType === 'INSTALLMENT' ? '<button class="small-btn" data-installments="' + debt.id + '">▤ Ver parcelas</button>' : '') + (receive ? '<button class="small-btn collect" data-action="collect" data-id="' + debt.id + '">💬 Cobrar</button>' : '') + '<button class="small-btn pay ' + (receive ? '' : 'out') + '" data-action="done" data-id="' + debt.id + '">✓ ' + (receive ? 'Receber' : 'Pagar') + '</button></div>' +
       '<div class="due-progress"><i style="width:' + progress + '%;background:' + toneColor + '"></i></div>' +
       '</div>' +
       '</article>';

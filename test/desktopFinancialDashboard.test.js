@@ -10,8 +10,8 @@ const serviceWorker = fs.readFileSync(path.join(publicDir, 'sw.js'), 'utf8');
 
 test('financial dashboard has a desktop-only dark neon treatment', () => {
   assert.match(css, /@media \(min-width: 1024px\)/);
-  assert.match(css, /#homeView \.financial-filters/);
-  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /#homeView \.financial-grid/);
+  assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(css, /var\(--glow-primary\)/);
 });
 

@@ -1,123 +1,119 @@
 (() => {
-  const api = () => location.port === '5500' ? 'http://localhost:3000/api/v1' : '/api/v1';
   const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const escapeHtml = (value) => String(value || '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
-  let lastKey = '';
+  const periodOptions = [['TODAY', 'Hoje'], ['WEEK', 'Semana'], ['MONTH', 'Mês'], ['QUARTER', 'Trimestre'], ['YEAR', 'Ano'], ['CUSTOM', 'Período']];
+  const dashboardCache = new Map();
   let inFlight = null;
+  let baseData = null;
+  let drillState = null;
+  let drillReturnFocus = null;
 
-  function card(label, value, report) {
-    return `<button class="financial-card" type="button" data-financial-report="${report}" aria-label="${label}: ${money(value)}. Abrir relatório detalhado"><span>${label}</span><b>${money(value)}</b><small>Ver relatório</small></button>`;
+  const icons = {
+    cash: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M16 14h2"/></svg>',
+    receivable: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v10m-3-3 3 3 3-3"/></svg>',
+    received: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 17V7m-3 3 3-3 3 3"/></svg>',
+    calendar: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M4 10h16"/></svg>',
+    customers: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.6-5.5 6-5.5s6 2.2 6 5.5M17 7a3 3 0 0 1 0 6m3 7c0-2.3-1.2-4.1-3.2-5"/></svg>',
+    overdue: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 22 20H2L12 3Z"/><path d="M12 9v4m0 3h.01"/></svg>'
+  };
+
+  const cards = [
+    { key: 'cash', label: 'Caixa', icon: 'cash', tone: 'primary', report: 'cashflow', note: (data) => `Capital em circulação: ${money(data.metrics.capitalInCirculation)}` },
+    { key: 'totalReceivable', label: 'Total a receber', icon: 'receivable', tone: 'secondary', report: 'receivables', note: () => 'Contas abertas para receber', alert: (data) => Number(data.metrics.overdueTotal) > 0 ? `Vencido: ${money(data.metrics.overdueTotal)}` : '' },
+    { key: 'received', label: 'Recebido', icon: 'received', tone: 'primary', report: 'cashflow', note: () => 'Recebido no mês atual' },
+    { key: 'due', label: 'A receber', icon: 'calendar', tone: 'warning', report: 'receivables', note: () => 'Vencimentos do mês atual' },
+    { key: 'customers', label: 'Clientes & empréstimos', icon: 'customers', tone: 'secondary', report: 'customers', note: (data) => count(data.metrics.activeLoans, 'empréstimo ativo', 'empréstimos ativos'), valueType: 'count' },
+    { key: 'overdue', label: 'Vencido', icon: 'overdue', tone: 'danger', report: 'overdue', note: () => 'Cobranças que exigem atenção' }
+  ];
+
+  function count(value, singular, plural) { return `${Number(value || 0)} ${Number(value || 0) === 1 ? singular : plural}`; }
+  function periodLabel(period) { return Object.fromEntries(periodOptions)[period] || 'Mês'; }
+  function periodDate(value) { return value ? new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : ''; }
+
+  function metricValue(card, data, period = 'MONTH') {
+    const metrics = data.metrics || {}; const selected = period || 'MONTH';
+    if (card.key === 'cash') return Number(metrics.availableCash || 0);
+    if (card.key === 'totalReceivable') return Number(metrics.totalReceivable || 0);
+    if (card.key === 'customers') return Number(metrics.activeCustomers || 0);
+    if (card.key === 'overdue') return Number(metrics.overdueTotal || 0);
+    if (card.key === 'received') {
+      if (selected === 'TODAY') return Number(metrics.receivedToday || 0);
+      if (selected === 'WEEK') return Number(metrics.receivedWeek || 0);
+      if (selected === 'MONTH') return Number(metrics.receivedMonth || 0);
+      return Number(data.charts?.forecastVsReceived?.received || 0);
+    }
+    if (selected === 'TODAY') return Number(metrics.dueToday || 0);
+    if (selected === 'WEEK') return Number(metrics.dueWeek || 0);
+    if (selected === 'MONTH') return Number(metrics.dueMonth || 0);
+    return Number(data.charts?.forecastVsReceived?.expected || 0);
   }
 
-  function selected(value, expected) { return value === expected ? ' selected' : ''; }
+  function formatCardValue(card, value) { return card.valueType === 'count' ? count(value, 'cliente ativo', 'clientes ativos') : money(value); }
 
-  function queryFrom(form) {
-    const data = new FormData(form);
-    const params = new URLSearchParams();
-    const period = data.get('period') || 'MONTH';
-    params.set('period', period);
-    ['cashAccountId', 'collectorId', 'status'].forEach((name) => { if (data.get(name)) params.set(name, data.get(name)); });
-    if (period === 'CUSTOM') ['startDate', 'endDate'].forEach((name) => { if (data.get(name)) params.set(name, data.get(name)); });
-    return params.toString();
-  }
-
-  function openReport(report) {
-    document.querySelector('[data-nav="caixa"]')?.click();
-    document.dispatchEvent(new CustomEvent('pagueon:financial-report', { detail: { report } }));
+  function dashboardCard(card, data) {
+    const value = metricValue(card, data, 'MONTH'); const alert = card.alert?.(data) || '';
+    return `<button class="financial-card financial-card--${card.tone}" type="button" data-dashboard-card="${card.key}" aria-label="${card.label}: ${formatCardValue(card, value)}. Abrir detalhes"><span class="financial-card__top"><span class="financial-card__label">${card.label}</span><i class="financial-card__icon">${icons[card.icon]}</i></span><strong>${formatCardValue(card, value)}</strong><small>${escapeHtml(card.note(data))}</small>${alert ? `<em class="financial-card__alert">${escapeHtml(alert)}</em>` : '<em class="financial-card__hint">Ver detalhes</em>'}</button>`;
   }
 
   function ensurePanel(host) {
-    const panels = [...host.querySelectorAll('#financial-dashboard')];
-    panels.slice(1).forEach((panel) => panel.remove());
-    if (panels[0]) return;
+    const panels = [...host.querySelectorAll('#financial-dashboard')]; panels.slice(1).forEach((panel) => panel.remove());
+    if (panels[0]) return panels[0];
     host.innerHTML = `<section id="financial-dashboard" data-query="period=MONTH" aria-busy="true"><style>
-      .financial-retry{min-height:44px;margin-top:12px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font-weight:700}
-      .financial-loading{display:grid;place-items:center;min-height:220px;padding:24px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,var(--surface),transparent);text-align:center}
-      .financial-loading-art{position:relative;width:116px;height:86px;margin:0 auto 13px;color:var(--green)}
-      .financial-wallet{position:absolute;inset:28px 8px 4px;border:2px solid currentColor;border-radius:14px;background:color-mix(in srgb,var(--green) 10%,var(--surface));overflow:hidden}
-      .financial-wallet::after{content:'';position:absolute;right:10px;top:15px;width:8px;height:8px;border-radius:50%;background:currentColor}
-      .financial-note{position:absolute;left:46px;top:0;width:28px;height:21px;border:2px solid currentColor;border-radius:5px;background:var(--surface);animation:financial-note-drop 1.25s ease-in-out infinite}
-      .financial-note::after{content:'R$';position:absolute;inset:0;display:grid;place-items:center;font-size:8px;font-weight:800}
-      .financial-loading p{margin:0;color:var(--muted);font-size:13px}.financial-loading strong{display:block;margin-bottom:4px;color:var(--text);font-size:15px}
-      @keyframes financial-note-drop{0%,100%{transform:translateY(0);opacity:.7}48%{transform:translateY(34px);opacity:1}60%{transform:translateY(29px)}}
-      @media(prefers-reduced-motion:reduce){.financial-note{animation:none}}
-    </style><h2 class="financial-title">Resumo financeiro</h2><div class="financial-loading" role="status" aria-live="polite"><div><div class="financial-loading-art" aria-hidden="true"><i class="financial-note"></i><i class="financial-wallet"></i></div><strong>Preparando seu resumo</strong><p data-financial-loading-status>Buscando os valores mais recentes com segurança.</p></div></div></section>`;
+      #financial-dashboard{margin:0 0 24px}.financial-title{margin:0 0 6px;font-size:clamp(1.25rem,3vw,1.7rem);letter-spacing:-.03em}.financial-subtitle{margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.5}.financial-loading{display:grid;place-items:center;min-height:220px;padding:24px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,var(--surface),transparent);text-align:center}.financial-loading-art{position:relative;width:116px;height:86px;margin:0 auto 13px;color:var(--green)}.financial-wallet{position:absolute;inset:28px 8px 4px;border:2px solid currentColor;border-radius:14px;background:color-mix(in srgb,var(--green) 10%,var(--surface));overflow:hidden}.financial-wallet::after{content:'';position:absolute;right:10px;top:15px;width:8px;height:8px;border-radius:50%;background:currentColor}.financial-note{position:absolute;left:46px;top:0;width:28px;height:21px;border:2px solid currentColor;border-radius:5px;background:var(--surface);animation:financial-note-drop 1.25s ease-in-out infinite}.financial-note::after{content:'R$';position:absolute;inset:0;display:grid;place-items:center;font-size:8px;font-weight:800}.financial-loading p{margin:0;color:var(--muted);font-size:13px}.financial-loading strong{display:block;margin-bottom:4px;color:var(--text);font-size:15px}.financial-retry{min-height:44px;margin-top:12px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font-weight:700}@keyframes financial-note-drop{0%,100%{transform:translateY(0);opacity:.7}48%{transform:translateY(34px);opacity:1}60%{transform:translateY(29px)}}.financial-grid{display:grid;grid-template-columns:1fr;gap:12px}.financial-card{position:relative;display:grid;min-height:148px;padding:20px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--text);text-align:left;cursor:pointer;overflow:hidden}.financial-card::before{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:var(--green);opacity:.9}.financial-card--secondary::before{background:#65d9ff}.financial-card--warning::before{background:var(--amber)}.financial-card--danger::before{background:var(--red)}.financial-card__top{display:flex;align-items:center;justify-content:space-between;gap:12px}.financial-card__label{color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.financial-card__icon{width:24px;height:24px;color:var(--green)}.financial-card--secondary .financial-card__icon{color:#65d9ff}.financial-card--warning .financial-card__icon{color:var(--amber)}.financial-card--danger .financial-card__icon{color:var(--red)}.financial-card__icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.financial-card strong{align-self:end;margin-top:14px;font-size:clamp(1.55rem,5vw,2rem);font-variant-numeric:tabular-nums;letter-spacing:-.04em}.financial-card small{margin-top:7px;color:var(--muted);font-size:13px}.financial-card em{margin-top:12px;font-size:12px;font-style:normal;font-weight:750}.financial-card__hint{color:var(--green)}.financial-card__alert{width:max-content;max-width:100%;padding:5px 8px;border-radius:999px;background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}.financial-card:focus-visible,.dashboard-drill button:focus-visible,.dashboard-drill input:focus-visible{outline:3px solid color-mix(in srgb,var(--green) 52%,transparent);outline-offset:2px}@media(min-width:680px){.financial-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(prefers-reduced-motion:no-preference){.financial-card{transition:transform 160ms ease,border-color 160ms ease,box-shadow 160ms ease}.financial-card:hover{border-color:color-mix(in srgb,var(--green) 50%,var(--line));box-shadow:var(--glow-primary);transform:translateY(-2px)}}@media(prefers-reduced-motion:reduce){.financial-note{animation:none}.financial-card{transition:none}}</style><h2 class="financial-title">Visão financeira</h2><p class="financial-subtitle">O essencial do mês atual. Abra um card para explorar períodos e detalhes.</p><div class="financial-loading" role="status" aria-live="polite"><div><div class="financial-loading-art" aria-hidden="true"><i class="financial-note"></i><i class="financial-wallet"></i></div><strong>Preparando seu resumo</strong><p data-financial-loading-status>Buscando os valores mais recentes com segurança.</p></div></div></section>`;
+    const styles = host.querySelector('#financial-dashboard style');
+    if (styles && !document.getElementById('financialDashboardStyles')) { styles.id = 'financialDashboardStyles'; document.head.append(styles); }
+    return host.querySelector('#financial-dashboard');
   }
+
+  function queryFor(period, custom = {}) { const params = new URLSearchParams({ period }); if (period === 'CUSTOM' && custom.startDate && custom.endDate) { params.set('startDate', custom.startDate); params.set('endDate', custom.endDate); } return params; }
+  async function fetchDashboard(params) { const key = params.toString(); if (dashboardCache.has(key)) return dashboardCache.get(key); if (inFlight?.key === key) return inFlight.promise; const request = window.pagueOnApi.get(`/dashboard/financial?${key}`).then((data) => { dashboardCache.set(key, data); return data; }); inFlight = { key, promise: request }; try { return await request; } finally { if (inFlight?.promise === request) inFlight = null; } }
 
   async function render() {
-    const host = document.getElementById('homeView');
-    if (!host) return;
-    ensurePanel(host);
-    if (!window.pagueOnAuth?.getToken?.()) return;
-    const existing = host.querySelector('#financial-dashboard');
-    const params = new URLSearchParams(existing?.dataset.query || 'period=MONTH');
-    const key = params.toString();
-    if (key === lastKey && existing) return;
-    if (inFlight?.key === key) return inFlight.promise;
-    lastKey = key;
+    const host = document.getElementById('homeView'); if (!host || !window.pagueOnAuth?.getToken?.()) return;
+    const existing = ensurePanel(host); const params = queryFor('MONTH');
+    if (existing.dataset.query === params.toString() && existing.querySelector('.financial-grid')) return;
     const startedAt = performance.now();
-    const load = (async () => {
-      let data;
-      try {
-        // Usa o cliente central: token, renovação e timeout seguem a mesma regra
-        // de todas as chamadas autenticadas.
-        data = await window.pagueOnApi.get(`/dashboard/financial?${params}`);
-        console.info('[DASHBOARD] loaded', { durationMs: Math.round(performance.now() - startedAt) });
-      } catch (error) {
-        // Falha de rede ou timeout sempre sai do estado de carregamento.
-        if (lastKey !== key) return;
-        lastKey = '';
-        existing.setAttribute('aria-busy', 'false');
-        const status = existing.querySelector('[data-financial-loading-status]');
-        if (status) status.textContent = error?.code === 'API_TIMEOUT' ? 'O carregamento demorou mais que o esperado. Tente novamente.' : 'Não foi possível atualizar agora. Seus dados aparecerão quando a conexão for restabelecida.';
-        const retry = document.createElement('button');
-        retry.type = 'button'; retry.className = 'financial-retry'; retry.textContent = 'Tentar novamente';
-        retry.onclick = () => render();
-        existing.querySelector('.financial-retry')?.remove();
-        (existing.querySelector('.financial-loading > div') || existing).append(retry);
-        console.info('[DASHBOARD] load_error', { code: error?.code || error?.name || 'NETWORK_ERROR', durationMs: Math.round(performance.now() - startedAt) });
-        return;
-      }
-    if (lastKey !== key) return;
-    const period = data.filters.period || 'MONTH';
-    const collectors = data.filters.collectors || [];
-    const section = document.createElement('section');
-    section.id = 'financial-dashboard';
-    section.dataset.query = key;
-    section.innerHTML = `
-      <style>
-        #financial-dashboard{margin:0 0 24px}.financial-title{margin:0 0 12px;font-size:18px}
-        .financial-filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;align-items:end}.financial-filters fieldset{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;border:0}.financial-filters label{display:grid;gap:4px;color:var(--muted);font-size:12px}
-        .financial-filters button,.financial-filters select,.financial-filters input{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);padding:0 12px}.financial-filters button,.financial-card{cursor:pointer}.financial-filters button:hover,.financial-card:hover{border-color:var(--green)}.financial-filters button:focus-visible,.financial-filters select:focus-visible,.financial-filters input:focus-visible,.financial-card:focus-visible{outline:3px solid color-mix(in srgb,var(--green) 45%,transparent);outline-offset:2px}.financial-filters button[aria-pressed=true]{border-color:var(--green);color:var(--green);font-weight:700}.financial-custom[hidden]{display:none}
-        .financial-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.financial-card{min-height:112px;border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--surface);color:var(--text);text-align:left}.financial-card span,.financial-card small{display:block;color:var(--muted);font-size:12px}.financial-card b{display:block;margin:9px 0 6px;font-size:18px;line-height:1.15}.financial-card small{color:var(--green)}
-        @media(min-width:760px){.financial-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:374px){.financial-grid{grid-template-columns:1fr}}@media(prefers-reduced-motion:no-preference){.financial-card{transition:border-color 140ms ease,box-shadow 140ms ease}.financial-card:hover{box-shadow:0 5px 14px color-mix(in srgb,var(--text) 9%,transparent)}}
-      </style>
-      <h2 class="financial-title">Resumo financeiro</h2>
-      <form class="financial-filters" aria-label="Filtros financeiros">
-        <fieldset aria-label="Período"><button type="button" data-period="TODAY" aria-pressed="${period === 'TODAY'}">Hoje</button><button type="button" data-period="WEEK" aria-pressed="${period === 'WEEK'}">Semana</button><button type="button" data-period="MONTH" aria-pressed="${period === 'MONTH'}">Mês</button><button type="button" data-period="CUSTOM" aria-pressed="${period === 'CUSTOM'}">Período</button></fieldset>
-        <input type="hidden" name="period" value="${escapeHtml(period)}">
-        <span class="financial-custom" ${period === 'CUSTOM' ? '' : 'hidden'}><label>Início<input name="startDate" type="date" value="${period === 'CUSTOM' ? escapeHtml(String(data.filters.startDate).slice(0, 10)) : ''}" required></label><label>Fim<input name="endDate" type="date" value="${period === 'CUSTOM' ? escapeHtml(String(data.filters.endDate).slice(0, 10)) : ''}" required></label></span>
-        <label>Caixa<select name="cashAccountId"><option value="">Todos os caixas</option>${data.accounts.map((account) => `<option value="${account.id}"${selected(params.get('cashAccountId'), account.id)}>${escapeHtml(account.name)}</option>`).join('')}</select></label>
-        <label>Cobrador<select name="collectorId"><option value="">Todos os cobradores</option>${collectors.map((collector) => `<option value="${collector.id}"${selected(params.get('collectorId'), collector.id)}>${escapeHtml(collector.name)}</option>`).join('')}</select></label>
-        <label>Situação<select name="status"><option value="">Todas as situações</option>${[['PENDING','Pendente'],['PARTIAL','Parcial'],['OVERDUE','Vencido'],['PAID','Pago'],['CANCELLED','Cancelado']].map(([value,label]) => `<option value="${value}"${selected(params.get('status'), value)}>${label}</option>`).join('')}</select></label>
-      </form>
-      <div class="financial-grid">
-        ${card('Disponível em caixa', data.metrics.availableCash, 'cashflow')}${card('Capital em circulação', data.metrics.capitalInCirculation, 'loans')}${card('Total a receber', data.metrics.totalReceivable, 'receivables')}${card('Recebido hoje', data.metrics.receivedToday, 'cashflow')}${card('A receber hoje', data.metrics.dueToday, 'receivables')}${card('Recebido nesta semana', data.metrics.receivedWeek, 'cashflow')}${card('A receber nesta semana', data.metrics.dueWeek, 'receivables')}${card('Recebido neste mês', data.metrics.receivedMonth, 'cashflow')}${card('A receber neste mês', data.metrics.dueMonth, 'receivables')}${card('Total vencido', data.metrics.overdueTotal, 'overdue')}${card('Clientes ativos', data.metrics.activeCustomers, 'customers')}${card('Empréstimos ativos', data.metrics.activeLoans, 'loans')}
-      </div>`;
-    existing?.replaceWith(section);
-    if (!existing) host.prepend(section);
-    const form = section.querySelector('form');
-    const apply = () => { section.dataset.query = queryFrom(form); lastKey = ''; render(); };
-    section.querySelectorAll('[data-period]').forEach((button) => { button.onclick = () => { form.elements.period.value = button.dataset.period; section.querySelector('.financial-custom').hidden = button.dataset.period !== 'CUSTOM'; if (button.dataset.period !== 'CUSTOM' || (form.elements.startDate.value && form.elements.endDate.value)) apply(); }; });
-    form.querySelectorAll('select,input[type=date]').forEach((control) => { control.onchange = () => { if (form.elements.period.value !== 'CUSTOM' || (form.elements.startDate.value && form.elements.endDate.value)) apply(); }; });
-    section.querySelectorAll('[data-financial-report]').forEach((button) => { button.onclick = () => openReport(button.dataset.financialReport); });
-    document.dispatchEvent(new CustomEvent('pagueon:financial-dashboard', { detail: { section, data } }));
-    })();
-    inFlight = { key, promise: load };
-    try { return await load; } finally { if (inFlight?.promise === load) inFlight = null; document.dispatchEvent(new CustomEvent('pagueon:financial-dashboard-settled', { detail: { key } })); }
+    try {
+      const data = await fetchDashboard(params); baseData = data;
+      const section = document.createElement('section'); section.id = 'financial-dashboard'; section.dataset.query = params.toString(); section.setAttribute('aria-busy', 'false');
+      section.innerHTML = `<h2 class="financial-title">Visão financeira</h2><p class="financial-subtitle">O essencial do mês atual. Abra um card para explorar períodos e detalhes.</p><div class="financial-grid">${cards.map((item) => dashboardCard(item, data)).join('')}</div>`;
+      existing.replaceWith(section); section.querySelectorAll('[data-dashboard-card]').forEach((button) => { button.onclick = () => openDrill(cards.find((item) => item.key === button.dataset.dashboardCard), button); });
+      console.info('[DASHBOARD] loaded', { durationMs: Math.round(performance.now() - startedAt) }); document.dispatchEvent(new CustomEvent('pagueon:financial-dashboard-settled', { detail: { key: params.toString() } }));
+    } catch (error) {
+      existing.setAttribute('aria-busy', 'false'); const status = existing.querySelector('[data-financial-loading-status]'); if (status) status.textContent = error?.code === 'API_TIMEOUT' ? 'O carregamento demorou mais que o esperado. Tente novamente.' : 'Não foi possível atualizar agora. Seus dados aparecerão quando a conexão for restabelecida.';
+      const retry = document.createElement('button'); retry.type = 'button'; retry.className = 'financial-retry'; retry.textContent = 'Tentar novamente'; retry.onclick = () => render(); (existing.querySelector('.financial-loading > div') || existing).append(retry);
+      console.info('[DASHBOARD] load_error', { code: error?.code || error?.name || 'NETWORK_ERROR', durationMs: Math.round(performance.now() - startedAt) });
+    }
   }
 
-  window.addEventListener('pagueon:auth', () => setTimeout(render, 0));
-  document.addEventListener('pagueon:dashboard-request', () => setTimeout(render, 0));
-  new MutationObserver(() => { if (document.getElementById('homeView')?.classList.contains('show')) render(); }).observe(document.body, { childList: true, subtree: true });
+  function ensureDrillRoot() { let root = document.getElementById('dashboardDrill'); if (!root) { root = document.createElement('section'); root.id = 'dashboardDrill'; root.className = 'dashboard-drill'; root.setAttribute('aria-live', 'polite'); document.body.append(root); } return root; }
+  function detailRows(card, data, period) {
+    const metrics = data.metrics || {}; const forecast = data.charts?.forecastVsReceived || {};
+    if (card.key === 'cash') return [['Disponível', money(metrics.availableCash)], ['Capital em circulação', money(metrics.capitalInCirculation)], ['Recebido no período', money(forecast.received)]];
+    if (card.key === 'totalReceivable') return [['Total em aberto', money(metrics.totalReceivable)], ['Total vencido', money(metrics.overdueTotal)], ['Previsto no período', money(forecast.expected)]];
+    if (card.key === 'received') return [['Recebido em ' + periodLabel(period).toLowerCase(), money(metricValue(card, data, period))], ['Previsto', money(forecast.expected)], ['Em aberto', money(Math.max(0, Number(forecast.expected || 0) - Number(forecast.received || 0)))]];
+    if (card.key === 'due') return [['A receber em ' + periodLabel(period).toLowerCase(), money(metricValue(card, data, period))], ['Total em aberto', money(metrics.totalReceivable)], ['Vencido', money(metrics.overdueTotal)]];
+    if (card.key === 'customers') return [['Clientes ativos', count(metrics.activeCustomers, 'cliente', 'clientes')], ['Empréstimos ativos', count(metrics.activeLoans, 'empréstimo', 'empréstimos')], ['Capital em circulação', money(metrics.capitalInCirculation)]];
+    return [['Total vencido', money(metrics.overdueTotal)], ['Total a receber', money(metrics.totalReceivable)], ['Previsto no período', money(forecast.expected)]];
+  }
+  function trendMarkup(data) { const series = (data.charts?.receipts || []).slice(-8); const largest = Math.max(1, ...series.map((item) => Number(item.value || 0))); if (!series.length) return '<p class="dashboard-drill__empty">Ainda não há movimentações registradas neste período.</p>'; return `<div class="dashboard-drill__trend" role="img" aria-label="Evolução de recebimentos: ${series.map((item) => `${periodDate(item.date)} ${money(item.value)}`).join(', ')}">${series.map((item) => `<div><i style="height:${Math.max(4, Math.round(Number(item.value || 0) / largest * 100))}%"></i><span>${periodDate(item.date)}</span></div>`).join('')}</div>`; }
+  function periodFilter(selected) { return `<div class="dashboard-drill__periods" role="group" aria-label="Selecionar período">${periodOptions.map(([value, label]) => `<button type="button" data-drill-period="${value}" aria-pressed="${selected === value}">${label}</button>`).join('')}</div>`; }
+
+  function renderDrill() {
+    const root = ensureDrillRoot(); if (!drillState) { root.classList.remove('show'); root.innerHTML = ''; return; }
+    const { card, period, data, loading, error, custom } = drillState; const activeData = data || baseData; const value = metricValue(card, activeData, period);
+    root.classList.add('show'); root.innerHTML = `<style>.dashboard-drill{position:fixed;z-index:260;inset:0;display:none}.dashboard-drill.show{display:block}.dashboard-drill__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.66);backdrop-filter:blur(4px)}.dashboard-drill__sheet{position:absolute;right:0;top:0;width:min(100%,560px);height:100%;display:flex;flex-direction:column;background:var(--bg);border-left:1px solid var(--line);box-shadow:-20px 0 50px rgba(0,0,0,.38)}.dashboard-drill__header{display:flex;align-items:flex-start;gap:12px;padding:22px;border-bottom:1px solid var(--line)}.dashboard-drill__header>div{flex:1}.dashboard-drill__handle{display:none}.dashboard-drill__eyebrow{display:block;margin-bottom:5px;color:var(--green);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.dashboard-drill h2{margin:0;font-size:22px;letter-spacing:-.03em}.dashboard-drill__close{flex:0 0 44px;width:44px;height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font-size:26px}.dashboard-drill__body{flex:1;overflow:auto;padding:20px 22px}.dashboard-drill__periods{display:flex;flex-wrap:wrap;gap:8px}.dashboard-drill__periods button,.dashboard-drill__custom button{min-height:44px;padding:0 13px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--text);font-weight:700}.dashboard-drill__periods button[aria-pressed=true]{border-color:var(--green);background:var(--green-bg);color:var(--green)}.dashboard-drill__custom{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.dashboard-drill__custom label{display:grid;gap:5px;color:var(--muted);font-size:12px}.dashboard-drill__custom input{min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;background:var(--surface);color:var(--text)}.dashboard-drill__custom button{grid-column:1/-1;border-radius:10px;background:var(--green);color:var(--on-green)}.dashboard-drill__highlight{display:grid;gap:7px;margin-top:20px;padding:18px;border:1px solid color-mix(in srgb,var(--green) 35%,var(--line));border-radius:16px;background:radial-gradient(circle at 100% 0,color-mix(in srgb,var(--green) 17%,transparent),transparent 45%),var(--surface)}.dashboard-drill__highlight span,.dashboard-drill__highlight small{color:var(--muted);font-size:12px}.dashboard-drill__highlight strong{font-size:30px;letter-spacing:-.04em;font-variant-numeric:tabular-nums}.dashboard-drill__section{margin-top:22px}.dashboard-drill__section h3{margin:0 0 10px;font-size:13px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}.dashboard-drill__trend{display:flex;align-items:end;gap:8px;min-height:132px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}.dashboard-drill__trend div{flex:1;display:grid;align-items:end;gap:7px;height:105px}.dashboard-drill__trend i{display:block;width:100%;min-height:4px;border-radius:6px 6px 2px 2px;background:var(--green)}.dashboard-drill__trend span{overflow:hidden;color:var(--muted);font-size:10px;text-align:center;text-overflow:ellipsis;white-space:nowrap}.dashboard-drill__rows{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface)}.dashboard-drill__rows div{display:flex;justify-content:space-between;gap:16px;padding:14px;border-bottom:1px solid var(--line);font-size:13px}.dashboard-drill__rows div:last-child{border-bottom:0}.dashboard-drill__rows span{color:var(--muted)}.dashboard-drill__rows b{font-variant-numeric:tabular-nums;text-align:right}.dashboard-drill__empty,.dashboard-drill__loading,.dashboard-drill__error{margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:12px;color:var(--muted);font-size:13px}.dashboard-drill__error{border-color:color-mix(in srgb,var(--red) 45%,var(--line));color:var(--red)}.dashboard-drill__footer{padding:16px 22px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg)}.dashboard-drill__footer button{width:100%;min-height:48px;border:0;border-radius:12px;background:var(--green);color:var(--on-green);font-weight:800}@media(max-width:767px){.dashboard-drill__sheet{top:auto;bottom:0;width:100%;height:min(82dvh,760px);border:1px solid var(--line);border-bottom:0;border-radius:22px 22px 0 0}.dashboard-drill__header{padding:12px 16px 16px}.dashboard-drill__handle{display:block;position:absolute;top:7px;left:50%;width:38px;height:4px;border-radius:99px;background:var(--muted);transform:translateX(-50%)}.dashboard-drill__header>div{padding-top:12px}.dashboard-drill__body{padding:16px}.dashboard-drill__periods{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.dashboard-drill__periods button{flex:0 0 auto}.dashboard-drill__footer{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}}@media(prefers-reduced-motion:no-preference){.dashboard-drill__sheet{animation:dashboard-drawer-in 180ms ease-out}@keyframes dashboard-drawer-in{from{transform:translateX(100%)}to{transform:translateX(0)}}@media(max-width:767px){.dashboard-drill__sheet{animation-name:dashboard-sheet-in}@keyframes dashboard-sheet-in{from{transform:translateY(100%)}to{transform:translateY(0)}}}}</style><div class="dashboard-drill__backdrop" data-drill-close></div><article class="dashboard-drill__sheet" role="dialog" aria-modal="true" aria-labelledby="dashboardDrillTitle"><header class="dashboard-drill__header" data-drill-drag><i class="dashboard-drill__handle" aria-hidden="true"></i><div><span class="dashboard-drill__eyebrow">${escapeHtml(periodLabel(period))}</span><h2 id="dashboardDrillTitle">${escapeHtml(card.label)}</h2></div><button type="button" class="dashboard-drill__close" data-drill-close aria-label="Fechar detalhes">×</button></header><div class="dashboard-drill__body">${periodFilter(period)}${period === 'CUSTOM' ? `<div class="dashboard-drill__custom"><label>Início<input type="date" data-drill-start value="${escapeHtml(custom.startDate || '')}"></label><label>Fim<input type="date" data-drill-end value="${escapeHtml(custom.endDate || '')}"></label><button type="button" data-drill-apply>Aplicar</button></div>` : ''}${loading ? '<p class="dashboard-drill__loading" role="status">Atualizando detalhes…</p>' : error ? `<p class="dashboard-drill__error">${escapeHtml(error)}</p>` : `<section class="dashboard-drill__highlight"><span>${escapeHtml(card.label)}</span><strong>${formatCardValue(card, value)}</strong><small>${escapeHtml(card.note(activeData))}</small></section><section class="dashboard-drill__section"><h3>Evolução</h3>${trendMarkup(activeData)}</section><section class="dashboard-drill__section"><h3>Resumo do período</h3><div class="dashboard-drill__rows">${detailRows(card, activeData, period).map(([label, amount]) => `<div><span>${escapeHtml(label)}</span><b>${escapeHtml(amount)}</b></div>`).join('')}</div></section>`}</div><footer class="dashboard-drill__footer"><button type="button" data-drill-report="${card.report}">Abrir relatório completo</button></footer></article>`;
+    root.querySelectorAll('[data-drill-close]').forEach((button) => { button.onclick = closeDrill; }); root.querySelectorAll('[data-drill-period]').forEach((button) => { button.onclick = () => setDrillPeriod(button.dataset.drillPeriod); });
+    root.querySelector('[data-drill-apply]')?.addEventListener('click', () => { const startDate = root.querySelector('[data-drill-start]').value; const endDate = root.querySelector('[data-drill-end]').value; if (startDate && endDate) setDrillPeriod('CUSTOM', { startDate, endDate }); });
+    root.querySelector('[data-drill-report]')?.addEventListener('click', () => { const report = root.querySelector('[data-drill-report]').dataset.drillReport; closeDrill(); openReport(report); }); bindSwipeToClose(root);
+  }
+
+  function openDrill(card, trigger) { if (!card || !baseData) return; drillReturnFocus = trigger || document.activeElement; drillState = { card, period: 'MONTH', data: baseData, loading: false, error: '', custom: {} }; renderDrill(); requestAnimationFrame(() => ensureDrillRoot().querySelector('[data-drill-close]')?.focus()); }
+  async function setDrillPeriod(period, custom = {}) { if (!drillState) return; drillState.period = period; drillState.custom = custom; drillState.error = ''; if (period === 'CUSTOM' && (!custom.startDate || !custom.endDate)) { renderDrill(); return; } const params = queryFor(period, custom); drillState.loading = true; renderDrill(); try { drillState.data = await fetchDashboard(params); } catch (error) { drillState.error = error?.message || 'Não foi possível carregar este período.'; } finally { if (drillState) { drillState.loading = false; renderDrill(); } } }
+  function closeDrill() { drillState = null; renderDrill(); const target = drillReturnFocus; drillReturnFocus = null; if (target?.isConnected) target.focus(); }
+  function bindSwipeToClose(root) { const header = root.querySelector('[data-drill-drag]'); if (!header) return; let startY = null; header.onpointerdown = (event) => { if (window.innerWidth > 767) return; startY = event.clientY; header.setPointerCapture?.(event.pointerId); }; header.onpointerup = (event) => { if (startY !== null && event.clientY - startY > 80) closeDrill(); startY = null; }; header.onpointercancel = () => { startY = null; }; }
+  function openReport(report) { document.querySelector('[data-nav="caixa"]')?.click(); document.dispatchEvent(new CustomEvent('pagueon:financial-report', { detail: { report } })); }
+
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && drillState) { event.preventDefault(); closeDrill(); } });
+  window.addEventListener('pagueon:auth', () => setTimeout(render, 0)); document.addEventListener('pagueon:dashboard-request', () => setTimeout(render, 0)); new MutationObserver(() => { if (document.getElementById('homeView')?.classList.contains('show')) render(); }).observe(document.body, { childList: true, subtree: true });
 })();

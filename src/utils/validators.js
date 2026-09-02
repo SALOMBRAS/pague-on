@@ -310,7 +310,7 @@ const budgetCreateSchema = z.object({ category: enums.category, month: z.coerce.
 const budgetUpdateSchema = z.object({ limitAmount: z.coerce.number().positive().max(9999999999).optional(), rollover: z.boolean().optional(), alertAt: z.coerce.number().int().min(1).max(100).optional() }).strict();
 const budgetQuerySchema = z.object({ month: z.coerce.number().int().min(1).max(12).default(new Date().getUTCMonth() + 1), year: z.coerce.number().int().min(2020).max(2200).default(new Date().getUTCFullYear()) }).strict();
 const dashboardQuerySchema = z.object({
-  period: z.enum(['TODAY', 'WEEK', 'MONTH', 'CUSTOM']).default('MONTH'),
+  period: z.enum(['TODAY', 'WEEK', 'MONTH', 'QUARTER', 'YEAR', 'CUSTOM']).default('MONTH'),
   startDate: z.string().date().optional(),
   endDate: z.string().date().optional(),
   cashAccountId: uuid.optional(),

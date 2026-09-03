@@ -68,6 +68,7 @@
     const name = String(state.draft.newCustomerName || '').trim(); const phone = String(state.draft.newCustomerPhone || '').trim();
     if (!name || !phone) throw new Error('Informe nome e telefone do novo cliente.');
     state.customer = await window.pagueOnApi.post('/customers', { name, phone }); state.newCustomer = false;
+    window.dispatchEvent(new CustomEvent('pagueon:customer-created', { detail: { customer: state.customer } }));
   }
 
   async function preview() {

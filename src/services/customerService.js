@@ -36,7 +36,10 @@ async function customerDetail(userId, id) {
 }
 
 async function createCustomer(userId, input) {
-  return prisma.customer.create({ data: { userId, ...input, status: 'PENDING_REVIEW', isActive: true } });
+  // Cadastro feito pela equipe no próprio Pague-On já é uma relação comercial
+  // validada. PENDING_REVIEW fica reservado para o fluxo de autocadastro via
+  // convite, que pode exigir conferência antes de liberar crédito.
+  return prisma.customer.create({ data: { userId, ...input, status: 'APPROVED', isActive: true, approvedAt: new Date(), approvedById: userId } });
 }
 
 async function updateCustomer(userId, id, input) {

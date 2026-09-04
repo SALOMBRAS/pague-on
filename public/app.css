@@ -148,3 +148,22 @@
 .duetracker-row .dot { width: 9px; height: 9px; } 
 .empty.small { padding: 20px; }
 .debt[role="button"], .debt:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+/* Estoque e formulários Neon — mesma leitura visual dos protótipos móveis. */
+.stock-head, .form-head { background:rgba(0,0,0,.94); }
+.stock-tabs { border-bottom-color:var(--line); }
+.product-card { border-radius:var(--radius-sm); box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 12px 26px rgba(0,0,0,.2); transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease; }
+.product-card:hover { transform:translateY(-4px); border-color:rgba(163,230,53,.42); box-shadow:0 0 24px rgba(163,230,53,.16),0 16px 30px rgba(0,0,0,.32); }
+.product-art, .stock-photo { background:radial-gradient(circle at 50% 20%,rgba(163,230,53,.08),transparent 45%),linear-gradient(135deg,#101010,#050505); }
+.product-add { border-color:var(--line); border-radius:var(--radius-sm); }
+.product-add:hover { border-color:var(--green); color:var(--green); background:var(--green-bg); box-shadow:0 0 22px rgba(163,230,53,.15); }
+.purchase-card { border-left-color:var(--green); box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 10px 22px rgba(0,0,0,.18); }
+.form-head { border-bottom-color:var(--line); }
+.field label,.fieldset-label { color:var(--muted); font-weight:700; letter-spacing:.035em; text-transform:uppercase; }
+.field input,.field select,.field textarea { border-radius:14px; background:var(--surface); }
+.field input:focus,.field select:focus,.field textarea:focus { border-color:var(--green); box-shadow:0 0 0 3px var(--green-bg),0 0 20px rgba(163,230,53,.16); }
+.segment,.radio,.product-choice { border-radius:14px; }
+.segment.active,.radio.active { box-shadow:0 0 15px rgba(163,230,53,.12); }
+.form-footer { background:rgba(0,0,0,.94); border-top-color:var(--line); }
+.photo { border-color:var(--line); border-radius:20px; background:var(--surface); }
+@media(max-width:374px){.product-grid,.split{grid-template-columns:1fr}.product-art{height:112px}}

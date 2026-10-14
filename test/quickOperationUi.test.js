@@ -26,7 +26,9 @@ test('a tela pede prévia do servidor antes de criar a venda', () => {
   assert.match(quickOperation, /quick-operations\/product-preview/);
   assert.match(quickOperation, /Confira a prévia e toque em salvar novamente/);
   assert.match(quickOperation, /pagueOnApi\.post\('\/sales'/);
-  assert.match(quickOperation, /newCustomerName/);
+  assert.match(quickOperation, /name="customerName"/);
+  assert.match(quickOperation, /name="customerPhone"/);
+  assert.doesNotMatch(quickOperation, /customerSearch|data-new-customer|newCustomerName/);
   assert.match(quickOperation, /function validationMessage\(error\)/);
   assert.match(quickOperation, /Valor de cada parcela/);
   assert.match(quickOperation, /raw\.replace\(\/\\\.\/g, ''\)\.replace\(',', '\.'\)/);

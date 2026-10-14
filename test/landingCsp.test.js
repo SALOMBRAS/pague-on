@@ -30,6 +30,10 @@ test('landing não exibe avaliações, usuários ou depoimentos inventados', () 
   assert.doesNotMatch(landing, /testimonialsTrack|testimonialPrev/);
 });
 
+test('landing não promete lembretes automáticos ou suporte que não existem', () => {
+  assert.doesNotMatch(landing, /Lembrete enviado|Cobrança agendada|Programe lembretes|Suporte prioritário|Backup na nuvem/);
+});
+
 test('CSP não depende mais de CDN de terceiros (ícones e OCR self-hosted)', () => {
   assert.doesNotMatch(app, /https:\/\/unpkg\.com/);
   assert.doesNotMatch(app, /https:\/\/cdn\.jsdelivr\.net/);

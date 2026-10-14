@@ -17,6 +17,7 @@ const normalizePhone = (value) => {
   const digits = String(value || '').replace(/\D/g, '');
   return digits.length >= 10 && digits.length <= 15 ? digits : null;
 };
+const passwordResetDeliveryConfigured = () => Boolean(process.env.PASSWORD_RESET_DELIVERY_WEBHOOK_URL && process.env.PASSWORD_RESET_BASE_URL);
 
 async function findByIdentity(identity) {
   const phone = normalizePhone(identity);
@@ -88,6 +89,7 @@ async function deliverPasswordReset(user, token) {
 }
 
 async function requestPasswordReset(identity) {
+  if (!passwordResetDeliveryConfigured()) throw new HttpError(503, 'PASSWORD_RESET_UNAVAILABLE', 'A recuperação de senha está temporariamente indisponível. Tente novamente mais tarde.');
   const user = await findByIdentity(identity);
   if (!user) return { accepted: true };
   const token = crypto.randomBytes(48).toString('base64url');
@@ -110,4 +112,4 @@ async function resetPassword(token, newPassword) {
   ]);
 }
 
-module.exports = { register, login, refresh, logout, changePassword, requestPasswordReset, resetPassword, normalizePhone, BCRYPT_COST, hashPassword };
+module.exports = { register, login, refresh, logout, changePassword, requestPasswordReset, resetPassword, normalizePhone, passwordResetDeliveryConfigured, BCRYPT_COST, hashPassword };

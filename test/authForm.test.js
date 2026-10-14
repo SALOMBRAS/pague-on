@@ -66,6 +66,12 @@ test('indisponibilidade do banco não expõe detalhes do Prisma na tela', () => 
   assert.match(errorHandlerSource, /DATABASE_UNAVAILABLE/);
 });
 
+test('recuperação de senha não confirma envio quando o provedor não está configurado', () => {
+  const authService = fs.readFileSync(path.resolve(__dirname, '../src/services/authService.js'), 'utf8');
+  assert.match(authService, /function passwordResetDeliveryConfigured|passwordResetDeliveryConfigured =/);
+  assert.match(authService, /PASSWORD_RESET_UNAVAILABLE/);
+});
+
 test('permite iniciar localmente com o ambiente seguro da Vercel', () => {
   assert.match(appSource, /DOTENV_CONFIG_PATH \|\| '\.env'/);
   assert.match(appSource, /override: process\.env\.VERCEL !== '1'/);

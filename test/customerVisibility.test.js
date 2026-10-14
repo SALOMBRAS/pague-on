@@ -12,8 +12,10 @@ test('cliente criado pela equipe já fica visível e aprovado', () => {
   assert.match(customerService, /approvedById: userId/);
 });
 
-test('venda rápida atualiza imediatamente a lista de clientes', () => {
+test('venda rápida cria o vínculo de cliente automaticamente, sem cadastro separado', () => {
   assert.match(quickOperation, /pagueon:customer-created/);
+  assert.match(quickOperation, /pagueOnApi\.post\('\/customers', \{ name, phone \}\)/);
+  assert.doesNotMatch(quickOperation, /\/customers\?search=/);
   assert.match(people, /includeCreatedCustomer/);
   assert.match(people, /window\.addEventListener\('pagueon:customer-created'/);
 });

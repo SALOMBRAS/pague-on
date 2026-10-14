@@ -1,0 +1,66 @@
+/* Desktop is a management workspace, deliberately separate from the mobile PWA. */
+@media (min-width: 1024px) {
+  body { background: var(--bg); min-width: 1024px; }
+  .app { margin-left: 256px; min-height: 100dvh; padding-bottom: var(--space-6); width: calc(100% - 256px); }
+  .side-nav {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    box-shadow: 18px 0 50px rgba(0, 0, 0, .18);
+    padding: 24px 16px 18px;
+    width: 256px;
+  }
+  .side-nav .brand { gap: 12px; padding: 2px 8px 30px; }
+  .side-nav .brand i {
+    align-items: center;
+    background: var(--green-bg);
+    border: 1px solid rgba(118, 255, 3, .48);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--glow-primary);
+    color: var(--green);
+    display: inline-flex;
+    height: 40px;
+    justify-content: center;
+    width: 40px;
+  }
+  .side-nav .brand b { color: var(--text); font-size: 1.0625rem; letter-spacing: -.03em; }
+  .side-nav .nav { border: 1px solid transparent; border-radius: var(--radius-sm); gap: 12px; min-height: 46px; padding: 0 12px; }
+  .side-nav .nav:hover { background: var(--hover); border-color: var(--line); color: var(--text); }
+  .side-nav .nav.active { background: var(--green-bg); border-color: rgba(118, 255, 3, .24); color: var(--green); }
+  .side-nav .nav i { align-items: center; display: inline-flex; justify-content: center; }
+  .side-nav .side-foot { border-top-color: var(--line); color: var(--muted); padding: 18px 8px 4px; }
+  .side-nav .side-foot b { color: var(--text); }
+  .side-nav kbd { background: var(--raised); border: 1px solid var(--line); border-radius: 5px; color: var(--muted); font: inherit; font-size: .7rem; padding: 1px 4px; }
+
+  .desk-top {
+    backdrop-filter: blur(18px);
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    border-bottom: 1px solid var(--line);
+    min-height: 84px;
+    padding: 18px 36px;
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+  }
+  .desk-top h1 { color: var(--text); font-family: var(--font-display); font-size: 1.625rem; margin: 2px 0 0; }
+  .desk-top .eyebrow { color: var(--muted); letter-spacing: .08em; }
+  .desk-top .icon { background: var(--raised); border-color: var(--line); min-height: 44px; min-width: 44px; }
+  .desk-top .new-charge {
+    align-items: center;
+    background: var(--green);
+    border: 1px solid var(--green);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--glow-primary);
+    color: var(--on-green);
+    display: inline-flex;
+    gap: var(--space-2);
+    justify-content: center;
+    min-height: 46px;
+    padding: 0 18px;
+  }
+  .desk-top .new-charge:hover { background: var(--green-strong); border-color: var(--green-strong); box-shadow: 0 0 18px rgba(118, 255, 3, .42); }
+  .desk-top .new-charge:active { transform: scale(.98); }
+
+  #mainView, .home-view, .wealth-view, .stock-view, .profile-view { margin-inline: auto; max-width: 1560px; }
+  #mainView > .top, .stock-view > .stock-head { padding-inline: 36px; }
+  #cashContent, .home-view, .wealth-view, .stock-view, .profile-view { padding-inline: 36px; }
+}

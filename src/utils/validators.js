@@ -179,10 +179,15 @@ const customerUpdateSchema = customerCreateSchema.partial().extend({ isActive: z
 const customerSelfRegistrationSchema = z.object({ name: customerFields.name.optional(), nickname: customerFields.nickname, personType: customerFields.personType.optional(), cpfCnpj: customerFields.cpfCnpj, documentNumber: customerFields.documentNumber, birthOrIncorporationDate: customerFields.birthOrIncorporationDate, professionOrActivity: customerFields.professionOrActivity, declaredIncome: customerFields.declaredIncome, phone: customerFields.phone, whatsapp: customerFields.whatsapp, email: customerFields.email, zipCode: customerFields.zipCode, address: customerFields.address, street: customerFields.street, streetNumber: customerFields.streetNumber, addressComplement: customerFields.addressComplement, neighborhood: customerFields.neighborhood, city: customerFields.city, state: customerFields.state, notes: customerFields.notes }).strict();
 
 const saleItemSchema = z.object({
-  productId: uuid,
+  productId: uuid.optional(),
+  name: z.string().trim().min(2).max(200).optional(),
   quantity: z.coerce.number().int().positive().max(1000000),
   unitPrice: optionalAmount.optional(),
-}).strict();
+}).strict().superRefine((value, context) => {
+  if (!value.productId && (!value.name || !value.unitPrice)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: 'Informe o produto cadastrado ou uma descrição e valor.' });
+  }
+});
 
 const saleCreateSchema = z.object({
   customerId: uuid.nullable().optional(),
@@ -193,6 +198,9 @@ const saleCreateSchema = z.object({
   quantity: z.coerce.number().int().positive().max(1000000).default(1),
   unitPrice: optionalAmount.optional(),
   discount: z.coerce.number().min(0).max(100000000).default(0),
+  downPaymentAmount: z.coerce.number().min(0).max(100000000).default(0),
+  cashAccountId: uuid.optional(),
+  paymentMethod: z.enum(['CASH', 'PIX', 'CARD', 'TRANSFER', 'OTHER']).optional(),
   paymentType: z.enum(['SINGLE', 'INSTALLMENT']).default('SINGLE'),
   totalInstallments: z.coerce.number().int().min(2).max(360).nullable().optional(),
   installmentAmount: optionalAmount.nullable().optional(),
@@ -207,8 +215,11 @@ const saleCreateSchema = z.object({
   if (value.paymentType === 'INSTALLMENT' && !value.totalInstallments) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['totalInstallments'], message: 'Informe o total de parcelas.' });
   }
-  if (!value.items?.length && (!value.productId || !value.productName || !value.unitPrice)) {
+  if (!value.items?.length && (!value.productName || !value.unitPrice)) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['items'], message: 'Informe os itens da venda ou produto, nome e preço.' });
+  }
+  if (value.downPaymentAmount > 0 && !value.cashAccountId) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['cashAccountId'], message: 'Selecione o caixa de destino da entrada.' });
   }
   if (value.customerId && value.personId && value.customerId !== value.personId) context.addIssue({ code: z.ZodIssueCode.custom, path: ['personId'], message: 'Informe apenas uma pessoa para a venda.' });
 });
@@ -233,6 +244,15 @@ const saleUpdateSchema = z.object({
   interestRate: z.coerce.number().min(0).max(1000000).optional(),
   totalAmount: optionalAmount.optional(),
   discount: z.coerce.number().min(0).max(100000000).optional(),
+}).strict();
+
+const quickProductPreviewSchema = z.object({
+  description: z.string().trim().min(2).max(500),
+  downPaymentAmount: z.coerce.number().min(0).max(100000000).default(0),
+  totalInstallments: z.coerce.number().int().min(1).max(360),
+  installmentAmount: z.coerce.number().positive().max(100000000),
+  frequency: enums.frequency,
+  firstDueDate: isoDate,
 }).strict();
 
 const addExtraSchema = z.object({
@@ -290,7 +310,7 @@ const budgetCreateSchema = z.object({ category: enums.category, month: z.coerce.
 const budgetUpdateSchema = z.object({ limitAmount: z.coerce.number().positive().max(9999999999).optional(), rollover: z.boolean().optional(), alertAt: z.coerce.number().int().min(1).max(100).optional() }).strict();
 const budgetQuerySchema = z.object({ month: z.coerce.number().int().min(1).max(12).default(new Date().getUTCMonth() + 1), year: z.coerce.number().int().min(2020).max(2200).default(new Date().getUTCFullYear()) }).strict();
 const dashboardQuerySchema = z.object({
-  period: z.enum(['TODAY', 'WEEK', 'MONTH', 'CUSTOM']).default('MONTH'),
+  period: z.enum(['TODAY', 'WEEK', 'MONTH', 'QUARTER', 'YEAR', 'CUSTOM']).default('MONTH'),
   startDate: z.string().date().optional(),
   endDate: z.string().date().optional(),
   cashAccountId: uuid.optional(),
@@ -303,6 +323,23 @@ const dashboardQuerySchema = z.object({
 const financialAccountCreateSchema = z.object({ name: z.string().trim().min(2).max(120), type: z.enum(['CASH', 'BANK', 'PAYMENT_ACCOUNT', 'DIGITAL_WALLET', 'LOAN_CAPITAL', 'OTHER']).default('CASH'), institution: z.string().trim().max(160).nullable().optional(), openingBalance: z.coerce.number().min(-9999999999).max(9999999999).default(0), isActive: z.boolean().default(true), includeInAvailability: z.boolean().default(true), notes: z.string().trim().max(1000).nullable().optional() }).strict();
 const financialAccountUpdateSchema = financialAccountCreateSchema.partial().strict();
 const financialStatementQuerySchema = z.object({ startDate: z.string().date().optional(), endDate: z.string().date().optional(), direction: z.enum(['CREDIT', 'DEBIT']).optional(), accountId: uuid.optional(), category: z.string().trim().max(80).optional(), origin: z.string().trim().max(80).optional(), customerId: uuid.optional(), debtId: uuid.optional(), collectorId: uuid.optional(), responsibleUserId: uuid.optional(), paymentMethod: z.string().trim().max(40).optional() }).strict().superRefine((value, context) => { if (value.startDate && value.endDate && value.startDate > value.endDate) context.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'A data final deve ser posterior à inicial.' }); });
+const reportKey = z.enum(['loans-active', 'loans-paid', 'loans-overdue', 'loans-by-period', 'loaned-values', 'received-values', 'installments-receivable', 'installments-overdue', 'receipts-by-period', 'receipts-projection', 'result-projection', 'principal-in-circulation', 'interest-forecast-received', 'penalties-applied-received', 'discounts-granted', 'collector-commissions', 'cash-statement', 'income-expenses', 'default-rate', 'average-delay', 'customer-history']);
+const reportKeySchema = z.object({ reportKey }).strict();
+const reportQuerySchema = z.object({
+  period: z.enum(['ALL', 'TODAY', 'NEXT_7', 'NEXT_8', 'NEXT_15', 'NEXT_30', 'WEEK', 'MONTH', 'CUSTOM']).default('MONTH'),
+  startDate: z.string().date().optional(),
+  endDate: z.string().date().optional(),
+  customerId: uuid.optional(),
+  collectorId: uuid.optional(),
+  accountId: uuid.optional(),
+  modality: z.enum(['INSTALLMENT', 'SIMPLE_INTEREST', 'PRICE', 'RENEWAL']).optional(),
+  status: enums.debtStatus.optional(),
+  category: z.string().trim().max(80).optional(),
+  paymentMethod: z.string().trim().max(40).optional(),
+}).strict().superRefine((value, context) => {
+  if (value.period === 'CUSTOM' && (!value.startDate || !value.endDate)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['startDate'], message: 'Informe as datas inicial e final do período personalizado.' });
+  if (value.startDate && value.endDate && value.startDate > value.endDate) context.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'A data final deve ser posterior à inicial.' });
+});
 const reconciliationUploadSchema = z.object({ fileName: z.string().trim().min(1).max(255), content: z.string().min(1).max(1024 * 1024), accountName: z.string().trim().max(160).nullable().optional() }).strict();
 const reconciliationMatchSchema = z.object({ statementId: uuid }).strict();
 const reconciliationConfirmSchema = z.object({ statementId: uuid, decisions: z.array(z.object({ transactionId: uuid, action: z.enum(['CONFIRM', 'IGNORE', 'CREATE']), debtId: uuid.nullable().optional() }).strict()).min(1).max(500) }).strict();
@@ -312,6 +349,25 @@ const pushSubscriptionSchema = z.object({ endpoint: z.string().url().max(2048), 
 const pushUnsubscribeSchema = z.object({ endpoint: z.string().url().max(2048) }).strict();
 const loanModality = z.enum(['INSTALLMENT', 'SIMPLE_INTEREST', 'PRICE', 'RENEWAL']);
 const loanFrequency = z.enum(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'BIMONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL']);
+const financialSettingsSchema = z.object({
+  simpleInterestEnabled: z.boolean().default(true),
+  compoundInterestAllowed: z.boolean().default(false),
+  modalityRates: z.object({ INSTALLMENT: z.coerce.number().min(0).max(1000).default(0), SIMPLE_INTEREST: z.coerce.number().min(0).max(1000).default(0), PRICE: z.coerce.number().min(0).max(1000).default(0), RENEWAL: z.coerce.number().min(0).max(1000).default(0) }).strict().default({ INSTALLMENT: 0, SIMPLE_INTEREST: 0, PRICE: 0, RENEWAL: 0 }),
+  latePenaltyType: z.enum(['PERCENTAGE', 'FIXED']).default('PERCENTAGE'),
+  latePenaltyValue: z.coerce.number().min(0).max(1000000).default(0),
+  lateInterestRate: z.coerce.number().min(0).max(1000).default(0),
+  gracePeriodDays: z.coerce.number().int().min(0).max(365).default(0),
+  paymentAllocationOrder: z.array(z.enum(['PENALTY', 'INTEREST', 'PRINCIPAL'])).length(3).refine((values) => new Set(values).size === 3, 'Não repita componentes na ordem de apropriação.'),
+  skipSundays: z.boolean().default(false),
+  dueDateRule: z.enum(['KEEP', 'PREVIOUS_BUSINESS_DAY', 'NEXT_BUSINESS_DAY']).default('KEEP'),
+  discountLimitPercent: z.coerce.number().min(0).max(100).default(0),
+  approvalLimits: z.object({ ADMIN: z.coerce.number().nonnegative().max(9999999999).nullable().default(null), MANAGER: z.coerce.number().nonnegative().max(9999999999).default(0) }).strict().default({ ADMIN: null, MANAGER: 0 }),
+  defaultCommission: z.object({ type: z.enum(['PERCENTAGE', 'FIXED']).default('PERCENTAGE'), rate: z.coerce.number().min(0).max(1000000).default(0), base: z.enum(['PRINCIPAL', 'INTEREST', 'PENALTY', 'TOTAL']).default('TOTAL') }).strict().default({ type: 'PERCENTAGE', rate: 0, base: 'TOTAL' }),
+  contractTemplates: z.record(z.string().max(12000)).default({}),
+  messageTemplates: z.record(z.string().max(2000)).default({}),
+}).strict();
+const financialSettingsUpdateSchema = z.object({ settings: financialSettingsSchema, reason: z.string().trim().min(5).max(500) }).strict();
+const financialHolidaySchema = z.object({ date: z.coerce.date(), type: z.enum(['NATIONAL', 'STATE', 'MUNICIPAL', 'CUSTOM']), name: z.string().trim().min(2).max(160), region: z.string().trim().max(120).nullable().optional(), isActive: z.boolean().default(true), reason: z.string().trim().min(5).max(500) }).strict();
 const loanConfigurationSchema = z.object({
   modality: loanModality,
   displayName: z.string().trim().min(2).max(120),
@@ -322,6 +378,7 @@ const loanConfigurationSchema = z.object({
   holidayDates: z.array(z.string().date()).max(500).default([]),
   legalReviewReference: z.string().trim().min(3).max(250),
   isActive: z.boolean().default(true),
+  reason: z.string().trim().min(5).max(500),
 }).strict();
 const loanSimulationSchema = z.object({
   customerId: uuid,
@@ -411,6 +468,7 @@ module.exports = {
   customerSelfRegistrationSchema,
   saleCreateSchema,
   saleUpdateSchema,
+  quickProductPreviewSchema,
   addExtraSchema,
   paymentCreateSchema,
   installmentPaySchema,
@@ -429,6 +487,8 @@ module.exports = {
   financialAccountCreateSchema,
   financialAccountUpdateSchema,
   financialStatementQuerySchema,
+  reportKeySchema,
+  reportQuerySchema,
   reconciliationUploadSchema,
   reconciliationMatchSchema,
   reconciliationConfirmSchema,
@@ -436,6 +496,9 @@ module.exports = {
   statementImportSchema,
   pushSubscriptionSchema,
   pushUnsubscribeSchema,
+  financialSettingsSchema,
+  financialSettingsUpdateSchema,
+  financialHolidaySchema,
   loanConfigurationSchema,
   loanSimulationSchema,
   loanConfirmationSchema,

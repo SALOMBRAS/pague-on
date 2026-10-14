@@ -68,6 +68,13 @@ enum LoanModality {
   RENEWAL
 }
 
+enum FinancialHolidayType {
+  NATIONAL
+  STATE
+  MUNICIPAL
+  CUSTOM
+}
+
 enum PaymentStatus {
   PENDING
   PARTIAL
@@ -299,6 +306,9 @@ model User {
   financialMovements  FinancialMovement[]
   financialCashClosings FinancialCashClosing[]
   loanModalityConfigurations LoanModalityConfiguration[]
+  financialSettingsVersions FinancialSettingsVersion[] @relation("FinancialSettingsOwner")
+  financialSettingsChanges FinancialSettingsVersion[] @relation("FinancialSettingsActor")
+  financialHolidays FinancialHoliday[]
   loanContracts LoanContract[]
   installmentPaymentsCreated InstallmentPayment[] @relation("InstallmentPaymentCreatedBy")
   installmentPayments InstallmentPayment[]
@@ -366,6 +376,8 @@ model FinancialMovement {
   @@index([accountId, occurredAt])
   @@index([customerId, occurredAt])
   @@index([debtId, occurredAt])
+  @@index([responsibleUserId, occurredAt])
+  @@index([collectorId, occurredAt])
   @@index([operationId])
 }
 
@@ -507,6 +519,37 @@ model LoanModalityConfiguration {
 
   @@unique([userId, modality])
   @@index([userId, isActive])
+}
+
+model FinancialSettingsVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  version     Int
+  settings    Json
+  reason      String   @db.VarChar(500)
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now())
+  user        User     @relation("FinancialSettingsOwner", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation("FinancialSettingsActor", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([userId, version])
+  @@index([userId, createdAt])
+}
+
+model FinancialHoliday {
+  id        String               @id @default(uuid()) @db.Uuid
+  userId    String               @db.Uuid
+  date      DateTime
+  type      FinancialHolidayType
+  name      String               @db.VarChar(160)
+  region    String?              @db.VarChar(120)
+  isActive  Boolean              @default(true)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, type, name])
+  @@index([userId, date, isActive])
 }
 
 model LoanContract {
@@ -838,6 +881,7 @@ model Sale {
   customerId  String?    @db.Uuid
   totalAmount Decimal    @db.Decimal(12, 2)
   paidAmount  Decimal    @default(0) @db.Decimal(12, 2)
+  downPaymentAmount Decimal @default(0) @db.Decimal(12, 2)
   discount    Decimal    @default(0) @db.Decimal(12, 2)
   interestRate Decimal  @default(0) @db.Decimal(7, 4)
   interestType InterestType @default(NONE)
@@ -866,14 +910,14 @@ model Sale {
 model SaleItem {
   id        String  @id @default(uuid()) @db.Uuid
   saleId    String  @db.Uuid
-  productId String  @db.Uuid
+  productId String? @db.Uuid
   name      String
   quantity  Int
   unitPrice Decimal @db.Decimal(12, 2)
   unitCost  Decimal @db.Decimal(12, 2)
   total     Decimal @db.Decimal(12, 2)
   sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([saleId])
   @@index([productId])

@@ -1,6 +1,32 @@
 const prisma = require('../config/database');
 const HttpError = require('../utils/httpError');
-const { buildInstallments, payDebt, payInstallment, debtInclude } = require('./debtService');
+const { buildInstallments, payDebt, payInstallment, debtInclude, updateDailyCashFlow } = require('./debtService');
+const { recordMovement } = require('./financialAccountService');
+
+function toCents(value) {
+  return Math.round(Number(value || 0) * 100);
+}
+
+function fromCents(value) {
+  return Number((value / 100).toFixed(2));
+}
+
+function calculateSaleAmounts(subtotalValue, discountValue = 0, downPaymentValue = 0) {
+  const subtotal = toCents(subtotalValue);
+  const discount = toCents(discountValue);
+  const downPayment = toCents(downPaymentValue);
+  if (discount > subtotal) throw new HttpError(400, 'INVALID_DISCOUNT', 'O desconto não pode ser maior que o total da venda.');
+  const total = subtotal - discount;
+  if (total <= 0) throw new HttpError(400, 'INVALID_SALE_TOTAL', 'O total da venda deve ser maior que zero.');
+  if (downPayment > total) throw new HttpError(400, 'INVALID_DOWN_PAYMENT', 'A entrada não pode ser maior que o total da venda.');
+  return {
+    subtotal: fromCents(subtotal),
+    discount: fromCents(discount),
+    totalAmount: fromCents(total),
+    downPaymentAmount: fromCents(downPayment),
+    remainingAmount: fromCents(total - downPayment),
+  };
+}
 
 const saleInclude = {
   customer: true,
@@ -8,7 +34,7 @@ const saleInclude = {
   debt: { include: debtInclude },
 };
 
-async function createSale(userId, input) {
+async function createSale(userId, input, context = {}) {
   const startDate = input.firstDueDate || input.startDate || new Date();
   return prisma.$transaction(async (tx) => {
     const customerId = input.customerId || input.personId || null;
@@ -34,40 +60,50 @@ async function createSale(userId, input) {
     const items = requestedItems.map((item) => {
       const product = productMap.get(item.productId);
       const unitPrice = item.unitPrice ?? Number(product?.sellingPrice);
-      const total = Number((unitPrice * item.quantity).toFixed(2));
-      return { productId: product.id, name: product.name, quantity: item.quantity, unitPrice, unitCost: Number(product.costPrice), total };
+      const total = fromCents(toCents(unitPrice) * item.quantity);
+      if (!product && (!(item.name || item.productName) || !Number.isFinite(Number(unitPrice)))) {
+        throw new HttpError(400, 'INVALID_SALE_ITEM', 'Informe descrição e valor para o item sem estoque.');
+      }
+      return {
+        productId: product?.id || null,
+        name: product?.name || item.name || item.productName,
+        quantity: item.quantity,
+        unitPrice,
+        unitCost: Number(product?.costPrice || 0),
+        total,
+      };
     });
     const subtotal = items.reduce((total, item) => total + item.total, 0);
-    const discount = Number(input.discount ?? 0);
-    if (discount > subtotal) throw new HttpError(400, 'INVALID_DISCOUNT', 'O desconto não pode ser maior que o total da venda.');
-    const totalAmount = Number((subtotal - discount).toFixed(2));
-    if (totalAmount <= 0) throw new HttpError(400, 'INVALID_SALE_TOTAL', 'O total da venda deve ser maior que zero.');
-    const installments = input.paymentType === 'INSTALLMENT'
-      ? buildInstallments({ totalAmount, totalInstallments: input.totalInstallments, installmentAmount: input.installmentAmount, startDate, frequency: input.frequency })
-      : [{ number: 1, amount: totalAmount, dueDate: startDate }];
+    const amounts = calculateSaleAmounts(subtotal, input.discount, input.downPaymentAmount);
+    const installments = amounts.remainingAmount > 0 && input.paymentType === 'INSTALLMENT'
+      ? buildInstallments({ totalAmount: amounts.remainingAmount, totalInstallments: input.totalInstallments, installmentAmount: input.installmentAmount, startDate, frequency: input.frequency })
+      : amounts.remainingAmount > 0 ? [{ number: 1, amount: amounts.remainingAmount, dueDate: startDate }] : [];
     const dueDate = installments[0]?.dueDate || startDate;
 
     const sale = await tx.sale.create({
       data: {
         userId,
         customerId,
-        totalAmount,
-        discount,
+        totalAmount: amounts.totalAmount,
+        paidAmount: amounts.downPaymentAmount,
+        downPaymentAmount: amounts.downPaymentAmount,
+        discount: amounts.discount,
         interestRate: input.interestRate,
         interestType: input.interestType,
         paymentType: input.paymentType,
         totalInstallments: input.paymentType === 'INSTALLMENT' ? input.totalInstallments : 1,
-        installmentAmount: installments[0].amount,
+        installmentAmount: installments[0]?.amount || null,
         frequency: input.paymentType === 'INSTALLMENT' ? input.frequency : null,
         firstDueDate: startDate,
-        remainingAmount: totalAmount,
+        remainingAmount: amounts.remainingAmount,
         description: input.description || null,
         notes: input.notes || null,
         soldAt: startDate,
+        status: amounts.remainingAmount === 0 ? 'PAID' : amounts.downPaymentAmount > 0 ? 'PARTIAL' : 'PENDING',
         items: { create: items },
       },
     });
-    const debt = await tx.debt.create({
+    const debt = amounts.remainingAmount > 0 ? await tx.debt.create({
       data: {
         userId,
         saleId: sale.id,
@@ -78,7 +114,7 @@ async function createSale(userId, input) {
         category: 'PRODUCT',
         counterparty: customer?.name || 'Cliente avulso',
         counterpartyPhone: customer?.phone || null,
-        totalAmount,
+        totalAmount: amounts.remainingAmount,
         installmentAmount: installments[0]?.amount || null,
         totalInstallments: input.paymentType === 'INSTALLMENT' ? input.totalInstallments : null,
         startDate,
@@ -87,7 +123,34 @@ async function createSale(userId, input) {
         quantity: items.length === 1 ? items[0].quantity : null,
         installments: { create: installments.map((installment) => ({ ...installment, totalAmount: installment.amount, interestRateAtCreation: input.interestRate })) },
       },
-    });
+    }) : null;
+    if (amounts.downPaymentAmount > 0) {
+      await recordMovement({
+        db: tx,
+        userId,
+        accountId: input.cashAccountId,
+        type: 'PAYMENT_RECEIVED',
+        amount: amounts.downPaymentAmount,
+        occurredAt: new Date(),
+        referenceId: `sale-down-payment:${sale.id}`,
+        description: `Entrada: ${input.description || `Venda #${sale.id.slice(0, 8)}`}`,
+        category: 'PRODUCT',
+        origin: 'SALE_DOWN_PAYMENT',
+        paymentMethod: input.paymentMethod || null,
+        customerId,
+        debtId: debt?.id || null,
+        responsibleUserId: context.actor?.id || null,
+        operationId: sale.id,
+      });
+      await updateDailyCashFlow(tx, userId, 'RECEIVABLE', amounts.downPaymentAmount);
+      await tx.auditLog.create({
+        data: {
+          eventType: 'sale_down_payment_recorded', workspaceOwnerId: userId, actorId: context.actor?.id || null,
+          actorEmailHash: context.actor?.email ? require('crypto').createHash('sha256').update(String(context.actor.email).trim().toLowerCase()).digest('hex') : null,
+          targetId: sale.id, targetType: 'sale', payload: { debtId: debt?.id || null, amount: amounts.downPaymentAmount, accountId: input.cashAccountId },
+        },
+      });
+    }
     for (const [productId, quantity] of quantities) {
       await tx.product.update({ where: { id: productId }, data: { stockQuantity: { decrement: quantity } } });
     }
@@ -221,7 +284,7 @@ async function cancelSale(userId, id) {
       throw new HttpError(409, 'SALE_HAS_PAYMENTS', 'Não é possível cancelar uma venda com pagamentos registrados.');
     }
     for (const item of sale.items) {
-      await tx.product.update({ where: { id: item.productId }, data: { stockQuantity: { increment: item.quantity } } });
+      if (item.productId) await tx.product.update({ where: { id: item.productId }, data: { stockQuantity: { increment: item.quantity } } });
     }
     if (sale.debt) await tx.debt.update({ where: { id: sale.debt.id }, data: { isActive: false, status: 'CANCELLED' } });
     return tx.sale.update({ where: { id }, data: { status: 'CANCELLED' }, include: saleInclude });
@@ -235,4 +298,4 @@ async function paySale(userId, id, payment) {
   return payDebt(userId, sale.debt.id, payment.paidAmount);
 }
 
-module.exports = { saleInclude, createSale, listSales, saleDetail, updateSale, findOwnedSale, cancelSale, paySale };
+module.exports = { saleInclude, calculateSaleAmounts, createSale, listSales, saleDetail, updateSale, findOwnedSale, cancelSale, paySale };

@@ -76,19 +76,23 @@ async function removeGoal(userId, id) {
 async function deposit(userId, goalId, amount, note) {
   const value = number(amount);
   if (!Number.isFinite(value) || value <= 0) throw new HttpError(400, 'INVALID_INPUT', 'Informe um valor de depósito válido.');
-  return prisma.$transaction(async (tx) => {
-    const goal = await tx.goal.findFirst({ where: { id: goalId, userId } });
-    if (!goal) throw new HttpError(404, 'NOT_FOUND', 'Cofrinho não encontrado.');
-    const updated = await tx.goal.update({ where: { id: goalId }, data: { currentAmount: { increment: value } } });
-    await tx.goalTransaction.create({ data: { userId, goalId, type: 'DEPOSIT', amount: value, note: note || null } });
-    if (number(updated.currentAmount) >= number(updated.targetAmount)) {
-      const existing = await tx.notification.findFirst({ where: { userId, type: 'GOAL_REACHED', data: { path: ['goalId'], equals: goalId } } });
-      if (!existing) {
-        await tx.notification.create({ data: { userId, type: 'GOAL_REACHED', title: 'Meta alcançada 🎯', body: `Você atingiu a meta "${updated.name}".`, data: { goalId } } });
-      }
+  return prisma.$transaction((tx) => depositWithTx(tx, userId, goalId, value, note)).then(withProgress);
+}
+
+// Depósito numa transação já aberta — usado quando o pagamento que origina o
+// crédito na meta roda na MESMA transação (evita perda se o depósito falhar).
+async function depositWithTx(tx, userId, goalId, value, note) {
+  const goal = await tx.goal.findFirst({ where: { id: goalId, userId } });
+  if (!goal) throw new HttpError(404, 'NOT_FOUND', 'Cofrinho não encontrado.');
+  const updated = await tx.goal.update({ where: { id: goalId }, data: { currentAmount: { increment: value } } });
+  await tx.goalTransaction.create({ data: { userId, goalId, type: 'DEPOSIT', amount: value, note: note || null } });
+  if (number(updated.currentAmount) >= number(updated.targetAmount)) {
+    const existing = await tx.notification.findFirst({ where: { userId, type: 'GOAL_REACHED', data: { path: ['goalId'], equals: goalId } } });
+    if (!existing) {
+      await tx.notification.create({ data: { userId, type: 'GOAL_REACHED', title: 'Meta alcançada 🎯', body: `Você atingiu a meta "${updated.name}".`, data: { goalId } } });
     }
-    return updated;
-  }).then(withProgress);
+  }
+  return updated;
 }
 
 async function withdraw(userId, goalId, amount, note) {
@@ -104,4 +108,4 @@ async function withdraw(userId, goalId, amount, note) {
   }).then(withProgress);
 }
 
-module.exports = { findOwnedGoal, listGoals, createGoal, updateGoal, removeGoal, deposit, withdraw };
+module.exports = { findOwnedGoal, listGoals, createGoal, updateGoal, removeGoal, deposit, depositWithTx, withdraw };

@@ -28,6 +28,9 @@ function errorHandler(error, _req, res, _next) {
   const status = error.status || 500;
   const code = error.code || 'INTERNAL_ERROR';
   if (status >= 500) console.error(error);
+  // 5xx não mapeado: devolve mensagem genérica (não vaza detalhe de schema/banco).
+  // HttpError/4xx têm `status < 500` e message própria — essas mantêm a mensagem.
+  if (status >= 500) return sendError(res, 'Ocorreu um erro inesperado. Tente novamente.', code, status);
   return sendError(res, error.message || 'Ocorreu um erro inesperado.', code, status);
 }
 

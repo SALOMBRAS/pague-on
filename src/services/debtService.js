@@ -111,10 +111,12 @@ async function createDebt(userId, input) {
       const allocations = cashAllocations.length ? cashAllocations : [{ accountId: null, amount: debt.totalAmount }];
       await Promise.all(allocations.map((allocation) => recordMovement({ db: tx, userId, accountId: allocation.accountId, type: 'LOAN_DISBURSEMENT', amount: allocation.amount, occurredAt: debt.startDate, referenceId: `loan-disbursement:${debt.id}:${allocation.accountId || 'default'}`, description: `Liberação: ${debt.description}`, origin: 'LOAN_DISBURSEMENT', debtId: debt.id, customerId: debt.customerId, principal: allocation.amount, operationId: debt.id })));
     }
+    // Orçamento na MESMA transação: se o gasto falhar, o débito reverte junto.
+    await budgetService.syncBudgetForDebt(userId, debt, tx);
     return debt;
   });
+  // Regras automáticas seguem fora da transação (idempotente + side effects).
   await ruleService.recordApplications(userId, debt, ruleResult.applications);
-  await budgetService.syncBudgetForDebt(userId, debt);
   return { ...debt, appliedRules: ruleResult.applications.map((application) => application.name) };
 }
 
@@ -208,10 +210,13 @@ async function updateDebt(userId, id, patch) {
       },
       include: debtInclude,
     });
+    // Orçamento na MESMA transação: refreshBudget recalculou o gasto do período
+    // com o débito já atualizado (uma única soma, sem duplicar). Se falhar,
+    // o update inteiro reverte — sem orçamento divergente.
+    await budgetService.syncBudgetForDebt(userId, debt, tx);
   });
+  // Regras automáticas seguem fora da transação (idempotente + side effects).
   await ruleService.recordApplications(userId, debt, ruleResult.applications);
-  await budgetService.syncBudgetForDebt(userId, current);
-  await budgetService.syncBudgetForDebt(userId, debt);
   return { ...debt, appliedRules: ruleResult.applications.map((application) => application.name) };
 }
 
@@ -244,7 +249,12 @@ async function updateLinkedSalePayment(tx, debt, amount, debtStatus) {
   const paidAmount = Number(sale.paidAmount);
   const totalAmount = Number(sale.totalAmount);
   const status = debtStatus === 'PAID' || paidAmount >= totalAmount ? 'PAID' : paidAmount > 0 ? 'PARTIAL' : 'PENDING';
-  await tx.sale.update({ where: { id: sale.id }, data: { status } });
+  // remainingAmount é dado derivado: total - pago. Centraliza aqui para não
+  // divergir do syncSaleAndDebt (installmentService), que já o atualizava — os
+  // pagamentos de venda única/recorrente passavam por este caminho e ficavam
+  // com remainingAmount stale (saldo errado no relatório/front).
+  const remaining = Number((totalAmount - paidAmount).toFixed(2));
+  await tx.sale.update({ where: { id: sale.id }, data: { status, remainingAmount: remaining > 0 ? remaining : 0 } });
 }
 
 async function paySingleDebt(userId, id, paidAmount, goalId, cashAccountId) {
@@ -276,12 +286,12 @@ async function paySingleDebt(userId, id, paidAmount, goalId, cashAccountId) {
       type: 'PAYMENT_RECEIVED',
       data: { debtId: debt.id },
     });
-    return updated;
-  }).then((debt) => {
-    if (debt.type === 'RECEIVABLE' && debt.status === 'PAID' && goalId) {
-      goalService.deposit(userId, goalId, amount).catch((error) => console.warn('Falha ao depositar na meta:', error.message));
+    // Depósito na meta dentro da MESMA transação: se falhar, o pagamento como
+    // um todo é revertido — sem perda silenciosa de crédito na meta.
+    if (debt.type === 'RECEIVABLE' && status === 'PAID' && goalId) {
+      await goalService.depositWithTx(tx, userId, goalId, amount);
     }
-    return debt;
+    return updated;
   });
 }
 

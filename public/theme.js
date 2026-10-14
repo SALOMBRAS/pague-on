@@ -13,7 +13,10 @@
   function current() {
     var saved = null;
     try { saved = localStorage.getItem(KEY); } catch (e) { /* privado */ }
-    return (saved === 'light' || saved === 'dark' || saved === 'system') ? saved : 'system';
+    // O produto é Dark Neon por padrão. O modo claro continua disponível apenas
+    // por escolha explícita, sem depender da preferência do sistema para não
+    // causar um flash claro antes dos tokens carregarem.
+    return (saved === 'light' || saved === 'dark') ? saved : 'dark';
   }
 
   function apply(theme) {
@@ -57,7 +60,7 @@
     },
     toggle: function () {
       var t = current();
-      var next = t === 'dark' ? 'light' : (t === 'light' ? 'dark' : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark'));
+      var next = t === 'dark' ? 'light' : 'dark';
       pagueOnTheme.set(next);
       return next;
     }

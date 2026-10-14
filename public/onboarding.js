@@ -6,22 +6,23 @@
   const state = { index: 0, steps: [], overlay: null, previousFocus: null, autoStartedFor: null, stepTimer: null };
 
   const mobileSteps = [
-    { target: '.app', title: 'Bem-vindo ao Pague-On', text: 'Controle seus recebimentos e lembretes em um só lugar.', position: 'center' },
-    { action: 'home', target: '#homeView', title: 'Seu resumo', text: 'Veja o que tem para receber e o que precisa de atenção.' },
-    { action: 'home', target: '#centerAdd', title: 'Adicionar uma conta', text: 'Toque aqui para registrar uma cobrança, produto ou lembrete.' },
-    { action: 'caixa', target: '.bottom-nav .nav[data-nav="caixa"]', title: 'Acompanhar pagamentos', text: 'No Resumo você acompanha o que está aberto, pago ou atrasado.' },
-    { action: 'profile', target: '.bottom-nav .nav[data-nav="profile"]', title: 'Lembretes e preferências', text: 'No Perfil você ativa alertas e pode rever este tour.' },
-    { action: 'home', target: '.bottom-nav', title: 'Tudo pronto', text: 'Comece quando quiser. Seus dados continuam protegidos.', position: 'top' }
+    { action: 'home', target: '#financial-dashboard .financial-title, .top', title: 'Bem-vindo ao Pague-On', text: 'Este é o seu ponto de partida: aqui você acompanha sua vida financeira de forma simples.' },
+    { action: 'home', target: '#financial-dashboard .financial-filters, #financial-dashboard', title: 'Resumo financeiro', text: 'Escolha o período e, se precisar, filtre por caixa, cobrador ou situação.' },
+    { action: 'home', target: '#financial-dashboard .financial-grid, #financial-dashboard', title: 'Valores importantes', text: 'Estes cartões mostram o que está disponível, a receber, recebido e vencido.' },
+    { action: 'home', target: '#centerAdd', title: 'Nova operação', text: 'Toque no + para criar uma cobrança, produto, empréstimo ou outro registro.' },
+    { action: 'caixa', target: '.bottom-nav .nav[data-nav="caixa"]', title: 'Caixa', text: 'Aqui você acompanha cobranças, parcelas, pagamentos e pendências.' },
+    { action: 'estoque', target: '.bottom-nav .nav[data-nav="stock"]', title: 'Estoque', text: 'Cadastre produtos, acompanhe quantidades e veja a margem das vendas.' },
+    { action: 'profile', target: '.bottom-nav .nav[data-nav="profile"]', title: 'Perfil', text: 'Ajuste preferências, segurança, notificações e reveja este guia quando quiser.' }
   ];
 
   const desktopSteps = [
-    { target: '.app', title: 'Bem-vindo ao Pague-On', text: 'Seu painel para acompanhar cobranças e recebimentos.', position: 'center' },
-    { action: 'home', target: '#financial-dashboard, #homeView', title: 'Visão geral', text: 'Aqui estão seus valores a receber, atrasados e recebidos no período.' },
-    { action: 'caixa', target: '.side-nav .nav[data-nav="caixa"]', title: 'Cobranças', text: 'Abra o Caixa para consultar parcelas, pagamentos e pendências.' },
-    { action: 'home', target: '#deskNewCharge', title: 'Nova operação', text: 'Registre uma nova cobrança em poucos passos ou pressione N.' },
-    { action: 'profile', target: '.side-nav .nav[data-nav="profile"]', title: 'Configurações', text: 'Ajuste sua conta, segurança, notificações e veja este tour depois.' },
-    { action: 'home', target: '.side-foot', title: 'Atalhos rápidos', text: 'N cria, / busca, ? abre esta ajuda e Esc fecha painéis.' },
-    { action: 'home', target: '.desk-top', title: 'Tudo pronto', text: 'Use o painel para manter seus recebimentos sob controle.', position: 'bottom' }
+    { action: 'home', target: '.desk-top', title: 'Bem-vindo ao Pague-On', text: 'Este painel concentra tudo que você precisa para acompanhar o dinheiro.' },
+    { action: 'home', target: '#financial-dashboard .financial-filters, #financial-dashboard', title: 'Resumo financeiro', text: 'Use estes filtros para ver seus números no período, caixa, cobrador ou situação desejada.' },
+    { action: 'home', target: '#financial-dashboard .financial-grid, #financial-dashboard', title: 'Valores importantes', text: 'Veja rapidamente o disponível, o que falta receber, o recebido e o vencido.' },
+    { action: 'home', target: '#deskNewCharge', title: 'Nova operação', text: 'Crie uma cobrança, venda ou empréstimo em poucos passos. O atalho é N.' },
+    { action: 'caixa', target: '.side-nav .nav[data-nav="caixa"]', title: 'Caixa', text: 'Consulte cobranças, parcelas e pagamentos sem sair do controle financeiro.' },
+    { action: 'estoque', target: '.side-nav .nav[data-nav="stock"]', title: 'Estoque', text: 'Cadastre produtos, acompanhe as quantidades e analise suas margens.' },
+    { action: 'profile', target: '.side-nav .nav[data-nav="profile"]', title: 'Perfil', text: 'Gerencie segurança, notificações e as preferências da sua conta.' }
   ];
 
   const isMobile = () => window.matchMedia?.(MOBILE_QUERY).matches;

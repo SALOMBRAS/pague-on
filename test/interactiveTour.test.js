@@ -13,6 +13,8 @@ test('tour keeps separate, short desktop and mobile step sets', () => {
   assert.match(tour, /const mobileSteps = \[/);
   assert.match(tour, /const desktopSteps = \[/);
   assert.match(tour, /MOBILE_QUERY = '\(max-width: 1023px\)'/);
+  assert.match(tour, /financial-filters/);
+  assert.match(tour, /data-nav="stock"/);
   assert.match(tour, /pagueon_tour_completed_v4/);
   assert.match(tour, /pagueOnAuth\?\.getUser/);
   assert.match(tour, /autoStartedFor/);
@@ -28,6 +30,8 @@ test('tour has an accessible modal, keyboard controls and cannot be skipped befo
   assert.doesNotMatch(tour, /window\.confirm\(/);
   assert.match(tour, /app\.inert/);
   assert.match(css, /min-height: 44px/);
+  assert.match(css, /var\(--bg\) 90%/);
+  assert.match(css, /onboarding-actions button:focus-visible/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(tour, /pague-mascot-user-v3\.png/);
   assert.match(css, /\.onboarding-mascot/);

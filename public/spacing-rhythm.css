@@ -1,0 +1,116 @@
+/* Shared layout rhythm. Keeps every screen aligned without changing its content. */
+:root {
+  --page-gutter: clamp(16px, 4vw, 28px);
+  --section-gap: 32px;
+  --title-gap: 12px;
+  --touch-target: 44px;
+}
+
+:where(.topline h1, .dashboard-head h1, .stock-head h1, .wealth-head h1, .profile-hero h1) {
+  line-height: 1.12;
+}
+
+:where(.form-head h2, .panel-head h2, .goals-form-head h2) {
+  margin: 0;
+  line-height: 1.2;
+}
+
+@media (max-width: 1023px) {
+  :where(.top, .home-view, .wealth-view, .stock-view, .profile-view, #cashContent) {
+    padding-inline: var(--page-gutter);
+  }
+
+  .top {
+    padding-top: max(18px, env(safe-area-inset-top));
+    padding-bottom: 10px;
+  }
+
+  .topline, .dashboard-head, .stock-head, .wealth-head {
+    gap: var(--title-gap);
+  }
+
+  .topline > *, .dashboard-head > *, .stock-head > *, .wealth-head > * {
+    min-width: 0;
+  }
+
+  .top-actions {
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
+  :where(.top-actions button, .top-actions .icon, .dash-link, .stock-tab) {
+    min-height: var(--touch-target);
+  }
+
+  :where(.top-actions button, .top-actions .icon) {
+    display: inline-grid;
+    width: var(--touch-target);
+    padding: 0;
+    place-items: center;
+  }
+
+  .dashboard-head {
+    margin-bottom: 24px;
+  }
+
+  .dash-section, .wealth-section, .profile-section, .stock-section {
+    margin-top: var(--section-gap);
+  }
+
+  .dash-section-head, .wealth-section-head {
+    align-items: center;
+    margin-bottom: var(--title-gap);
+  }
+
+  .dash-section-head h2, .wealth-section-head h2, .profile-section h2, .stock-section h3 {
+    line-height: 1.25;
+  }
+
+  .dash-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-inline: 4px;
+  }
+
+  .dash-quick-row, .dash-products {
+    margin-inline: calc(-1 * var(--page-gutter));
+    padding-inline: var(--page-gutter);
+  }
+
+  .stock-tabs {
+    min-height: var(--touch-target);
+    margin-inline: calc(-1 * var(--page-gutter));
+    padding-inline: var(--page-gutter);
+  }
+
+  .stock-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 9px;
+  }
+
+  :where(.form-head, .goals-form-head) {
+    padding-inline: var(--page-gutter);
+  }
+
+  :where(.form-body, .wealth-form, .stock-detail, .full-panel) {
+    padding-inline: var(--page-gutter);
+  }
+
+  .form-footer {
+    padding-inline: var(--page-gutter);
+  }
+
+  :where(.form-head button, .panel-head button, .goals-form-head button, .form-footer button) {
+    min-height: var(--touch-target);
+  }
+}
+
+@media (max-width: 374px) {
+  :root {
+    --page-gutter: 12px;
+    --section-gap: 28px;
+  }
+}

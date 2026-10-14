@@ -6,7 +6,8 @@ const notificationJobs = require('../services/notificationJobsService');
 const interestCalculator = require('../services/interestCalculator');
 
 function assertCronSecret(req) {
-  const secret = req.headers['x-cron-secret'];
+  const authorization = String(req.headers.authorization || '');
+  const secret = req.headers['x-cron-secret'] || (authorization.startsWith('Bearer ') ? authorization.slice(7) : null);
   if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) throw new HttpError(401, 'INVALID_CRON_SECRET', 'Credencial de cron inválida.');
 }
 
@@ -46,5 +47,29 @@ async function runNotifications(req, res) { assertCronSecret(req); return sendSu
 async function weeklyDigest(req, res) { assertCronSecret(req); return sendSuccess(res, await notificationJobs.runDigest('WEEKLY_DIGEST'), 'Resumo semanal processado.'); }
 async function monthlyDigest(req, res) { assertCronSecret(req); return sendSuccess(res, await notificationJobs.runDigest('MONTHLY_DIGEST'), 'Resumo mensal processado.'); }
 async function recalculateInterest(req, res) { assertCronSecret(req); return sendSuccess(res, await interestCalculator.recalculateAllInterest(), 'Juros recalculados.'); }
+async function daily(req, res) {
+  assertCronSecret(req);
+  const [reminders, notifications, interest, exchange] = await Promise.all([
+    checkRemindersJob(),
+    notificationJobs.runDailyNotifications(),
+    interestCalculator.recalculateAllInterest(),
+    currencyService.updateExchangeRates(),
+  ]);
+  return sendSuccess(res, { reminders, notifications, interest, exchange }, 'Rotinas diárias processadas.');
+}
 
-module.exports = { checkReminders, updateExchangeRates, runNotifications, weeklyDigest, monthlyDigest, recalculateInterest };
+async function checkRemindersJob() {
+  const now = new Date();
+  const candidates = await prisma.debt.findMany({ where: { isActive: true, status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] } }, include: { user: true } });
+  const dueDebts = candidates.filter((debt) => debt.user.notificationEnabled && debt.user.reminderDefaultTime !== null && (debt.dueDate.getTime() - now.getTime()) / 60000 >= 0 && (debt.dueDate.getTime() - now.getTime()) / 60000 <= debt.user.reminderDefaultTime);
+  let created = 0;
+  for (const debt of dueDebts) {
+    const existing = await prisma.reminder.findFirst({ where: { userId: debt.userId, debtId: debt.id, status: 'SCHEDULED', scheduledAt: { gte: new Date(now.getTime() - 3600000) } } });
+    if (existing) continue;
+    await prisma.$transaction([prisma.notification.create({ data: { userId: debt.userId, title: 'Vencimento próximo', body: `${debt.description} vence em breve.`, type: 'DEBT_DUE', data: { debtId: debt.id } } }), prisma.reminder.create({ data: { userId: debt.userId, debtId: debt.id, scheduledAt: now, message: `${debt.description} vence em breve.`, status: 'SCHEDULED' } })]);
+    created += 1;
+  }
+  return { checked: candidates.length, created };
+}
+
+module.exports = { checkReminders, updateExchangeRates, runNotifications, weeklyDigest, monthlyDigest, recalculateInterest, daily };

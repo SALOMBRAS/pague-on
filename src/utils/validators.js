@@ -195,6 +195,8 @@ const saleItemSchema = z.object({
 const saleCreateSchema = z.object({
   customerId: uuid.nullable().optional(),
   personId: uuid.nullable().optional(),
+  counterparty: z.string().trim().min(2).max(200).optional(),
+  counterpartyPhone: z.string().trim().max(30).nullable().optional(),
   items: z.array(saleItemSchema).min(1).max(100).optional(),
   productId: uuid.nullable().optional(),
   productName: z.string().trim().min(2).max(200).optional(),
@@ -225,6 +227,7 @@ const saleCreateSchema = z.object({
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['cashAccountId'], message: 'Selecione o caixa de destino da entrada.' });
   }
   if (value.customerId && value.personId && value.customerId !== value.personId) context.addIssue({ code: z.ZodIssueCode.custom, path: ['personId'], message: 'Informe apenas uma pessoa para a venda.' });
+  if (!value.customerId && !value.personId && !value.counterparty) context.addIssue({ code: z.ZodIssueCode.custom, path: ['counterparty'], message: 'Informe o nome do cliente.' });
 });
 
 const paymentCreateSchema = z.object({

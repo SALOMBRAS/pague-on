@@ -12,12 +12,12 @@ test('cliente criado pela equipe já fica visível e aprovado', () => {
   assert.match(customerService, /approvedById: userId/);
 });
 
-test('venda rápida cria o vínculo de cliente automaticamente, sem cadastro separado', () => {
-  assert.match(quickOperation, /pagueon:customer-created/);
-  assert.match(quickOperation, /pagueOnApi\.post\('\/customers', \{ name, phone \}\)/);
+test('venda rápida mantém o contato na própria venda, sem criar cliente', () => {
+  assert.match(quickOperation, /counterparty: values\.customerName/);
+  assert.match(quickOperation, /counterpartyPhone: values\.customerPhone/);
   assert.doesNotMatch(quickOperation, /\/customers\?search=/);
+  assert.doesNotMatch(quickOperation, /pagueon:customer-created|pagueOnApi\.post\('\/customers'/);
   assert.match(people, /includeCreatedCustomer/);
-  assert.match(people, /window\.addEventListener\('pagueon:customer-created'/);
 });
 
 test('cadastro de pessoa normaliza campos opcionais vazios antes de enviar à API', () => {

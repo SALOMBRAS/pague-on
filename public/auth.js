@@ -213,12 +213,7 @@
         }
         if (mode === 'forgot') show('login', result.message || 'Se houver uma conta compatível, você receberá as instruções.');
         else if (mode === 'reset') { history.replaceState({}, '', location.pathname); show('login', result.message || 'Senha atualizada. Entre novamente.'); }
-        else if (mode === 'register') {
-          const loginUrl = new URL(location.href);
-          loginUrl.search = 'auth=login';
-          history.replaceState({}, '', `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`);
-          show('login', result.message || 'Conta criada com sucesso. Entre com seu e-mail e senha para continuar.');
-        }
+        else if (mode === 'register') { setSession(result.data); trace('registration_authenticated'); startSession(); }
         else { setSession(result.data); trace('login_authenticated'); startSession(); }
       } catch (error) {
         actionError(submittedForm, error.message || 'Verifique os dados e tente novamente.', error.code);

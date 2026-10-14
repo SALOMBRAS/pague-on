@@ -35,7 +35,7 @@ async function register(input) {
   const phoneNormalized = normalizePhone(input.phone);
   if (phoneNormalized && await prisma.user.findUnique({ where: { phoneNormalized } })) throw new HttpError(409, 'PHONE_IN_USE', 'Este telefone já está em uso.');
   const user = await prisma.user.create({ data: { ...input, phoneNormalized, password: await hashPassword(input.password) } });
-  return publicUser(user);
+  return issueSession(user);
 }
 
 async function login({ identity, password }) {

@@ -25,3 +25,11 @@ test('cadastro de pessoa normaliza campos opcionais vazios antes de enviar à AP
   assert.match(people, /key !== 'name' && !value\.trim\(\) \? null : value/);
   assert.match(people, /api\(\)\.post\('\/people', customerPayload\(person\)\)/);
 });
+
+test('histórico de clientes permite arquivamento somente após confirmação explícita', () => {
+  assert.match(people, /function confirmDeletePerson\(personId\)/);
+  assert.match(people, /aria-modal="true"/);
+  assert.match(people, /data-delete-confirm/);
+  assert.match(people, /api\(\)\.delete\(`\/people\/\$\{person\.id\}`\)/);
+  assert.match(people, /As vendas e cobranças já registradas serão preservadas/);
+});

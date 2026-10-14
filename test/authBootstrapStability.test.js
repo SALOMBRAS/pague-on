@@ -44,6 +44,9 @@ test('dashboard termina em erro após timeout e PWA troca a versão do shell', (
   assert.match(dashboard, /setAttribute\('aria-busy', 'false'\)/);
   assert.match(dashboard, /Tentar novamente/);
   assert.match(dashboard, /inFlight/);
+  assert.match(dashboard, /function invalidateDashboard\(\)/);
+  assert.match(dashboard, /window\.addEventListener\('pagueon:operation-created'/);
+  assert.match(dashboard, /render\(true\)/);
   assert.match(worker, /pagueon-shell-v30/);
   assert.doesNotMatch(offline, /navigator\.serviceWorker\.register/);
 });

@@ -18,6 +18,7 @@ const APP_SHELL = [
   '/desktop-financial-dashboard.css',
   '/onboarding.css',
   '/assets/pague-mascot-v1.png',
+  '/assets/pague-mascot-dollar-v2.png',
   '/theme.js',
   '/icons.js',
   '/ui-components.js',

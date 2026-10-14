@@ -27,7 +27,7 @@ test('tour has an accessible modal, keyboard controls and cannot be skipped befo
   assert.match(tour, /app\.inert/);
   assert.match(css, /min-height: 44px/);
   assert.match(css, /prefers-reduced-motion/);
-  assert.match(tour, /pague-mascot-v1\.png/);
+  assert.match(tour, /pague-mascot-dollar-v2\.png/);
   assert.match(css, /\.onboarding-mascot/);
 });
 
@@ -35,4 +35,5 @@ test('tour CSS is present in the application and its offline shell', () => {
   assert.match(html, /href="\/onboarding\.css"/);
   assert.match(serviceWorker, /'\/onboarding\.css'/);
   assert.match(serviceWorker, /'\/assets\/pague-mascot-v1\.png'/);
+  assert.match(serviceWorker, /'\/assets\/pague-mascot-dollar-v2\.png'/);
 });

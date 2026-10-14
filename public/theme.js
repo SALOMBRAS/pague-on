@@ -28,9 +28,14 @@
   // Mantém <meta name="theme-color"> coerente com o tema (chrome/navbar do PWA).
   function fluidMeta() {
     if (!meta) meta = document.querySelector('meta[name="theme-color"]');
-    var dark = root.getAttribute('data-theme') !== 'light';
-    var base = dark ? '#0a0a0a' : '#f4f5f3';
-    var brand = dark ? '#76ff03' : '#287d00';
+    var dark = root.getAttribute('data-theme') === 'dark'
+      || (root.getAttribute('data-theme') !== 'light'
+          && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    // A identidade atual do produto é Neon escura em todas as superfícies.
+    // O seletor de tema continua disponível para preferências futuras, mas a
+    // barra do navegador não deve voltar para uma cor de outra identidade.
+    var base = '#000000';
+    var brand = '#a3e635';
     if (meta) meta.setAttribute('content', base);
     // fundo do app nas bordas do mobile
     if (root && root.style) root.style.backgroundColor = base;

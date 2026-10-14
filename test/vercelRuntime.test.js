@@ -8,6 +8,14 @@ test('as functions da Vercel executam na mesma região do Supabase', () => {
   assert.deepEqual(config.regions, ['gru1']);
 });
 
+test('Vercel executa as rotinas diárias com a credencial de cron padrão', () => {
+  const cron = fs.readFileSync(path.join(__dirname, '..', 'src', 'controllers', 'cronController.js'), 'utf8');
+  const config = fs.readFileSync(path.join(__dirname, '..', 'vercel.json'), 'utf8');
+  assert.match(cron, /authorization\.startsWith\('Bearer '\)/);
+  assert.match(cron, /async function daily\(req, res\)/);
+  assert.match(config, /"path": "\/api\/v1\/cron\/daily"/);
+});
+
 test('assets públicos recebem cache de CDN pela configuração da Vercel', () => {
   const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'vercel.json'), 'utf8'));
   assert.match(config.routes[0].src, /css\|js/);

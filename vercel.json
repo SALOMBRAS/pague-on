@@ -4,6 +4,9 @@
   "functions": {
     "api/index.js": { "maxDuration": 30, "memory": 1024 }
   },
+  "crons": [
+    { "path": "/api/v1/cron/daily", "schedule": "0 9 * * *" }
+  ],
   "routes": [
     {
       "src": "/(?!sw\\.js$)(.*)\\.(css|js|svg|png|jpg|jpeg|webp|ico|woff|woff2)",

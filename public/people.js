@@ -22,7 +22,19 @@
     localStorage.setItem(productCacheKey, JSON.stringify(cache));
     return product.id;
   }
-  async function syncPerson(person) { if (!token()) return; try { const { id: _ignored, createdAt: _createdAt, ...fields } = person; const remote = await api().post('/people', fields); if (remote?.id) person.id = remote.id; save(state()); } catch (_error) { /* A gravação local continua valendo quando autenticado falhar ou estiver offline. */ } }
+  function customerPayload(person) {
+    const { id: _ignored, createdAt: _createdAt, remote: _remote, ...fields } = person;
+    return Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, typeof value === 'string' && key !== 'name' && !value.trim() ? null : value]));
+  }
+  async function syncPerson(person) {
+    if (!token()) return { synced: false };
+    try {
+      const remote = await api().post('/people', customerPayload(person));
+      if (remote?.id) person.id = remote.id;
+      save(state());
+      return { synced: true };
+    } catch (error) { return { synced: false, error }; }
+  }
   async function syncSale(sale) { if (!token()) return; try { const productId = await ensureProduct(sale); const payload = { personId: sale.personId, description: sale.description || sale.productName, paymentType: sale.installments.length === 1 ? 'SINGLE' : 'INSTALLMENT', totalInstallments: sale.installments.length > 1 ? sale.installments.length : undefined, frequency: sale.frequency, firstDueDate: sale.installments[0]?.dueDate, interestType: sale.interestType, interestRate: sale.interestRate, items: [{ productId, quantity: sale.quantity }] }; await api().post('/sales', payload); } catch (_error) { /* O cacho local é preservado quando a chamada falhar. */ } }
   async function syncPay(installmentId, fields) { if (!token()) return; try { await api().post(`/installments/${installmentId}/pay`, { paidAmount: Number(fields.paidAmount), paymentDate: fields.paymentDate, paymentMethod: fields.paymentMethod, note: fields.note || undefined }); } catch (_error) { /* offline-first */ } }
   async function syncUnpay(installmentId) { if (!token()) return; try { await api().post(`/installments/${installmentId}/unpay`); } catch (_error) { /* offline-first */ } }
@@ -44,7 +56,7 @@
   }
   function renderPersonForm() {
     host().innerHTML = `<header class="people-head"><button data-people-back>← Voltar</button><h2>Nova pessoa</h2><span></span></header><form class="people-form" data-person-form><label>Nome completo<input name="name" required minlength="2" placeholder="João Silva"></label><label>Como chamar (apelido)<input name="nickname" placeholder="João"></label><label>Telefone / WhatsApp<input name="phone" inputmode="tel" placeholder="(11) 99999-9999"></label><label>E-mail<input name="email" type="email" placeholder="joao@email.com"></label><label>CPF/CNPJ (opcional)<input name="cpfCnpj"></label><label>Endereço (opcional)<input name="address"></label><label>Observações<textarea name="notes" placeholder="Cliente desde 2025, prefere PIX."></textarea></label><button class="people-primary">💾 Cadastrar pessoa</button></form>`;
-    host().querySelector('[data-people-back]').onclick = () => renderPeople(); host().querySelector('[data-person-form]').onsubmit = async (event) => { event.preventDefault(); const fields = Object.fromEntries(new FormData(event.currentTarget)); const data = state(); const person = { id: `person-${Date.now()}`, ...fields, createdAt: today() }; data.people.unshift(person); save(data); await syncPerson(person); toast('Pessoa cadastrada com sucesso.'); renderPerson(person.id); };
+    host().querySelector('[data-people-back]').onclick = () => renderPeople(); host().querySelector('[data-person-form]').onsubmit = async (event) => { event.preventDefault(); const fields = Object.fromEntries(new FormData(event.currentTarget)); const data = state(); const person = { id: `person-${Date.now()}`, ...fields, createdAt: today() }; data.people.unshift(person); save(data); const result = await syncPerson(person); if (result.error) toast(`Cadastro salvo só neste aparelho: ${result.error.message || 'não foi possível enviar ao servidor.'}`); else toast(result.synced ? 'Pessoa cadastrada com sucesso.' : 'Cadastro salvo neste aparelho.'); renderPerson(person.id); };
   }
   function renderPerson(personId) {
     const data = state(); const person = data.people.find((item) => item.id === personId); if (!person) return renderPeople(); const summary = personSummary(person, data); const sales = summary.sales;

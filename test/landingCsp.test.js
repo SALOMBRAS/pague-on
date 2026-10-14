@@ -19,6 +19,12 @@ test('landing mantém conteúdo e menu utilizáveis sem scripts inline', () => {
   assert.match(landingScript, /toggleDrawer\(true\)/);
 });
 
+test('menu móvel oferece login no lugar de criar conta', () => {
+  const drawer = landing.match(/<aside class="drawer"[\s\S]*?<\/aside>/)?.[0] || '';
+  assert.match(drawer, /href="\/login"[\s\S]*>Entrar<\/a>/);
+  assert.doesNotMatch(drawer, /href="\/(?:app\?auth=)?register"/);
+});
+
 test('CSP não depende mais de CDN de terceiros (ícones e OCR self-hosted)', () => {
   assert.doesNotMatch(app, /https:\/\/unpkg\.com/);
   assert.doesNotMatch(app, /https:\/\/cdn\.jsdelivr\.net/);

@@ -2,7 +2,13 @@
   const money = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
   const dateInputValue = (value) => new Date(value).toISOString().slice(0, 10);
-  const decimal = (value) => Number(String(value || '').replace(',', '.'));
+  const decimal = (value) => {
+    let raw = String(value ?? '').trim().replace(/[R$\s]/g, '');
+    if (!raw) return 0;
+    if (raw.includes(',')) raw = raw.replace(/\./g, '').replace(',', '.');
+    else if (/^\d{1,3}(\.\d{3})+$/.test(raw)) raw = raw.replace(/\./g, '');
+    return Number(raw);
+  };
   const defaultDueDate = () => { const value = new Date(); value.setDate(value.getDate() + 30); return dateInputValue(value); };
   let state = null;
   let searchTimer = null;
@@ -13,6 +19,8 @@
 
   function screen() { return document.getElementById('quick-operation-screen'); }
   function setMessage(message = '', kind = '') { const node = screen()?.querySelector('[data-quick-message]'); if (!node) return; node.textContent = message; node.dataset.kind = kind; }
+  const fieldLabels = { description: 'Produto ou descrição', totalInstallments: 'Quantidade de parcelas', installmentAmount: 'Valor de cada parcela', firstDueDate: 'Primeiro vencimento', downPaymentAmount: 'Entrada', cashAccountId: 'Caixa da entrada', customerId: 'Cliente' };
+  function validationMessage(error) { const fields = error?.details?.fields; if (!Array.isArray(fields) || !fields.length) return error?.message || 'Não foi possível salvar a operação.'; return fields.map((field) => `${fieldLabels[field.path] || field.path}: ${field.message}`).join(' '); }
   function close() { screen()?.remove(); document.removeEventListener('keydown', onKeydown); }
   function onKeydown(event) { if (event.key === 'Escape') close(); }
 
@@ -72,7 +80,7 @@
   }
 
   async function preview() {
-    try { const values = formValues(); if (!state.customer && !state.newCustomer) throw new Error('Selecione ou cadastre o cliente antes de continuar.'); setMessage('Calculando prévia…'); state.preview = await window.pagueOnApi.post('/quick-operations/product-preview', { description: values.description, downPaymentAmount: values.downPaymentAmount, totalInstallments: values.totalInstallments, installmentAmount: values.installmentAmount, frequency: values.frequency, firstDueDate: values.firstDueDate }); render(); } catch (error) { state.preview = null; setMessage(error.message || 'Não foi possível calcular a prévia.', 'error'); }
+    try { const values = formValues(); if (!state.customer && !state.newCustomer) throw new Error('Selecione ou cadastre o cliente antes de continuar.'); setMessage('Calculando prévia…'); state.preview = await window.pagueOnApi.post('/quick-operations/product-preview', { description: values.description, downPaymentAmount: values.downPaymentAmount, totalInstallments: values.totalInstallments, installmentAmount: values.installmentAmount, frequency: values.frequency, firstDueDate: values.firstDueDate }); render(); } catch (error) { state.preview = null; setMessage(validationMessage(error), 'error'); }
   }
 
   async function submit(event) {
@@ -86,7 +94,7 @@
       if (values.productId) sale.items = [{ productId: values.productId, quantity: 1, unitPrice: state.preview.payment.totalAmount }];
       await window.pagueOnApi.post('/sales', sale);
       window.showToast?.('Operação salva com sucesso.'); window.dispatchEvent(new CustomEvent('pagueon:operation-created')); document.dispatchEvent(new CustomEvent('pagueon:dashboard-request')); close();
-    } catch (error) { state.busy = false; render(); setMessage(error.message || 'Não foi possível salvar a operação.', 'error'); }
+    } catch (error) { state.busy = false; render(); setMessage(validationMessage(error), 'error'); }
   }
 
   function bind() {

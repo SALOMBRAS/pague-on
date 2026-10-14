@@ -17,3 +17,9 @@ test('venda rápida atualiza imediatamente a lista de clientes', () => {
   assert.match(people, /includeCreatedCustomer/);
   assert.match(people, /window\.addEventListener\('pagueon:customer-created'/);
 });
+
+test('cadastro de pessoa normaliza campos opcionais vazios antes de enviar à API', () => {
+  assert.match(people, /function customerPayload\(person\)/);
+  assert.match(people, /key !== 'name' && !value\.trim\(\) \? null : value/);
+  assert.match(people, /api\(\)\.post\('\/people', customerPayload\(person\)\)/);
+});

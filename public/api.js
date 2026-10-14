@@ -10,9 +10,10 @@
     return '/api/v1';
   };
   const REQUEST_TIMEOUT_MS = 12_000;
-  const apiError = (message, code) => {
+  const apiError = (message, code, details) => {
     const error = new Error(message);
     error.code = code;
+    error.details = details;
     return error;
   };
   async function request(method, endpoint, body) {
@@ -24,7 +25,7 @@
       const response = await fetch(`${base()}${endpoint}`, { method, headers: body === undefined ? undefined : { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal: controller.signal });
       const payload = await response.json().catch(() => ({}));
       console.info('[API] request_completed', { method, route, status: response.status, durationMs: Math.round(performance.now() - startedAt) });
-      if (!response.ok || !payload.success) throw apiError(payload.error || 'Não foi possível concluir a operação.', payload.code || 'API_ERROR');
+      if (!response.ok || !payload.success) throw apiError(payload.error || 'Não foi possível concluir a operação.', payload.code || 'API_ERROR', payload.details);
       return payload.data;
     } catch (error) {
       const failure = controller.signal.aborted ? apiError('A conexão demorou mais que o esperado. Tente novamente.', 'API_TIMEOUT') : error;

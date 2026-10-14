@@ -1,6 +1,7 @@
 const multer = require('multer');
 const { ZodError } = require('zod');
 const { sendError } = require('../utils/responseHelper');
+const audit = require('../services/auditService');
 
 function notFoundHandler(_req, _res, next) {
   const error = new Error('Rota não encontrada.');
@@ -9,9 +10,18 @@ function notFoundHandler(_req, _res, next) {
   next(error);
 }
 
-function errorHandler(error, _req, res, _next) {
+function validationMessage(issue) {
+  if (issue.code === 'custom') return issue.message;
+  if (issue.code === 'invalid_string' && issue.validation === 'email') return 'Informe um e-mail válido.';
+  if (issue.code === 'invalid_type' || issue.code === 'too_small' || issue.code === 'too_big') return 'Informe um valor válido para este campo.';
+  return 'Revise este campo.';
+}
+
+async function errorHandler(error, req, res, _next) {
   if (error instanceof ZodError) {
-    return sendError(res, 'Dados inválidos.', 'VALIDATION_ERROR', 400);
+    const fields = error.issues.slice(0, 10).map((issue) => ({ path: issue.path.map(String).join('.') || 'form', message: validationMessage(issue) }));
+    await audit.record({ eventType: 'validation_failed', req, actor: req.actor, workspaceOwnerId: req.user?.id, targetType: 'request', payload: { method: req.method, route: req.path, fields: fields.map((field) => field.path) } });
+    return sendError(res, 'Revise os campos informados.', 'VALIDATION_ERROR', 400, { fields });
   }
   if (error instanceof multer.MulterError) {
     return sendError(res, error.message, 'UPLOAD_ERROR', 400);

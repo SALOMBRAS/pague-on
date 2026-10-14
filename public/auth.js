@@ -128,7 +128,7 @@
     let element = document.getElementById('auth-shell');
     if (element) return element;
     const style = document.createElement('style');
-    style.textContent = '#auth-shell{position:fixed;z-index:500;inset:0;display:grid;place-items:center;padding:24px;background:var(--bg,#07150e);color:var(--text,#f3fbf6);font-family:Inter,system-ui,sans-serif}.auth-card{width:min(100%,430px);padding:30px;border:1px solid var(--line,rgba(194,238,211,.13));border-radius:24px;background:var(--surface,#0f2117);box-shadow:var(--shadow,0 24px 80px #0009)}.auth-card h1{margin:0;font-size:26px}.auth-card p{color:var(--muted,#a9bdb0);line-height:1.5}.auth-field{display:grid;gap:7px;margin-top:15px}.auth-field input{min-height:48px;border:1px solid var(--line,rgba(194,238,211,.13));border-radius:12px;padding:0 13px;background:var(--raised,#152b1f);color:var(--text,#f3fbf6);font-size:16px}.auth-field input[aria-invalid="true"]{border-color:var(--red,#ff5b5b);box-shadow:0 0 0 3px rgba(255,91,91,.14)}.auth-primary,.auth-secondary{width:100%;min-height:48px;margin-top:14px;border-radius:12px;padding:0 14px;font-weight:800;cursor:pointer}.auth-primary{border:0;background:var(--green,#00c853);color:var(--on-green,#07150e)}.auth-primary:disabled{opacity:.7;cursor:wait}.auth-secondary,.auth-link{border:1px solid var(--line,rgba(194,238,211,.13));background:transparent;color:var(--text,#f3fbf6)}.auth-link{border:0;padding:2px;color:var(--green,#00c853);text-decoration:underline}.auth-error{margin:14px 0;padding:12px;border:1px solid var(--red,rgba(255,91,91,.4));border-radius:12px;background:var(--red-bg,rgba(69,29,40,.9));color:#fee2e2}.auth-error[hidden]{display:none}.auth-check{display:flex;gap:9px;align-items:center;margin-top:16px;color:var(--muted,#a9bdb0);font-size:13px}.auth-help{text-align:center;font-size:13px}.side-session{display:none}';
+    style.textContent = '#auth-shell{position:fixed;z-index:500;inset:0;display:grid;place-items:center;padding:24px;background:var(--bg,#07150e);color:var(--text,#f3fbf6);font-family:Inter,system-ui,sans-serif}#auth-shell[hidden]{display:none!important}.auth-card{width:min(100%,430px);padding:30px;border:1px solid var(--line,rgba(194,238,211,.13));border-radius:24px;background:var(--surface,#0f2117);box-shadow:var(--shadow,0 24px 80px #0009)}.auth-card h1{margin:0;font-size:26px}.auth-card p{color:var(--muted,#a9bdb0);line-height:1.5}.auth-field{display:grid;gap:7px;margin-top:15px}.auth-field input{min-height:48px;border:1px solid var(--line,rgba(194,238,211,.13));border-radius:12px;padding:0 13px;background:var(--raised,#152b1f);color:var(--text,#f3fbf6);font-size:16px}.auth-field input[aria-invalid="true"]{border-color:var(--red,#ff5b5b);box-shadow:0 0 0 3px rgba(255,91,91,.14)}.auth-primary,.auth-secondary{width:100%;min-height:48px;margin-top:14px;border-radius:12px;padding:0 14px;font-weight:800;cursor:pointer}.auth-primary{border:0;background:var(--green,#00c853);color:var(--on-green,#07150e)}.auth-primary:disabled{opacity:.7;cursor:wait}.auth-secondary,.auth-link{border:1px solid var(--line,rgba(194,238,211,.13));background:transparent;color:var(--text,#f3fbf6)}.auth-link{border:0;padding:2px;color:var(--green,#00c853);text-decoration:underline}.auth-error{margin:14px 0;padding:12px;border:1px solid var(--red,rgba(255,91,91,.4));border-radius:12px;background:var(--red-bg,rgba(69,29,40,.9));color:#fee2e2}.auth-error[hidden]{display:none}.auth-check{display:flex;gap:9px;align-items:center;margin-top:16px;color:var(--muted,#a9bdb0);font-size:13px}.auth-help{text-align:center;font-size:13px}.side-session{display:none}';
     document.head.append(style);
     element = document.createElement('section');
     element.id = 'auth-shell';
@@ -261,7 +261,20 @@
     clearSession(); document.getElementById('auth-session-control')?.remove(); show('login', 'Sua sessão terminou. Entre novamente para continuar.');
     setTimeout(() => { endingSession = false; }, 0);
   }
-  async function logout() { try { if (getToken()) await rawFetch(`${apiBase()}/auth/logout`, { method: 'POST', credentials: 'include', headers: { Authorization: `Bearer ${getToken()}` } }); } finally { endSession(); } }
+  async function logout() {
+    const token = getToken();
+    // A saída local precisa ser imediata. A revogação no servidor continua em
+    // seguida, mas uma rede lenta nunca deixa a conta aberta neste dispositivo.
+    endSession();
+    if (!token) return;
+    try {
+      await requestWithTimeout((signal) => rawFetch(`${apiBase()}/auth/logout`, {
+        method: 'POST', credentials: 'include', headers: { Authorization: `Bearer ${token}` }, signal,
+      }), 'logout');
+    } catch (error) {
+      trace('logout_background_error', { code: error?.code || error?.name || 'NETWORK_ERROR' });
+    }
+  }
   async function loadUser() {
     if (!getToken() && !(await renew())) return null;
     trace('profile_started');

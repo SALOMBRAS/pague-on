@@ -140,5 +140,4 @@
   }
 
   setupCarousel('previewCarousel', 'previewPrev', 'previewNext');
-  setupCarousel('testimonialsTrack', 'testimonialPrev', 'testimonialNext', '.dot-button');
 })();

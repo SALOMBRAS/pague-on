@@ -25,6 +25,11 @@ test('menu móvel oferece login no lugar de criar conta', () => {
   assert.doesNotMatch(drawer, /href="\/(?:app\?auth=)?register"/);
 });
 
+test('landing não exibe avaliações, usuários ou depoimentos inventados', () => {
+  assert.doesNotMatch(landing, /4\.9 na App Store|\+10 mil usuários ativos|Maria Silva|Carlos Mendes|Ana Costa/);
+  assert.doesNotMatch(landing, /testimonialsTrack|testimonialPrev/);
+});
+
 test('CSP não depende mais de CDN de terceiros (ícones e OCR self-hosted)', () => {
   assert.doesNotMatch(app, /https:\/\/unpkg\.com/);
   assert.doesNotMatch(app, /https:\/\/cdn\.jsdelivr\.net/);

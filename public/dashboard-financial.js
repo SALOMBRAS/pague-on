@@ -80,7 +80,7 @@
       const data = await fetchDashboard(params, version); if (version !== dashboardVersion) return; baseData = data;
       const section = document.createElement('section'); section.id = 'financial-dashboard'; section.dataset.query = params.toString(); section.setAttribute('aria-busy', 'false');
       section.innerHTML = `<h2 class="financial-title">Visão financeira</h2><p class="financial-subtitle">O essencial do mês atual. Abra um card para explorar períodos e detalhes.</p><div class="financial-grid">${cards.map((item) => dashboardCard(item, data)).join('')}</div>`;
-      existing.replaceWith(section); section.querySelectorAll('[data-dashboard-card]').forEach((button) => { button.onclick = () => openDrill(cards.find((item) => item.key === button.dataset.dashboardCard), button); });
+      existing.replaceWith(section); section.querySelectorAll('[data-dashboard-card]').forEach((button) => { const card = cards.find((item) => item.key === button.dataset.dashboardCard); button.onclick = () => card?.key === 'customers' ? openCustomerDirectory() : openDrill(card, button); });
       console.info('[DASHBOARD] loaded', { durationMs: Math.round(performance.now() - startedAt) }); document.dispatchEvent(new CustomEvent('pagueon:financial-dashboard-settled', { detail: { key: params.toString() } }));
     } catch (error) {
       existing.setAttribute('aria-busy', 'false'); const status = existing.querySelector('[data-financial-loading-status]'); if (status) status.textContent = error?.code === 'API_TIMEOUT' ? 'O carregamento demorou mais que o esperado. Tente novamente.' : 'Não foi possível atualizar agora. Seus dados aparecerão quando a conexão for restabelecida.';
@@ -116,7 +116,8 @@
   async function setDrillPeriod(period, custom = {}) { if (!drillState) return; drillState.period = period; drillState.custom = custom; drillState.error = ''; if (period === 'CUSTOM' && (!custom.startDate || !custom.endDate)) { renderDrill(); return; } const params = queryFor(period, custom); drillState.loading = true; renderDrill(); try { drillState.data = await fetchDashboard(params); } catch (error) { drillState.error = error?.message || 'Não foi possível carregar este período.'; } finally { if (drillState) { drillState.loading = false; renderDrill(); } } }
   function closeDrill() { drillState = null; renderDrill(); const target = drillReturnFocus; drillReturnFocus = null; if (target?.isConnected) target.focus(); }
   function bindSwipeToClose(root) { const header = root.querySelector('[data-drill-drag]'); if (!header) return; let startY = null; header.onpointerdown = (event) => { if (window.innerWidth > 767) return; startY = event.clientY; header.setPointerCapture?.(event.pointerId); }; header.onpointerup = (event) => { if (startY !== null && event.clientY - startY > 80) closeDrill(); startY = null; }; header.onpointercancel = () => { startY = null; }; }
-  function openReport(report) { document.querySelector('[data-nav="caixa"]')?.click(); document.dispatchEvent(new CustomEvent('pagueon:financial-report', { detail: { report } })); }
+  function openCustomerDirectory() { closeDrill(); if (window.pagueOnPeople?.open) { window.pagueOnPeople.open(); return; } document.querySelector('[data-nav="profile"]')?.click(); }
+  function openReport(report) { if (report === 'customers') return openCustomerDirectory(); document.querySelector('[data-nav="caixa"]')?.click(); document.dispatchEvent(new CustomEvent('pagueon:financial-report', { detail: { report } })); }
 
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && drillState) { event.preventDefault(); closeDrill(); } });
   function refreshDashboard() { invalidateDashboard(); render(true); }

@@ -49,6 +49,7 @@ test('dashboard termina em erro após timeout e PWA troca a versão do shell', (
   assert.match(dashboard, /render\(true\)/);
   assert.match(dashboard, /function observeDashboardVisibility\(\)/);
   assert.match(dashboard, /root\.onclick = \(event\)/);
+  assert.match(dashboard, /function openCustomerDirectory\(\)/);
   assert.match(worker, /pagueon-shell-v30/);
   assert.doesNotMatch(offline, /navigator\.serviceWorker\.register/);
 });

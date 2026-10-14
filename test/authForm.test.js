@@ -30,12 +30,9 @@ test('exibe conflitos de cadastro, bloqueia reenvio e anuncia o erro', () => {
   assert.match(source, /aria-invalid/);
 });
 
-test('cadastro concluído direciona a pessoa para o login, sem abrir sessão', () => {
-  assert.match(source, /else if \(mode === 'register'\) \{/);
-  assert.match(source, /loginUrl\.search = 'auth=login'/);
-  assert.match(source, /show\('login', result\.message/);
-  assert.match(authControllerSource, /sendSuccess\(res, \{ user \}, 'Conta criada com sucesso\. Entre com seu e-mail e senha para continuar\.'/);
-  assert.doesNotMatch(authControllerSource, /async function register[^\n]*sendSession/);
+test('cadastro concluído abre sessão e leva a pessoa diretamente ao app', () => {
+  assert.match(source, /else if \(mode === 'register'\) \{ setSession\(result\.data\); trace\('registration_authenticated'\); startSession\(\); \}/);
+  assert.match(authControllerSource, /async function register[^\n]*sendSession\(res, result, 'Conta criada com sucesso\.'/);
 });
 
 test('sessão autenticada remove parâmetros de cadastro da URL', () => {

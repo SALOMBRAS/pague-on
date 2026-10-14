@@ -42,6 +42,8 @@ async function createSale(userId, input, context = {}) {
       ? await tx.customer.findFirst({ where: { id: customerId, userId, isActive: true } })
       : null;
     if (customerId && !customer) throw new HttpError(400, 'INVALID_CUSTOMER', 'A pessoa selecionada não existe ou está inativa.');
+    const counterparty = customer?.name || input.counterparty || 'Cliente avulso';
+    const counterpartyPhone = customer?.phone || input.counterpartyPhone || null;
 
     const requestedItems = input.items || [{ productId: input.productId, quantity: input.quantity, unitPrice: input.unitPrice, productName: input.productName }];
     const productIds = [...new Set(requestedItems.map((item) => item.productId).filter(Boolean))];
@@ -112,8 +114,8 @@ async function createSale(userId, input, context = {}) {
         paymentType: input.paymentType,
         description: input.description || `Venda #${sale.id.slice(0, 8)}`,
         category: 'PRODUCT',
-        counterparty: customer?.name || 'Cliente avulso',
-        counterpartyPhone: customer?.phone || null,
+        counterparty,
+        counterpartyPhone,
         totalAmount: amounts.remainingAmount,
         installmentAmount: installments[0]?.amount || null,
         totalInstallments: input.paymentType === 'INSTALLMENT' ? input.totalInstallments : null,

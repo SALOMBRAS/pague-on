@@ -13,7 +13,7 @@
   let state = null;
 
   function reset() {
-    state = { type: 'PRODUCT', customer: null, accounts: [], products: [], preview: null, busy: false, draft: { customerName: '', customerPhone: '', description: '', productId: '', downPaymentAmount: '0', totalInstallments: '10', installmentAmount: '', frequency: 'MONTHLY', firstDueDate: defaultDueDate(), cashAccountId: '', paymentMethod: 'PIX', notes: '' } };
+    state = { type: 'PRODUCT', accounts: [], products: [], preview: null, busy: false, draft: { customerName: '', customerPhone: '', description: '', productId: '', downPaymentAmount: '0', totalInstallments: '10', installmentAmount: '', frequency: 'MONTHLY', firstDueDate: defaultDueDate(), cashAccountId: '', paymentMethod: 'PIX', notes: '' } };
   }
 
   function screen() { return document.getElementById('quick-operation-screen'); }
@@ -57,13 +57,6 @@
 
   function invalidatePreview() { state.preview = null; }
 
-  async function createCustomer(values) {
-    const name = values.customerName; const phone = values.customerPhone;
-    if (!name || !phone) throw new Error('Informe nome e telefone do cliente.');
-    state.customer = await window.pagueOnApi.post('/customers', { name, phone }); state.newCustomer = false;
-    window.dispatchEvent(new CustomEvent('pagueon:customer-created', { detail: { customer: state.customer } }));
-  }
-
   async function preview() {
     try { const values = formValues(); if (!values.customerName || !values.customerPhone) throw new Error('Informe nome e telefone do cliente antes de continuar.'); setMessage('Calculando prévia…'); state.preview = await window.pagueOnApi.post('/quick-operations/product-preview', { description: values.description, downPaymentAmount: values.downPaymentAmount, totalInstallments: values.totalInstallments, installmentAmount: values.installmentAmount, frequency: values.frequency, firstDueDate: values.firstDueDate }); render(); } catch (error) { state.preview = null; setMessage(validationMessage(error), 'error'); }
   }
@@ -73,9 +66,8 @@
     try {
       if (!state.preview) { await preview(); if (!state.preview) return; setMessage('Confira a prévia e toque em salvar novamente.'); return; }
       const values = formValues();
-      if (!state.customer) await createCustomer(values);
       state.busy = true; render();
-      const sale = { customerId: state.customer.id, productName: values.description, quantity: 1, unitPrice: state.preview.payment.totalAmount, downPaymentAmount: values.downPaymentAmount, cashAccountId: values.cashAccountId, paymentMethod: values.paymentMethod, paymentType: values.totalInstallments > 1 ? 'INSTALLMENT' : 'SINGLE', totalInstallments: values.totalInstallments > 1 ? values.totalInstallments : null, installmentAmount: values.totalInstallments > 1 ? values.installmentAmount : null, frequency: values.frequency, firstDueDate: values.firstDueDate, description: values.description, notes: values.notes };
+      const sale = { counterparty: values.customerName, counterpartyPhone: values.customerPhone, productName: values.description, quantity: 1, unitPrice: state.preview.payment.totalAmount, downPaymentAmount: values.downPaymentAmount, cashAccountId: values.cashAccountId, paymentMethod: values.paymentMethod, paymentType: values.totalInstallments > 1 ? 'INSTALLMENT' : 'SINGLE', totalInstallments: values.totalInstallments > 1 ? values.totalInstallments : null, installmentAmount: values.totalInstallments > 1 ? values.installmentAmount : null, frequency: values.frequency, firstDueDate: values.firstDueDate, description: values.description, notes: values.notes };
       if (values.productId) sale.items = [{ productId: values.productId, quantity: 1, unitPrice: state.preview.payment.totalAmount }];
       await window.pagueOnApi.post('/sales', sale);
       window.showToast?.('Operação salva com sucesso.'); window.dispatchEvent(new CustomEvent('pagueon:operation-created')); document.dispatchEvent(new CustomEvent('pagueon:dashboard-request')); close();

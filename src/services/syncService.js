@@ -100,12 +100,41 @@ function mapCustomerPayload(payload) {
   return mapped;
 }
 
+function mapGoalPayload(payload) {
+  const p = payload || {};
+  const mapped = {};
+  for (const key of ['name', 'icon', 'targetAmount', 'currentAmount', 'targetDate', 'color']) {
+    if (p[key] !== undefined) mapped[key] = p[key];
+  }
+  return mapped;
+}
+
+function mapPurchasePayload(payload) {
+  const p = payload || {};
+  const mapped = {};
+  for (const key of ['productId', 'quantity', 'unitCost', 'totalCost', 'supplier', 'date', 'notes']) {
+    if (p[key] !== undefined) mapped[key] = p[key];
+  }
+  if (mapped.totalCost === undefined && mapped.quantity !== undefined && mapped.unitCost !== undefined) {
+    mapped.totalCost = Number(mapped.quantity) * Number(mapped.unitCost);
+  }
+  return mapped;
+}
+
 // Mapper por modelo. Entidades sem mapper (purchase, goal) seguem com o payload cru.
 const PAYLOAD_MAPPERS = {
   debt: mapDebtPayload,
   product: mapProductPayload,
   customer: mapCustomerPayload,
+  goal: mapGoalPayload,
+  purchase: mapPurchasePayload,
 };
+
+async function assertOwnedProduct(userId, productId) {
+  if (!productId) return;
+  const product = await prisma.product.findFirst({ where: { id: productId, userId } });
+  if (!product) throw Object.assign(new Error('Produto não encontrado ou sem permissão.'), { code: 'NOT_FOUND' });
+}
 
 /**
  * Aplica as mudanças sincronizadas do dispositivo e registra cada tentativa
@@ -129,23 +158,35 @@ async function push(userId, changes = []) {
     const mapper = PAYLOAD_MAPPERS[modelKey];
 
     try {
-      await prisma.syncLog.create({ data: { userId, entity, recordId: String(recordId ?? ''), op } });
-
-      if (modelKey && SUPPORTED_OPS.has(op) && data) {
-        const model = prisma[modelKey];
+      if (!modelKey || !SUPPORTED_OPS.has(op) || !data || !recordId) {
+        throw Object.assign(new Error('Alteração de sincronização inválida.'), { code: 'INVALID_SYNC_CHANGE' });
+      }
+      const model = prisma[modelKey];
+      if (model) {
         if (op === 'INSERT' || op === 'CREATE') {
-          const mapped = mapper ? { ...mapper(data, { forCreate: true }), userId } : { ...data, userId };
+          const mapped = { ...(mapper ? mapper(data, { forCreate: true }) : data), userId };
+          if (modelKey === 'purchase') await assertOwnedProduct(userId, mapped.productId);
           await model.create({ data: mapped });
         } else if (op === 'UPDATE') {
+          // Escopo por userId: um registro só pode ser alterado pelo seu dono.
+          const owned = await model.findFirst({ where: { id: recordId, userId } });
+          if (!owned) throw Object.assign(new Error('Registro não encontrado ou sem permissão.'), { code: 'NOT_FOUND' });
           const mapped = mapper ? mapper(data, { forCreate: false }) : data;
+          if (modelKey === 'purchase' && mapped.productId !== undefined) await assertOwnedProduct(userId, mapped.productId);
           await model.update({ where: { id: recordId }, data: mapped });
         } else if (op === 'DELETE') {
+          // Escopo por ownership antes de apagar.
+          const owned = await model.findFirst({ where: { id: recordId, userId } });
+          if (!owned) throw Object.assign(new Error('Registro não encontrado ou sem permissão.'), { code: 'NOT_FOUND' });
           await model.delete({ where: { id: recordId } });
         }
       }
+      // Só confirma a fila após a alteração persistir; uma falha continua
+      // reenviável pelo dispositivo.
+      await prisma.syncLog.create({ data: { userId, entity, recordId: String(recordId), op } });
       processedIds.push(change.id || recordId);
     } catch (error) {
-      errors.push({ id: change.id || null, entity, recordId, op, message: error.message });
+      errors.push({ id: change.id || null, entity, recordId, op, code: error.code || 'SYNC_FAILED', message: error.code === 'NOT_FOUND' ? error.message : 'Não foi possível sincronizar esta alteração.' });
     }
   }
 

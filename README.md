@@ -1,19 +1,23 @@
-# Pague-On API
+# Pague-On
 
-Backend REST do Pague-On, construído com Node.js, Express, Prisma e PostgreSQL. A API usa JSON, JWT e o prefixo `/api/v1`.
+Aplicação full-stack de **gestão de cobranças, dívidas, estoque e financeiro**, com front duplo (PWA mobile + dashboard desktop) servido pela mesma base.
+
+- **Backend**: Node.js + Express 5 + Prisma 6 + PostgreSQL (Supabase)
+- **Frontend**: Vanilla JS SPA em `public/` (sem framework) — mobile (`≤1023px`) e desktop (`≥1024px`)
+- **Deploy**: Vercel serverless (`api/index.js`)
 
 ## Requisitos
 
 - Node.js 20 ou superior
-- PostgreSQL 14 ou superior
+- PostgreSQL 14 ou superior (ou um projeto Supabase)
 
 ## Como executar
 
 ```bash
 cp .env.example .env
-# Edite DATABASE_URL, JWT_SECRET e CRON_SECRET no .env
+# Edite DATABASE_URL, DIRECT_URL, JWT_SECRET e CRON_SECRET no .env
 npm install
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 npx prisma db seed
 npm run dev
 ```
@@ -26,137 +30,137 @@ curl http://localhost:3000/health
 
 O seed cria `teste@pagueon.com` com a senha `123456`. Altere ou remova essa conta fora do ambiente de desenvolvimento.
 
-## Integração com o front HTML
+## Variáveis de ambiente
 
-Use `http://localhost:3000/api/v1` como base e armazene o token retornado no login. Todas as rotas privadas exigem:
+| Variável | Descrição |
+| --- | --- |
+| `PORT` | Porta da API (padrão 3000) |
+| `DATABASE_URL` | Conexão Prisma (pooler Supabase, `pgbouncer=true`) |
+| `DIRECT_URL` | Conexão direta para migrations (sem pooler) |
+| `JWT_SECRET` | Segredo do token JWT (mín. 32 caracteres) |
+| `JWT_EXPIRES_IN` | Expiração do access token (ex.: `7d`) |
+| `REFRESH_TOKEN_TTL_DAYS` | Vida do refresh token (padrão 30) |
+| `PASSWORD_RESET_TTL_MINUTES` | Validade do token de reset (padrão 30) |
+| `PASSWORD_RESET_BASE_URL` | Base para o link de reset |
+| `PASSWORD_RESET_DELIVERY_WEBHOOK_URL` | Endpoint que entrega `{ to, name, resetUrl }` |
+| `UPLOAD_PATH` | Diretório local de uploads (dev) |
+| `MAX_FILE_SIZE` | Tamanho máximo de upload (bytes, padrão 5MB) |
+| `SUPABASE_URL` | URL do projeto Supabase (ativa Storage em produção) |
+| `SUPABASE_SERVICE_ROLE_KEY` | service_role key (ativa Storage em produção) |
+| `CRON_SECRET` | Segredo do endpoint de cron (`x-cron-secret`) |
+| `FRONTEND_ORIGINS` | Origens permitidas no CORS (separadas por vírgula) |
+| `WEBAUTHN_RP_ID` / `WEBAUTHN_RP_NAME` / `WEBAUTHN_ORIGINS` | Configuração WebAuthn (biometria) |
+| `BACKUP_ENCRYPTION_KEY` | Chave de criptografia dos backups |
+| `VAPID_SUBJECT` / `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Push notifications (web-push) |
+| `ENABLE_INTERNAL_CRON` | Liga o cron interno (`true`/`false`) |
+| `NODE_ENV` | `development` / `production` |
 
-```http
-Authorization: Bearer <token_jwt>
-Content-Type: application/json
-```
-
-Exemplo mínimo:
-
-```js
-const API_URL = 'http://localhost:3000/api/v1';
-
-const login = await fetch(`${API_URL}/auth/login`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email: 'teste@pagueon.com', password: '123456' }),
-});
-const { data } = await login.json();
-localStorage.setItem('pagueon_token', data.token);
-
-const dashboard = await fetch(`${API_URL}/dashboard`, {
-  headers: { Authorization: `Bearer ${data.token}` },
-}).then((response) => response.json());
-```
-
-O CORS aceita qualquer porta em `localhost` e `127.0.0.1`, incluindo Live Server em `:5500`. Para produção, defina uma lista separada por vírgula em `FRONTEND_ORIGINS` no `.env`.
-
-## Formato de resposta
-
-Sucesso:
-
-```json
-{ "success": true, "data": {}, "message": "Opcional" }
-```
-
-Erro:
-
-```json
-{ "success": false, "error": "Mensagem descritiva", "code": "ERROR_CODE" }
-```
-
-As únicas exceções são exportações CSV, que retornam um arquivo `text/csv`.
+> **Uploads**: com `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` definidos, os uploads vão para o bucket `uploads/` do Supabase Storage (pastas `avatars/`, `products/`, `payment-proofs/`) e são servidos por URL pública. Sem eles, os arquivos ficam no filesystem local `uploads/` (apenas desenvolvimento — na Vercel o filesystem é efêmero).
 
 ## Rotas
 
+Todas as rotas privadas exigem `Authorization: Bearer <token_jwt>` e `Content-Type: application/json`. Prefixo base: `/api/v1`.
+
 | Área | Rotas |
 | --- | --- |
-| Autenticação | `POST /auth/register`, `POST /auth/login`, `GET/PUT /auth/me`, `PUT /auth/password`, `POST /auth/avatar` |
-| Dashboard | `GET /dashboard` |
-| Dívidas | `GET/POST /debts`, `GET/PUT/DELETE /debts/:id`, `POST /debts/:id/pay`, `POST /debts/:id/cancel`, `GET /debts/:id/installments`, `POST /debts/:id/installments/:installmentId/pay`, `GET /debts/:id/recurring-history`, `POST /debts/:id/collect` |
-| Produtos | `GET/POST /products`, `GET/PUT/DELETE /products/:id`, `POST /products/:id/image` |
-| Compras | `GET/POST /purchases`, `DELETE /purchases/:id` |
-| Clientes | `GET/POST /customers`, `GET/PUT/DELETE /customers/:id` |
-| Vendas | `GET/POST /sales`, `GET /sales/:id`, `POST /sales/:id/pay`, `POST /sales/:id/cancel` |
-| Pagamentos | `POST /payments` para registrar um pagamento por `debtId` e, opcionalmente, `installmentId` |
-| Notificações | `GET /notifications`, `PUT /notifications/read-all`, `PUT /notifications/:id/read`, `DELETE /notifications/:id` |
-| Lembretes | `GET/POST /reminders`, `DELETE /reminders/:id` |
-| Relatórios | `GET /reports/cashflow`, `GET /reports/profit`, `GET /reports/debts`, `GET /reports/export?format=csv&type=cashflow` |
-| Cron | `POST /cron/check-reminders` com `x-cron-secret` |
+| **Auth** | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `POST /auth/password-reset/request`, `POST /auth/password-reset/confirm`, `GET/PUT /auth/me`, `PUT /auth/password`, `POST /auth/avatar`, `GET/PUT /auth/security`, `POST /auth/pin/set`, `POST /auth/pin/verify`, `POST /auth/biometric/*` (registration/authentication options + verify) |
+| **Dashboard** | `GET /dashboard`, `GET /dashboard/financial` |
+| **Dívidas** | `GET/POST /debts`, `POST /debts/check-duplicate`, `GET/PUT/DELETE /debts/:id`, `POST /debts/:id/pay`, `POST /debts/:id/cancel`, `GET /debts/:id/installments`, `POST /debts/:id/installments/:installmentId/pay`, `GET /debts/:id/recurring-history`, `POST /debts/:id/collect` |
+| **Empréstimos** | `GET/PUT /loans/configurations`, `GET/PUT /loans/settings`, `GET/POST/PUT/DELETE /loans/settings/holidays`, `GET /loans/customers`, `POST /loans/simulate`, `POST /loans` |
+| **Recibos de empréstimo** | `GET /loan-receipts/:debtId`, `POST /loan-receipts/installments/:installmentId/proof`, `POST /loan-receipts/installments/:installmentId/preview-receipt`, `POST /loan-receipts/installments/:installmentId/receipts`, `POST /loan-receipts/receipts/:paymentId/reverse` |
+| **Parcelas** | `GET /installments/mine`, `GET /installments/overdue`, `POST /installments/:id/extra`, `POST /installments/:id/pay`, `POST /installments/:id/pay-partial`, `POST /installments/:id/unpay`, `POST /installments/:id/remind` |
+| **Produtos** | `GET/POST /products`, `GET/PUT/DELETE /products/:id`, `POST /products/:id/image` |
+| **Compras** | `GET/POST /purchases`, `DELETE /purchases/:id` |
+| **Vendas** | `GET/POST /sales`, `GET/PUT /sales/:id`, `POST /sales/:id/pay`, `POST /sales/:id/cancel`, `DELETE /sales/:id`, `POST /sales/:id/recalculate` |
+| **Clientes** | `GET/POST /customers`, `POST /customers/:id/approve`, `GET/PUT/DELETE /customers/:id` |
+| **Cadastro de cliente (convite)** | `GET/POST /customer-registration/:token`, `POST /customer-registration/customers/:id/invite`, `POST /customer-registration/invites/:id/revoke` |
+| **Pessoas** | `GET/POST /people`, `GET /people/search`, `GET /people/:id/sales`, `GET/PUT/DELETE /people/:id` |
+| **Cobradores** | `GET/POST /collectors`, `GET /collectors/me/customers`, `GET /collectors/me/debts`, `GET /collectors/me/agenda`, `GET/POST /collectors/me/contacts`, `GET /collectors/me/commissions`, `POST /collectors/me/installments/:id/pay`, `GET /collectors/:id/commissions`, `PUT /collectors/:id`, `PUT /collectors/:id/customers` |
+| **Contas financeiras** | `GET/POST /financial-accounts`, `POST /financial-accounts/transfers`, `POST /financial-accounts/adjustments`, `POST /financial-accounts/closings`, `GET /financial-accounts/closings`, `POST /financial-accounts/movements/:id/reverse`, `PATCH /financial-accounts/:id`, `GET /financial-accounts/statement` |
+| **Metas** | `GET/POST /goals`, `PUT/DELETE /goals/:id`, `POST /goals/:id/deposit`, `POST /goals/:id/withdraw` |
+| **Relatórios** | `GET /reports/cashflow`, `GET /reports/profit`, `GET /reports/debts`, `GET /reports/export`, `GET /reports/catalog`, `GET /reports/:reportKey`, `GET /reports/:reportKey/export` |
+| **Regras automáticas** | `GET/POST /rules`, `POST /rules/run-all`, `GET/PUT/DELETE /rules/:id`, `POST /rules/:id/test` |
+| **Sincronização** | `POST /sync/push`, `GET /sync/pull` |
+| **Backup** | `GET /backup/export`, `POST /backup/restore`, `GET /backup/cloud/status`, `POST /backup/cloud`, `POST /backup/cloud/:id/restore` |
+| **Ativos/Patrimônio** | `GET/POST /assets`, `PUT/DELETE /assets/:id`, `GET /net-worth` |
+| **Reconciliação** | `GET /reconciliation`, `POST /reconciliation/upload`, `POST /reconciliation/match`, `POST /reconciliation/confirm`, `GET /reconciliation/:id` |
+| **Orçamento** | `GET/POST /budgets`, `PUT/DELETE /budgets/:id` |
+| **Moedas** | `GET /currencies`, `GET /currencies/convert`, `POST /currencies/refresh` |
+| **Importação de extrato** | `POST /statement-imports` |
+| **Push** | `GET /push/config`, `POST /push/subscribe`, `DELETE /push/subscribe`, `POST /push/test` |
+| **Notificações** | `GET /notifications`, `PUT /notifications/read-all`, `PUT /notifications/:id/read`, `DELETE /notifications/:id` |
+| **Lembretes** | `GET/POST /reminders`, `DELETE /reminders/:id` |
+| **Operações rápidas** | `POST /quick-operations/product-preview` |
+| **Pagamentos** | `POST /payments` |
+| **Cron** | `POST /cron/check-reminders`, `POST /cron/update-exchange-rates`, `POST /cron/run-notifications`, `POST /cron/weekly-digest`, `POST /cron/monthly-digest`, `POST /cron/recalculate-interest` (todas com `x-cron-secret`) |
+| **Acesso/Auditoria (admin)** | `GET /access/me`, `GET /access/audit`, `GET/POST /access/users`, `PUT /access/users/:id` |
 
-Filtros suportados: `/debts` aceita `type`, `status`, `paymentType` e `search`; `/products` aceita `search`, `lowStock=true` e `sort=profitMargin|name|stock`; `/purchases` aceita `productId`, `startDate`, `endDate`; `/customers` aceita `search`; `/sales` aceita `customerId`, `status`, `startDate`, `endDate`.
+Filtros comuns: `/debts` aceita `type`, `status`, `paymentType`, `search`; `/products` aceita `search`, `lowStock`, `sort`; `/purchases` aceita `productId`, `startDate`, `endDate`; `/customers` aceita `search`; `/sales` aceita `customerId`, `status`, `startDate`, `endDate`.
 
-## Exemplos com cURL
+## Banco de dados (Prisma)
 
-Criar uma dívida parcelada:
+48 models, 31 enums, 67 índices, 17 uniques. Principais grupos:
 
-```bash
-curl -X POST http://localhost:3000/api/v1/debts \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type":"RECEIVABLE",
-    "paymentType":"INSTALLMENT",
-    "description":"Venda de mesa",
-    "category":"PRODUCT",
-    "counterparty":"Carlos Souza",
-    "totalAmount":1500,
-    "totalInstallments":6,
-    "startDate":"2026-08-25T00:00:00.000Z"
-  }'
-```
-
-Criar um produto:
-
-```bash
-curl -X POST http://localhost:3000/api/v1/products \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Camiseta Preta","costPrice":25,"sellingPrice":55,"stockQuantity":12}'
-```
-
-Registrar uma venda pelo botão **Nova Venda** do dashboard. O backend calcula o valor, reduz o estoque e cria a cobrança vinculada:
-
-```bash
-curl -X POST http://localhost:3000/api/v1/sales \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "customerId":"uuid-do-cliente",
-    "items":[{"productId":"uuid-do-produto","quantity":2}],
-    "paymentType":"INSTALLMENT",
-    "totalInstallments":2,
-    "startDate":"2026-08-25T00:00:00.000Z"
-  }'
-```
-
-Enviar avatar ou foto de produto:
-
-```bash
-curl -X POST http://localhost:3000/api/v1/auth/avatar \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "image=@./minha-foto.png"
-```
+- **Identidade/auth**: `User`, `RefreshToken`, `PasswordResetToken`, `UserSecurity`, `WebAuthnCredential`, `AuditLog`
+- **Financeiro**: `FinancialAccount`, `FinancialMovement`, `FinancialCashClosing`, `FinancialSettingsVersion`, `FinancialHoliday`
+- **Cobranças**: `Debt`, `Installment`, `InstallmentPayment`, `InstallmentPaymentAllocation`, `RecurringPayment`, `Reminder`, `Notification`
+- **Empréstimos**: `LoanContract`, `LoanModalityConfiguration`
+- **Produtos/estoque**: `Product`, `Purchase`, `Sale`, `SaleItem`
+- **Clientes**: `Customer`, `CustomerClassification`, `CustomerDocument`, `CustomerConsent`, `CustomerRegistrationInvite`
+- **Cobradores**: `CollectorProfile`, `CollectorContact`, `CollectorCommission`
+- **Regras**: `Rule`, `RuleTrigger`, `RuleAction`, `RuleExecution`
+- **Extras**: `CashFlow`, `Goal`, `GoalTransaction`, `SyncLog`, `BackupSnapshot`, `Asset`, `NetWorthSnapshot`, `BankStatement`, `BankTransaction`, `Budget`, `Currency`, `PushSubscription`
 
 ## Decisões de negócio
 
 - Valores são calculados e persistidos no backend; o front não define margem, saldo, datas de parcelas ou vencimento recorrente.
-- Operações que modificam mais de uma tabela (parcelas, pagamentos e compras) usam transações Prisma.
-- Ação **Nova Venda** reduz o estoque, persiste itens com preço/custo do momento e cria uma dívida a receber. Pagamentos mantêm venda e dívida sincronizadas.
-- Ação **Novo Cliente** usa `/customers`; o cliente pode ser associado manualmente a uma dívida ou automaticamente por uma venda.
+- Operações que modificam mais de uma tabela usam transações Prisma.
+- `Nova Venda` reduz o estoque, persiste itens com preço/custo do momento e cria uma dívida a receber. Pagamentos mantêm venda e dívida sincronizadas.
 - Produtos são arquivados por soft delete (`isActive = false`).
-- Datas são armazenadas em UTC. A conversão para `America/Sao_Paulo` deve ocorrer na interface.
-- Arquivos são gravados localmente em `uploads/` e servidos publicamente em `/uploads/...`. Para produção, substitua esse armazenamento por um serviço de objetos.
+- Datas são armazenadas em UTC; a conversão para `America/Sao_Paulo` ocorre na interface.
+- Regras financeiras (juros, multa, feriados, vencimentos) são versionadas — alterações nunca mudam contratos antigos.
+
+## Deploy (Vercel)
+
+- `vercel.json` roteia tudo para `api/index.js` (Express serverless), região `gru1` (mesma do Supabase).
+- Assets estáticos (`css/js/svg/png/...`) recebem cache de CDN (`s-maxage=3600`); HTML e `sw.js` ficam fora do cache para publicação imediata.
+- **Uploads em produção**: configure `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` e crie o bucket `uploads` (público) no Supabase Storage.
 
 ## Scripts
 
 ```bash
-npm run dev          # inicia com nodemon
-npm start            # inicia com node
-npm run prisma:migrate
-npm run prisma:seed
+npm run dev               # nodemon
+npm start                 # node
+npm run prisma:generate   # gera o Prisma Client
+npm run prisma:migrate    # migrate dev
+npm run prisma:seed       # seed
+npm run db:up             # docker compose up postgres
+npm run db:migrate        # prisma migrate deploy
+npm run db:reset          # prisma migrate reset --force
+npm test                  # testes unitários
+npm run test:integration  # testes de integração (banco local)
+```
+
+## Segurança e dependências
+
+- Helmet (CSP), CORS com allowlist, rate-limit por rota, JWT + refresh token (cookie httpOnly), PIN e WebAuthn (biometria), auditoria append-only.
+- `npm audit` reporta 5 vulnerabilidades **aceitas** (deps transitivas de ferramentas, sem fix sem breaking change major): `uuid` via `exceljs` (moderate) e `deepmerge-ts` via `@prisma/config` (high). Ambas fora do caminho crítico de autenticação.
+
+## Estrutura de pastas
+
+```
+api/            # entrypoint serverless (Vercel)
+src/
+  app.js        # Express app (middlewares, rotas, CSP, CORS)
+  server.js     # bootstrap local
+  routes/       # 31 arquivos de rota
+  controllers/  # handlers HTTP
+  services/     # regras de negócio
+  middlewares/  # auth, errorHandler, upload, apiAccessPolicy
+  utils/        # jwt, validators (zod), serializers, httpError, dateHelpers
+prisma/
+  schema.prisma # 48 models
+  migrations/   # 20 ativas + 12 legacy
+public/         # front SPA (mobile + desktop), PWA, landing
+test/           # 75 unit + 49 integration
 ```

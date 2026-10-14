@@ -24,6 +24,7 @@ const purchaseRoutes = require('./routes/purchaseRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const customerRegistrationRoutes = require('./routes/customerRegistrationRoutes');
 const saleRoutes = require('./routes/saleRoutes');
+const quickOperationRoutes = require('./routes/quickOperationRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reminderRoutes = require('./routes/reminderRoutes');
@@ -57,12 +58,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com', 'https://cdn.jsdelivr.net'],
+      scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'", 'https://cdn.jsdelivr.net'],
-      workerSrc: ["'self'", 'blob:', 'https://cdn.jsdelivr.net'],
+      connectSrc: ["'self'"],
+      workerSrc: ["'self'", 'blob:'],
     },
   },
   crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -74,6 +75,18 @@ app.use(cors({
   },
   credentials: true,
 }));
+// Observabilidade do caminho crítico sem expor identidade, credenciais, token
+// ou query string. Ajuda a separar autenticação, perfil e dashboard lentos.
+app.use('/api/v1', (req, res, next) => {
+  const area = req.path.startsWith('/auth') ? 'AUTH' : req.path.startsWith('/dashboard') ? 'DASHBOARD' : null;
+  if (!area) return next();
+  const startedAt = process.hrtime.bigint();
+  res.once('finish', () => {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+    console.info(`[${area}] request_completed`, { method: req.method, route: req.path, status: res.statusCode, durationMs: Math.round(durationMs) });
+  });
+  next();
+});
 // O limite é da API. Aplicá-lo ao app inteiro bloqueava a própria tela e seus
 // arquivos estáticos depois de muitas requisições no mesmo minuto.
 app.use('/api/v1', rateLimit({ windowMs: 60 * 1000, limit: 100, standardHeaders: 'draft-8', legacyHeaders: false }));
@@ -82,10 +95,24 @@ const registrationLimiter = rateLimit({ windowMs: 60 * 1000, limit: 10, standard
 app.use('/api/v1/customer-registration', (req, res, next) => { if (req.path === '/customers' || req.path.startsWith('/invites') || req.path.startsWith('/customers/')) return next(); return registrationLimiter(req, res, next); });
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.resolve(process.env.UPLOAD_PATH || './uploads')));
+// Uploads locais só são servidos em desenvolvimento. Em produção os arquivos
+// vão para o Supabase Storage e são acessados por URL pública (ver uploadMiddleware).
+if (!process.env.SUPABASE_URL) {
+  app.use('/uploads', express.static(path.resolve(process.env.UPLOAD_PATH || './uploads')));
+}
 app.get('/', (_req, res) => res.sendFile(path.resolve('public/landing.html')));
 app.get('/app', (_req, res) => res.sendFile(path.resolve('public/index.html')));
-app.use(express.static(path.resolve('public')));
+// Os arquivos versionados pelo deploy devem ser atendidos pelo CDN entre
+// acessos. HTML e o service worker ficam fora desta política, para que uma
+// publicação nova seja descoberta imediatamente pelo PWA.
+const cacheablePublicAsset = /\.(?:css|js|svg|png|jpg|jpeg|webp|ico|woff2?)$/i;
+app.use(express.static(path.resolve('public'), {
+  setHeaders(res, filePath) {
+    if (cacheablePublicAsset.test(filePath) && !/[/\\]sw\.js$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
+    }
+  },
+}));
 
 app.get('/health', (_req, res) => sendSuccess(res, { status: 'ok', timestamp: new Date().toISOString() }));
 app.use('/api/v1/auth', authRoutes);
@@ -103,6 +130,7 @@ app.use('/api/v1/purchases', purchaseRoutes);
 app.use('/api/v1/customers', customerRoutes);
 app.use('/api/v1/people', peopleRoutes);
 app.use('/api/v1/sales', saleRoutes);
+app.use('/api/v1/quick-operations', quickOperationRoutes);
 app.use('/api/v1/installments', installmentRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/notifications', notificationRoutes);

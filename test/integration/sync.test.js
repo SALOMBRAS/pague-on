@@ -125,6 +125,36 @@ test('sync: push com payload de debt incompleto vai para erros e não aplica', a
   assert.equal((await prisma.debt.count({ where: { userId: user.id } })), before, 'nenhuma Debt deve ser criada');
 });
 
+test('sync: purchase não pode referenciar produto de outro usuário', async (t) => {
+  const owner = await createTestUser();
+  const attacker = await createTestUser();
+  t.after(() => Promise.all([cleanup(owner.id), cleanup(attacker.id)]));
+  const product = await prisma.product.create({ data: { userId: owner.id, name: `Produto privado ${owner.id}`, costPrice: 10, sellingPrice: 20, profitMargin: 50, stockQuantity: 1 } });
+
+  const result = await syncService.push(attacker.id, [{
+    id: 'cross-tenant-purchase', entity: 'purchase', action: 'CREATE', recordId: 'cross-tenant-purchase',
+    payload: { productId: product.id, quantity: 1, unitCost: 10, totalCost: 10, date: ISO },
+  }]);
+
+  assert.equal(result.applied, 0);
+  assert.equal(result.errors[0].code, 'NOT_FOUND');
+  assert.equal(await prisma.purchase.count({ where: { userId: attacker.id } }), 0);
+});
+
+test('sync: goal ignora campos de posse enviados pelo cliente', async (t) => {
+  const user = await createTestUser();
+  t.after(() => cleanup(user.id));
+  const result = await syncService.push(user.id, [{
+    id: 'goal-owner-guard', entity: 'goal', action: 'CREATE', recordId: 'goal-owner-guard',
+    payload: { name: 'Reserva', targetAmount: 1000, currentAmount: 0, userId: '00000000-0000-0000-0000-000000000000', workspaceOwnerId: 'forged', isPro: true },
+  }]);
+
+  assert.equal(result.applied, 1);
+  const goal = await prisma.goal.findFirst({ where: { userId: user.id, name: 'Reserva' } });
+  assert.ok(goal);
+  assert.equal(goal.userId, user.id);
+});
+
 test('sync: pull retorna os SyncLogs gravados respeitando since', async (t) => {
   const user = await createTestUser();
   t.after(() => cleanup(user.id));

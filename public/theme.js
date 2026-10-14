@@ -13,7 +13,10 @@
   function current() {
     var saved = null;
     try { saved = localStorage.getItem(KEY); } catch (e) { /* privado */ }
-    return (saved === 'light' || saved === 'dark' || saved === 'system') ? saved : 'system';
+    // O produto é Dark Neon por padrão. O modo claro continua disponível apenas
+    // por escolha explícita, sem depender da preferência do sistema para não
+    // causar um flash claro antes dos tokens carregarem.
+    return (saved === 'light' || saved === 'dark') ? saved : 'dark';
   }
 
   function apply(theme) {
@@ -28,8 +31,11 @@
     var dark = root.getAttribute('data-theme') === 'dark'
       || (root.getAttribute('data-theme') !== 'light'
           && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    var base = dark ? '#07150e' : '#f6f8f7';
-    var brand = dark ? '#00c853' : '#008a4a';
+    // A identidade atual do produto é Neon escura em todas as superfícies.
+    // O seletor de tema continua disponível para preferências futuras, mas a
+    // barra do navegador não deve voltar para uma cor de outra identidade.
+    var base = '#000000';
+    var brand = '#a3e635';
     if (meta) meta.setAttribute('content', base);
     // fundo do app nas bordas do mobile
     if (root && root.style) root.style.backgroundColor = base;
@@ -54,7 +60,7 @@
     },
     toggle: function () {
       var t = current();
-      var next = t === 'dark' ? 'light' : (t === 'light' ? 'dark' : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark'));
+      var next = t === 'dark' ? 'light' : 'dark';
       pagueOnTheme.set(next);
       return next;
     }

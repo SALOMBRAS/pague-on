@@ -1,14 +1,30 @@
-const CACHE_NAME = 'pagueon-shell-v22';
+// Versão deliberada do shell: obriga a troca atômica do cache depois da
+// correção do bootstrap de autenticação, evitando que mobile execute JS antigo.
+const CACHE_NAME = 'pagueon-shell-v30';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/landing.html',
+  '/app',
   '/manifest.webmanifest',
   '/tokens.css',
+  '/design-system.css',
   '/app.css',
   '/ui-enhancements.css',
   '/mobile-fintech.css',
   '/desktop-dashboard.css',
+  '/desktop-shell.css',
+  '/mobile-shell.css',
+  '/desktop-financial-dashboard.css',
+  '/caixa-attention.css',
+  '/stock-attention.css',
+  '/wealth-overview.css',
+  '/goals-status.css',
+  '/onboarding.css',
+  '/financial-settings.css',
+  '/assets/pague-mascot-v1.png',
+  '/assets/pague-mascot-dollar-v2.png',
+  '/assets/pague-mascot-user-v3.png',
   '/theme.js',
   '/icons.js',
   '/ui-components.js',
@@ -16,12 +32,17 @@ const APP_SHELL = [
   '/offline.js',
   '/pwa-install.js',
   '/api.js',
+  '/reports.js',
   '/auth.js',
+  '/quick-operation.js',
+  '/quick-operation.css',
+  '/reports.css',
   '/security.js',
   '/export.js',
   '/scanner.js',
   '/widget.js',
   '/onboarding.js',
+  '/financial-settings.js',
   '/networth.js',
   '/reconciliation.js',
   '/budget.js',
@@ -68,14 +89,20 @@ self.addEventListener('fetch', (event) => {
   // Fora do worker o mesmo <link> é regido por style-src, que permite as fontes.
   if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 
-  // Rede primeiro para TUDO, cache como plano B offline. O cache existe para o
-  // app abrir sem conexão — não para escolher qual versão do código roda.
-  // Responder do cache, mesmo revalidando em segundo plano, ainda entrega o
-  // arquivo velho no load em que o usuário está: foi assim que uma correção já
-  // publicada continuou invisível no navegador de quem tinha o shell antigo.
+  // Navegação (documento): rede primeiro; se falhar, cai no cache do app shell.
+  // Nunca devolve undefined — se não houver nada em cache, retorna um Response
+  // mínimo em vez de "Failed to convert value to 'Response'".
+  if (request.mode === 'navigate') {
+    event.respondWith(fetch(request)
+      .then((response) => store(request, response))
+      .catch(() => caches.match('/index.html').then((cached) => cached || caches.match('/').then((root) => root || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } })))));
+    return;
+  }
+
+  // Assets: rede primeiro, cache como plano B. Nunca retornar undefined.
   event.respondWith(fetch(request)
     .then((response) => store(request, response))
-    .catch(() => caches.match(request).then((cached) => cached || (request.mode === 'navigate' ? caches.match('/index.html') : undefined))));
+    .catch(() => caches.match(request).then((cached) => cached || new Response('', { status: 504, headers: { 'Content-Type': 'text/plain' } }))));
 });
 
 const DEFAULT_WIDGET = { enabled: false, balance: true, receive: true, pay: true, urgent: true, upcoming: false, addDebt: true, collect: true, interval: 15 };

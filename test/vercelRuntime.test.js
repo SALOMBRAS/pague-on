@@ -15,4 +15,5 @@ test('assets públicos recebem cache de CDN pela configuração da Vercel', () =
   assert.equal(config.routes[0].continue, true);
   assert.ok(config.builds.some((build) => build.src === 'public/**' && build.use === '@vercel/static'));
   assert.ok(config.routes.some((route) => route.handle === 'filesystem'));
+  assert.equal(config.routes.find((route) => route.dest === 'api/index.js' && route.src.includes('/app')).src, '/app$');
 });

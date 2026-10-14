@@ -4,6 +4,7 @@
   const periodOptions = [['TODAY', 'Hoje'], ['WEEK', 'Semana'], ['MONTH', 'Mês'], ['QUARTER', 'Trimestre'], ['YEAR', 'Ano'], ['CUSTOM', 'Período']];
   const dashboardCache = new Map();
   let inFlight = null;
+  let dashboardVersion = 0;
   let baseData = null;
   let drillState = null;
   let drillReturnFocus = null;
@@ -66,15 +67,17 @@
   }
 
   function queryFor(period, custom = {}) { const params = new URLSearchParams({ period }); if (period === 'CUSTOM' && custom.startDate && custom.endDate) { params.set('startDate', custom.startDate); params.set('endDate', custom.endDate); } return params; }
-  async function fetchDashboard(params) { const key = params.toString(); if (dashboardCache.has(key)) return dashboardCache.get(key); if (inFlight?.key === key) return inFlight.promise; const request = window.pagueOnApi.get(`/dashboard/financial?${key}`).then((data) => { dashboardCache.set(key, data); return data; }); inFlight = { key, promise: request }; try { return await request; } finally { if (inFlight?.promise === request) inFlight = null; } }
+  function invalidateDashboard() { dashboardVersion += 1; dashboardCache.clear(); }
+  async function fetchDashboard(params, version = dashboardVersion) { const query = params.toString(); const key = `${version}:${query}`; if (dashboardCache.has(key)) return dashboardCache.get(key); if (inFlight?.key === key) return inFlight.promise; const request = window.pagueOnApi.get(`/dashboard/financial?${query}`).then((data) => { if (version === dashboardVersion) dashboardCache.set(key, data); return data; }); inFlight = { key, promise: request }; try { return await request; } finally { if (inFlight?.promise === request) inFlight = null; } }
 
-  async function render() {
+  async function render(force = false) {
     const host = document.getElementById('homeView'); if (!host || !window.pagueOnAuth?.getToken?.()) return;
     const existing = ensurePanel(host); const params = queryFor('MONTH');
-    if (existing.dataset.query === params.toString() && existing.querySelector('.financial-grid')) return;
+    if (!force && existing.dataset.query === params.toString() && existing.querySelector('.financial-grid')) return;
+    const version = dashboardVersion;
     const startedAt = performance.now();
     try {
-      const data = await fetchDashboard(params); baseData = data;
+      const data = await fetchDashboard(params, version); if (version !== dashboardVersion) return; baseData = data;
       const section = document.createElement('section'); section.id = 'financial-dashboard'; section.dataset.query = params.toString(); section.setAttribute('aria-busy', 'false');
       section.innerHTML = `<h2 class="financial-title">Visão financeira</h2><p class="financial-subtitle">O essencial do mês atual. Abra um card para explorar períodos e detalhes.</p><div class="financial-grid">${cards.map((item) => dashboardCard(item, data)).join('')}</div>`;
       existing.replaceWith(section); section.querySelectorAll('[data-dashboard-card]').forEach((button) => { button.onclick = () => openDrill(cards.find((item) => item.key === button.dataset.dashboardCard), button); });
@@ -115,5 +118,6 @@
   function openReport(report) { document.querySelector('[data-nav="caixa"]')?.click(); document.dispatchEvent(new CustomEvent('pagueon:financial-report', { detail: { report } })); }
 
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && drillState) { event.preventDefault(); closeDrill(); } });
-  window.addEventListener('pagueon:auth', () => setTimeout(render, 0)); document.addEventListener('pagueon:dashboard-request', () => setTimeout(render, 0)); new MutationObserver(() => { if (document.getElementById('homeView')?.classList.contains('show')) render(); }).observe(document.body, { childList: true, subtree: true });
+  function refreshDashboard() { invalidateDashboard(); render(true); }
+  window.addEventListener('pagueon:auth', () => setTimeout(refreshDashboard, 0)); window.addEventListener('pagueon:operation-created', () => setTimeout(refreshDashboard, 0)); document.addEventListener('pagueon:dashboard-request', () => setTimeout(refreshDashboard, 0)); new MutationObserver(() => { if (document.getElementById('homeView')?.classList.contains('show')) render(); }).observe(document.body, { childList: true, subtree: true });
 })();

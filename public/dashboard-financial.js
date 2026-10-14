@@ -33,7 +33,7 @@
     host.innerHTML = `<section id="financial-dashboard" data-query="period=MONTH" aria-busy="true"><style>
       .financial-retry{min-height:44px;margin-top:12px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font-weight:700}
       .financial-loading{display:grid;place-items:center;min-height:220px;padding:24px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,var(--surface),transparent);text-align:center}
-      .financial-loading-art{position:relative;width:116px;height:86px;margin-bottom:13px;color:var(--green)}
+      .financial-loading-art{position:relative;width:116px;height:86px;margin:0 auto 13px;color:var(--green)}
       .financial-wallet{position:absolute;inset:28px 8px 4px;border:2px solid currentColor;border-radius:14px;background:color-mix(in srgb,var(--green) 10%,var(--surface));overflow:hidden}
       .financial-wallet::after{content:'';position:absolute;right:10px;top:15px;width:8px;height:8px;border-radius:50%;background:currentColor}
       .financial-note{position:absolute;left:46px;top:0;width:28px;height:21px;border:2px solid currentColor;border-radius:5px;background:var(--surface);animation:financial-note-drop 1.25s ease-in-out infinite}
@@ -74,7 +74,7 @@
         retry.type = 'button'; retry.className = 'financial-retry'; retry.textContent = 'Tentar novamente';
         retry.onclick = () => render();
         existing.querySelector('.financial-retry')?.remove();
-        existing.append(retry);
+        (existing.querySelector('.financial-loading > div') || existing).append(retry);
         console.info('[DASHBOARD] load_error', { code: error?.code || error?.name || 'NETWORK_ERROR', durationMs: Math.round(performance.now() - startedAt) });
         return;
       }
@@ -114,7 +114,7 @@
     document.dispatchEvent(new CustomEvent('pagueon:financial-dashboard', { detail: { section, data } }));
     })();
     inFlight = { key, promise: load };
-    try { return await load; } finally { if (inFlight?.promise === load) inFlight = null; }
+    try { return await load; } finally { if (inFlight?.promise === load) inFlight = null; document.dispatchEvent(new CustomEvent('pagueon:financial-dashboard-settled', { detail: { key } })); }
   }
 
   window.addEventListener('pagueon:auth', () => setTimeout(render, 0));

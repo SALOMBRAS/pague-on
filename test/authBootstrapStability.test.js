@@ -28,7 +28,8 @@ test('bootstrap não duplica dashboard/perfil e dados offline são vinculados ao
   assert.doesNotMatch(app, /window\.pagueOnApi\.get\('\/dashboard'\)/);
   assert.doesNotMatch(app, /window\.pagueOnApi\.get\('\/auth\/me'\)/);
   assert.match(app, /function scheduleRemoteHydration\(\)/);
-  assert.match(app, /window\.setTimeout\(\(\)=>\{remoteHydrationTimer=null;hydrateRemote\(\);\},700\)/);
+  assert.match(app, /pagueon:financial-dashboard-settled/);
+  assert.match(app, /window\.setTimeout\(start,15000\)/);
 });
 
 test('dashboard termina em erro após timeout e PWA troca a versão do shell', () => {

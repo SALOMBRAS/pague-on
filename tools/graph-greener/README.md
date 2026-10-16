@@ -63,6 +63,17 @@ python3 graph_greener.py --repo priv --seed 123456 \
   --name "SALOMBRAS" --email "SEU_EMAIL_VERIFICADO"
 ```
 
+Volumes customizados (substituem os 4 padrão; repita `--volume` quantas vezes quiser):
+
+```bash
+python3 graph_greener.py --repo priv \
+  --volume 2026-03-03 2026-06-30 300 \
+  --volume 2024-12-02 2024-12-31 173
+```
+
+Num **projeto real** que já tem histórico, use `--force --empty`: os commits
+são vazios (`--allow-empty`) e nenhum arquivo do projeto é criado ou alterado.
+
 No Windows use `python` em vez de `python3`. Opções úteis:
 `--burst-start 2024-10-14` (escolhe os 5 dias do Volume 3), `--push`.
 Os 700 commits levam cerca de 1 minuto.

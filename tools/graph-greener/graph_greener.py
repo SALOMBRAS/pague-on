@@ -100,16 +100,20 @@ def distribute(rng, total, days, zero_prob, sigma, weekend_factor,
 
 
 def _apply_cap(rng, counts, days, weights, cap):
-    """Move o excedente de dias acima do teto para outros dias ativos."""
+    """
+    Move o excedente para outros dias ativos. Cada dia tem um teto proprio
+    (70-100% de `cap`) para que varios dias nao fiquem com o mesmo valor maximo.
+    """
+    limit = {d: rng.randint(max(1, int(cap * 0.7)), cap) for d in days}
     overflow = 0
     for d in list(counts):
-        if counts[d] > cap:
-            overflow += counts[d] - cap
-            counts[d] = cap
+        if counts[d] > limit[d]:
+            overflow += counts[d] - limit[d]
+            counts[d] = limit[d]
     while overflow:
-        candidates = [d for d, w in zip(days, weights) if w and counts[d] < cap]
+        candidates = [d for d, w in zip(days, weights) if w and counts[d] < limit[d]]
         if not candidates:  # todos os ativos lotados: ativa um dia "vazio"
-            candidates = [d for d in days if counts[d] < cap]
+            candidates = [d for d in days if counts[d] < limit[d]]
         counts[rng.choice(candidates)] += 1
         overflow -= 1
 
@@ -157,6 +161,28 @@ def build_plan(rng, today, burst_start=None):
     return volumes
 
 
+def build_custom_plan(rng, specs, today):
+    """Volumes passados por --volume INICIO FIM QTD; parametros pela densidade."""
+    volumes = []
+    for start, end, n in specs:
+        if start > end:
+            sys.exit(f"ERRO: --volume {start} {end}: inicio depois do fim.")
+        if end >= today:
+            sys.exit(f"ERRO: --volume {start} {end}: o fim precisa ser antes de hoje.")
+        days = days_between(start, end)
+        avg = n / len(days)
+        if avg <= 3:
+            zero_prob, cap = 0.45, 15
+        elif avg <= 8:
+            zero_prob, cap = 0.25, max(15, round(avg * 2.5))
+        else:
+            zero_prob, cap = 0.10, round(avg * 2.5)
+        counts = distribute(rng, n, days, zero_prob=zero_prob, sigma=0.8,
+                            weekend_factor=0.4, max_per_day=cap)
+        volumes.append((f"{start:%d/%m/%Y} a {end:%d/%m/%Y}", n, counts))
+    return volumes
+
+
 def print_plan(volumes):
     total = Counter()
     for name, n, counts in volumes:
@@ -184,7 +210,7 @@ def git(repo, *args, env=None, check=True, capture=False):
                           text=True, capture_output=capture)
 
 
-def prepare_repo(repo, force, name, email):
+def prepare_repo(repo, force, name, email, empty=False):
     if not os.path.isdir(repo):
         os.makedirs(repo)
     if not os.path.isdir(os.path.join(repo, ".git")):
@@ -209,12 +235,14 @@ def prepare_repo(repo, force, name, email):
                  "verificado na sua conta GitHub (ou o noreply do GitHub).")
     print(f"Autor dos commits: {cfg_email}  (precisa estar verificado no GitHub)")
 
+    if empty:  # projeto real: nao cria nenhum arquivo
+        return
     with open(os.path.join(repo, MARKER), "w") as f:
         f.write("Repositorio gerado por graph_greener.py\n")
     git(repo, "add", MARKER)
 
 
-def make_commits(rng, repo, total):
+def make_commits(rng, repo, total, empty=False):
     stamps = []
     for d, n in sorted(total.items()):
         if n:
@@ -226,12 +254,16 @@ def make_commits(rng, repo, total):
     width = len(str(len(stamps)))
     for i, ts in enumerate(stamps, 1):
         git_date = ts.strftime("%Y-%m-%dT%H:%M:%S") + TZ_OFFSET
-        with open(data_path, "a") as f:
-            f.write(f"{git_date}\n")
         env["GIT_AUTHOR_DATE"] = git_date
         env["GIT_COMMITTER_DATE"] = git_date
-        git(repo, "add", DATA_FILE)
-        git(repo, "commit", "-q", "-m", f"update {ts:%Y-%m-%d}", env=env)
+        if empty:
+            git(repo, "commit", "-q", "--allow-empty", "-m",
+                f"update {ts:%Y-%m-%d}", env=env)
+        else:
+            with open(data_path, "a") as f:
+                f.write(f"{git_date}\n")
+            git(repo, "add", DATA_FILE)
+            git(repo, "commit", "-q", "-m", f"update {ts:%Y-%m-%d}", env=env)
         if i % 50 == 0 or i == len(stamps):
             print(f"  [{i:>{width}}/{len(stamps)}] {git_date}")
 
@@ -254,6 +286,13 @@ def main():
                    help="faz 'git push -u origin main' ao final")
     p.add_argument("--force", action="store_true",
                    help="permite usar um repositorio que ja tem historico")
+    p.add_argument("--volume", nargs=3, action="append",
+                   metavar=("INICIO", "FIM", "QTD"),
+                   help="volume customizado (AAAA-MM-DD AAAA-MM-DD N); pode repetir. "
+                        "Se usado, substitui os 4 volumes padrao")
+    p.add_argument("--empty", action="store_true",
+                   help="commits vazios (--allow-empty), sem criar arquivos; "
+                        "para usar em um projeto real junto com --force")
     args = p.parse_args()
 
     if args.burst_start and not (date(2024, 1, 1) <= args.burst_start <= date(2024, 12, 27)):
@@ -263,7 +302,15 @@ def main():
     rng = random.Random(seed)
     print(f"Semente: {seed}  (repita com --seed {seed} para o mesmo resultado)")
 
-    volumes = build_plan(rng, date.today(), args.burst_start)
+    if args.volume:
+        try:
+            specs = [(date.fromisoformat(a), date.fromisoformat(b), int(n))
+                     for a, b, n in args.volume]
+        except ValueError:
+            sys.exit("ERRO: use --volume AAAA-MM-DD AAAA-MM-DD QTD")
+        volumes = build_custom_plan(rng, specs, date.today())
+    else:
+        volumes = build_plan(rng, date.today(), args.burst_start)
     total = print_plan(volumes)
 
     if args.dry_run:
@@ -272,8 +319,8 @@ def main():
 
     repo = os.path.abspath(args.repo)
     print(f"\nRepositorio: {repo}")
-    prepare_repo(repo, args.force, args.name, args.email)
-    make_commits(rng, repo, total)
+    prepare_repo(repo, args.force, args.name, args.email, args.empty)
+    make_commits(rng, repo, total, args.empty)
     print(f"\n{sum(total.values())} commits criados.")
 
     if args.push:

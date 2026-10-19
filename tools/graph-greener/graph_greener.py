@@ -28,7 +28,7 @@ import random
 import subprocess
 import sys
 from collections import Counter
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 MARKER = ".graph-greener"
 DATA_FILE = "data.txt"
@@ -37,6 +37,7 @@ DATA_FILE = "data.txt"
 # local o horario UTC fica entre 12:00 e 23:59 do MESMO dia, entao o GitHub
 # nunca empurra um commit para o dia seguinte por causa do fuso.
 TZ_OFFSET = "-0300"
+LOCAL_TZ = timezone(timedelta(hours=-3))
 FIRST_HOUR, LAST_HOUR = 9, 20
 
 
@@ -122,6 +123,13 @@ def times_for_day(rng, d, n):
     """n horarios aleatorios, distintos e ordenados, dentro do expediente."""
     start = FIRST_HOUR * 3600
     end = (LAST_HOUR + 1) * 3600 - 1
+    now = datetime.now(LOCAL_TZ)
+    if d == now.date():  # hoje: so horarios que ja passaram
+        now_s = now.hour * 3600 + now.minute * 60 + now.second
+        end = min(end, now_s - 60)
+        start = min(start, max(0, end - 1800))
+        if end - start + 1 < n:
+            sys.exit(f"ERRO: ainda nao ha horario suficiente hoje para {n} commits.")
     secs = sorted(rng.sample(range(start, end + 1), n))
     base = datetime(d.year, d.month, d.day)
     return [base + timedelta(seconds=s) for s in secs]
@@ -167,8 +175,8 @@ def build_custom_plan(rng, specs, today):
     for start, end, n in specs:
         if start > end:
             sys.exit(f"ERRO: --volume {start} {end}: inicio depois do fim.")
-        if end >= today:
-            sys.exit(f"ERRO: --volume {start} {end}: o fim precisa ser antes de hoje.")
+        if end > today:
+            sys.exit(f"ERRO: --volume {start} {end}: o fim nao pode ser no futuro.")
         days = days_between(start, end)
         avg = n / len(days)
         if avg <= 3:
@@ -177,8 +185,12 @@ def build_custom_plan(rng, specs, today):
             zero_prob, cap = 0.25, max(15, round(avg * 2.5))
         else:
             zero_prob, cap = 0.10, round(avg * 2.5)
+        min_per_day = 0
+        if len(days) <= 7:  # periodo curto: todo dia recebe algo
+            zero_prob, min_per_day = 0.0, min(3, n // len(days))
         counts = distribute(rng, n, days, zero_prob=zero_prob, sigma=0.8,
-                            weekend_factor=0.4, max_per_day=cap)
+                            weekend_factor=0.4, max_per_day=cap,
+                            min_per_day=min_per_day)
         volumes.append((f"{start:%d/%m/%Y} a {end:%d/%m/%Y}", n, counts))
     return volumes
 
@@ -308,9 +320,9 @@ def main():
                      for a, b, n in args.volume]
         except ValueError:
             sys.exit("ERRO: use --volume AAAA-MM-DD AAAA-MM-DD QTD")
-        volumes = build_custom_plan(rng, specs, date.today())
+        volumes = build_custom_plan(rng, specs, datetime.now(LOCAL_TZ).date())
     else:
-        volumes = build_plan(rng, date.today(), args.burst_start)
+        volumes = build_plan(rng, datetime.now(LOCAL_TZ).date(), args.burst_start)
     total = print_plan(volumes)
 
     if args.dry_run:
